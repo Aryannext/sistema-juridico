@@ -180,9 +180,7 @@ export default function ProcesosList() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8 animate-fade-in relative items-start pb-16">
-      {/* Left Column: List */}
-      <div className={`transition-all duration-300 space-y-8 ${showModal ? 'w-full lg:w-2/3' : 'w-full'}`}>
+    <div className="space-y-8 animate-fade-in pb-16">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -209,8 +207,12 @@ export default function ProcesosList() {
         </button>
       </div>
 
-      {/* Multi-Filters Bar (HU-31) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Main Content Area */}
+      <div className="flex flex-col lg:flex-row gap-8 items-start relative">
+        {/* Left Column: List */}
+        <div className={`transition-all duration-300 space-y-6 ${showModal ? 'w-full lg:w-2/3' : 'w-full'}`}>
+          {/* Multi-Filters Bar (HU-31) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Search */}
         <div className="relative">
           <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500">

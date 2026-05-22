@@ -91,11 +91,9 @@ export default function ClientesList() {
   });
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8 animate-fade-in relative items-start">
-      {/* Left Column: List */}
-      <div className={`transition-all duration-300 space-y-8 ${showModal ? 'w-full lg:w-2/3' : 'w-full'}`}>
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="space-y-8 animate-fade-in pb-16">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent">
               Gestión de Clientes
@@ -113,8 +111,12 @@ export default function ClientesList() {
         </button>
       </div>
 
-      {/* Search and Filters */}
-      <div className="relative max-w-md">
+      {/* Main Content Area */}
+      <div className="flex flex-col lg:flex-row gap-8 items-start relative">
+        {/* Left Column: List */}
+        <div className={`transition-all duration-300 space-y-6 ${showModal ? 'w-full lg:w-2/3' : 'w-full'}`}>
+          {/* Search and Filters */}
+          <div className="relative max-w-md">
         <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500">
           <Search size={18} />
         </span>
