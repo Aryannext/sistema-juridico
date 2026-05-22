@@ -688,7 +688,7 @@ export default function ProcesoDetalle() {
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/procesos')}
-            className="p-3 bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-neutral-400 hover:text-white rounded-xl transition-all cursor-pointer"
+            className="p-2 md:p-3 bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-neutral-400 hover:text-white rounded-xl transition-all cursor-pointer"
           >
             <ArrowLeft size={18} />
           </button>
@@ -704,7 +704,7 @@ export default function ProcesoDetalle() {
 
         <button
           onClick={() => setShowEditModal(true)}
-          className="flex items-center justify-center gap-2 bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-white font-semibold px-5 py-2.5 rounded-xl transition-all cursor-pointer text-sm"
+          className="flex items-center justify-center gap-1.5 md:gap-2 bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-white font-semibold px-4 py-2 md:px-5 md:py-2.5 rounded-xl transition-all cursor-pointer text-xs md:text-sm"
         >
           <Edit3 size={16} />
           <span>Editar Datos</span>
@@ -725,7 +725,7 @@ export default function ProcesoDetalle() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-6 py-3.5 border-b-2 font-bold text-sm transition-all cursor-pointer whitespace-nowrap ${
+              className={`flex items-center gap-1.5 md:gap-2 px-4 py-2 md:px-6 md:py-3.5 border-b-2 font-bold text-xs md:text-sm transition-all cursor-pointer whitespace-nowrap ${
                 isSelected 
                   ? 'border-white text-white' 
                   : 'border-transparent text-neutral-500 hover:text-neutral-300'
@@ -740,7 +740,7 @@ export default function ProcesoDetalle() {
 
       {/* TAB CONTENT: GENERAL */}
       {activeTab === 'general' && (
-        <div className="space-y-6 animate-fade-in w-full">
+        <div className="space-y-4 md:space-y-6 animate-fade-in w-full">
           {(!proceso.partes?.some(p => p.tipo === 'DEMANDANTE') || !proceso.partes?.some(p => p.tipo === 'DEMANDADO')) && (
             <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex items-center gap-3 text-amber-400">
               <AlertTriangle className="flex-shrink-0" size={20} />
@@ -752,9 +752,9 @@ export default function ProcesoDetalle() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Details */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-4 md:space-y-6">
               {/* Card: General Information */}
-              <div className="bg-gradient-to-b from-neutral-950 to-neutral-900 border border-neutral-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
+              <div className="bg-gradient-to-b from-neutral-950 to-neutral-900 border border-neutral-800 rounded-2xl md:rounded-3xl p-4 md:p-6 md:p-8 shadow-xl space-y-4 md:space-y-6">
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
                   <Briefcase size={20} className="text-neutral-400" />
                   <span>Información General del Proceso</span>
@@ -826,7 +826,7 @@ export default function ProcesoDetalle() {
                 {/* Client Profile Summary */}
                 <div 
                   onClick={() => navigate(`/clientes/${proceso.id_cliente}`)}
-                  className="bg-neutral-950 border border-neutral-800 hover:border-neutral-700 p-6 rounded-3xl cursor-pointer transition-colors shadow-lg group"
+                  className="bg-neutral-950 border border-neutral-800 hover:border-neutral-700 p-4 md:p-6 rounded-2xl md:rounded-3xl cursor-pointer transition-colors shadow-lg group"
                 >
                   <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-4">
                     Cliente Asociado
@@ -847,7 +847,7 @@ export default function ProcesoDetalle() {
                 </div>
 
                 {/* Abogado Responsable */}
-                <div className="bg-neutral-950 border border-neutral-800 p-6 rounded-3xl shadow-lg">
+                <div className="bg-neutral-950 border border-neutral-800 p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-lg">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-4">
                     Abogado Responsable
                   </h3>
@@ -866,7 +866,7 @@ export default function ProcesoDetalle() {
               {/* Grid: Equipo de Trabajo and Partes Procesales (HU-08 & HU-11) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Equipo de Trabajo */}
-                <div className="bg-neutral-950 border border-neutral-800 p-6 rounded-3xl shadow-lg space-y-4">
+                <div className="bg-neutral-950 border border-neutral-800 p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-lg space-y-4">
                   <div className="flex justify-between items-center">
                     <h3 className="text-sm font-bold uppercase tracking-widest text-neutral-400 flex items-center gap-2">
                       <Users size={16} />
@@ -943,7 +943,7 @@ export default function ProcesoDetalle() {
                 </div>
 
                 {/* Partes Procesales */}
-                <div className="bg-neutral-950 border border-neutral-800 p-6 rounded-3xl shadow-lg space-y-4">
+                <div className="bg-neutral-950 border border-neutral-800 p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-lg space-y-4">
                   <div className="flex justify-between items-center">
                     <h3 className="text-sm font-bold uppercase tracking-widest text-neutral-400 flex items-center gap-2">
                       <Users size={16} />
@@ -1006,7 +1006,7 @@ export default function ProcesoDetalle() {
             </div>
 
             {/* Change History Timeline */}
-            <div className="lg:col-span-1 bg-gradient-to-b from-neutral-950 to-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-xl space-y-6">
+            <div className="lg:col-span-1 bg-gradient-to-b from-neutral-950 to-neutral-900 border border-neutral-800 rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl space-y-4 md:space-y-6">
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 <Clock size={20} className="text-neutral-400" />
                 <span>Bitácora de Cambios</span>
@@ -1018,7 +1018,7 @@ export default function ProcesoDetalle() {
                   <p className="text-neutral-400 text-xs">No hay modificaciones registradas en el expediente.</p>
                 </div>
               ) : (
-                <div className="relative border-l border-neutral-800 pl-4 ml-2 space-y-6">
+                <div className="relative border-l border-neutral-800 pl-4 ml-2 space-y-4 md:space-y-6">
                   {proceso.historial.map((hist) => (
                     <div key={hist.id_historial} className="relative group">
                       <div className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-neutral-700 group-hover:bg-white transition-colors" />
@@ -1045,7 +1045,7 @@ export default function ProcesoDetalle() {
 
       {/* TAB CONTENT: DOCUMENTS */}
       {activeTab === 'documentos' && (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-4 md:space-y-6 animate-fade-in">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-xl font-bold text-white">Gestión Documental</h2>
@@ -1182,7 +1182,7 @@ export default function ProcesoDetalle() {
 
       {/* TAB CONTENT: AGENDA */}
       {activeTab === 'agenda' && (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-4 md:space-y-6 animate-fade-in">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-xl font-bold text-white">Agenda de Audiencias</h2>
@@ -1284,7 +1284,7 @@ export default function ProcesoDetalle() {
 
       {/* TAB CONTENT: TERMINOS */}
       {activeTab === 'terminos' && (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-4 md:space-y-6 animate-fade-in">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-xl font-bold text-white">Términos Judiciales</h2>
@@ -1310,7 +1310,7 @@ export default function ProcesoDetalle() {
               <p className="text-neutral-400 text-xs mt-1">No se han registrado vencimientos en este expediente.</p>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4 md:space-y-6">
               {/* Traffic light counts */}
               {(() => {
                 const stats = getSemaforoStats();
@@ -1410,7 +1410,7 @@ export default function ProcesoDetalle() {
       {/* MODAL - EDIT PROCESO */}
       {showEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
-          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
+          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-2xl animate-scale-in my-8">
             <button
               onClick={() => setShowEditModal(false)}
               className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
@@ -1425,7 +1425,7 @@ export default function ProcesoDetalle() {
               Actualiza los datos clave. Cualquier cambio generará una bitácora inmutable en el historial.
             </p>
 
-            <form onSubmit={handleEditSubmit} className="space-y-6">
+            <form onSubmit={handleEditSubmit} className="space-y-4 md:space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
@@ -1503,7 +1503,7 @@ export default function ProcesoDetalle() {
       {/* MODAL - UPLOAD DOCUMENT */}
       {showUploadDocModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
-          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
+          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-2xl animate-scale-in my-8">
             <button
               onClick={() => setShowUploadDocModal(false)}
               className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
@@ -1518,7 +1518,7 @@ export default function ProcesoDetalle() {
               Adjunte demandas, fallos, pruebas o contratos. Límite máximo de 10MB.
             </p>
 
-            <form onSubmit={handleDocUploadSubmit} className="space-y-6">
+            <form onSubmit={handleDocUploadSubmit} className="space-y-4 md:space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
@@ -1603,7 +1603,7 @@ export default function ProcesoDetalle() {
       {/* MODAL - UPLOAD NEW VERSION */}
       {showNewVersionModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
-          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
+          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-2xl animate-scale-in my-8">
             <button
               onClick={() => setShowNewVersionModal(false)}
               className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
@@ -1618,7 +1618,7 @@ export default function ProcesoDetalle() {
               Reemplace el archivo de: <strong className="text-white">{selectedDoc?.nombre}</strong>. La versión física se incrementará de manera automática.
             </p>
 
-            <form onSubmit={handleNewVersionSubmit} className="space-y-6">
+            <form onSubmit={handleNewVersionSubmit} className="space-y-4 md:space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
@@ -1657,7 +1657,7 @@ export default function ProcesoDetalle() {
       {/* MODAL - VERSION HISTORY */}
       {showVersionesModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
-          <div className="relative w-full max-w-3xl bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
+          <div className="relative w-full max-w-3xl bg-neutral-950 border border-neutral-800 rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-2xl animate-scale-in my-8">
             <button
               onClick={() => setShowVersionesModal(false)}
               className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
@@ -1728,7 +1728,7 @@ export default function ProcesoDetalle() {
       {/* MODAL - SCHEDULE AUDIENCIA */}
       {showAddAudienciaModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
-          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
+          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-2xl animate-scale-in my-8">
             <button
               onClick={() => setShowAddAudienciaModal(false)}
               className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
@@ -1743,7 +1743,7 @@ export default function ProcesoDetalle() {
               Registre audiencias virtuales o presenciales. El cron job del sistema despachará alertas al correo registrado del abogado.
             </p>
 
-            <form onSubmit={handleAddAudienciaSubmit} className="space-y-6">
+            <form onSubmit={handleAddAudienciaSubmit} className="space-y-4 md:space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
@@ -1840,7 +1840,7 @@ export default function ProcesoDetalle() {
                   )}
 
                   {customRecordatorios.length < 3 && (
-                    <div className="bg-neutral-900/20 border border-neutral-800 p-4 rounded-2xl space-y-3">
+                    <div className="bg-neutral-900/20 border border-neutral-800 p-3 md:p-4 rounded-xl md:rounded-2xl space-y-3">
                       <p className="text-[10px] uppercase font-bold text-neutral-500">Agregar Nueva Alerta</p>
                       <div className="grid grid-cols-3 gap-2">
                         <div>
@@ -1929,7 +1929,7 @@ export default function ProcesoDetalle() {
       {/* MODAL - ADD TERMINO */}
       {showAddTerminoModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
-          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
+          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-2xl animate-scale-in my-8">
             <button
               onClick={() => setShowAddTerminoModal(false)}
               className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
@@ -1944,7 +1944,7 @@ export default function ProcesoDetalle() {
               Añada un término crítico para contestar demanda, interponer recursos o subsanar pliegos.
             </p>
 
-            <form onSubmit={handleAddTerminoSubmit} className="space-y-6">
+            <form onSubmit={handleAddTerminoSubmit} className="space-y-4 md:space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
@@ -2029,7 +2029,7 @@ export default function ProcesoDetalle() {
                   )}
 
                   {termRecordatoriosList.length < 3 && (
-                    <div className="bg-neutral-900/20 border border-neutral-800 p-4 rounded-2xl space-y-3">
+                    <div className="bg-neutral-900/20 border border-neutral-800 p-3 md:p-4 rounded-xl md:rounded-2xl space-y-3">
                       <p className="text-[10px] uppercase font-bold text-neutral-500">Configurar Alerta Preventiva</p>
                       <div className="grid grid-cols-3 gap-2">
                         <div>
@@ -2104,7 +2104,7 @@ export default function ProcesoDetalle() {
         const cannotEdit = isAlreadyResolved && !isAdmin;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
-            <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
+            <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-2xl animate-scale-in my-8">
               <button
                 onClick={() => setShowGestionarTerminoModal(false)}
                 className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
@@ -2121,7 +2121,7 @@ export default function ProcesoDetalle() {
 
               {/* Warning Banners */}
               {isVencido && !isAlreadyResolved && (
-                <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 p-4 rounded-2xl text-xs flex items-start gap-2 mb-4">
+                <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 p-3 md:p-4 rounded-xl md:rounded-2xl text-xs flex items-start gap-2 mb-4">
                   <AlertTriangle className="flex-shrink-0 mt-0.5" size={16} />
                   <span>
                     <strong>Atención:</strong> La fecha límite de este término ya ha expirado. Al guardarse, se auto-clasificará de forma inmutable como <strong>CUMPLIDO_TARDÍAMENTE</strong> en el sistema.
@@ -2130,7 +2130,7 @@ export default function ProcesoDetalle() {
               )}
 
               {isAlreadyResolved && !isAdmin && (
-                <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-2xl text-xs flex items-start gap-2 mb-4">
+                <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-3 md:p-4 rounded-xl md:rounded-2xl text-xs flex items-start gap-2 mb-4">
                   <AlertCircle className="flex-shrink-0 mt-0.5" size={16} />
                   <span>
                     <strong>Acción Denegada:</strong> Este término ya ha sido resuelto como <strong>{selectedTermino?.estado}</strong>. Solo un Administrador puede modificar los términos ya resueltos.
@@ -2139,7 +2139,7 @@ export default function ProcesoDetalle() {
               )}
 
               {isAlreadyResolved && isAdmin && (
-                <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 p-4 rounded-2xl text-xs flex items-start gap-2 mb-4">
+                <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 p-3 md:p-4 rounded-xl md:rounded-2xl text-xs flex items-start gap-2 mb-4">
                   <AlertTriangle className="flex-shrink-0 mt-0.5" size={16} />
                   <span>
                     <strong>Atención Administrador:</strong> Está modificando la resolución de un término ya resuelto. Esta acción registrará una bitácora especial en el historial de auditoría de consultorio.
@@ -2147,7 +2147,7 @@ export default function ProcesoDetalle() {
                 </div>
               )}
 
-              <form onSubmit={handleGestionarTerminoSubmit} className="space-y-6">
+              <form onSubmit={handleGestionarTerminoSubmit} className="space-y-4 md:space-y-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
@@ -2208,7 +2208,7 @@ export default function ProcesoDetalle() {
       {/* MODAL - CAMBIAR ESTADO */}
       {showChangeEstadoModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
-          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
+          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-2xl animate-scale-in my-8">
             <button
               onClick={() => {
                 setShowChangeEstadoModal(false);
@@ -2226,7 +2226,7 @@ export default function ProcesoDetalle() {
               Las transiciones de estado quedan documentadas en la bitácora del proceso.
             </p>
 
-            <form onSubmit={handleCambiarEstado} className="space-y-6">
+            <form onSubmit={handleCambiarEstado} className="space-y-4 md:space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
@@ -2345,7 +2345,7 @@ export default function ProcesoDetalle() {
       {/* MODAL - ASIGNAR COLABORADOR */}
       {showAddColaboradorModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
-          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
+          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-2xl animate-scale-in my-8">
             <button
               onClick={() => setShowAddColaboradorModal(false)}
               className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
@@ -2376,7 +2376,7 @@ export default function ProcesoDetalle() {
                 </button>
               </div>
             ) : (
-              <form onSubmit={handleAsignarColaborador} className="space-y-6">
+              <form onSubmit={handleAsignarColaborador} className="space-y-4 md:space-y-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
@@ -2435,7 +2435,7 @@ export default function ProcesoDetalle() {
       {/* MODAL - REGISTRAR PARTE PROCESAL */}
       {showAddParteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
-          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
+          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-2xl animate-scale-in my-8">
             <button
               onClick={() => setShowAddParteModal(false)}
               className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
@@ -2450,7 +2450,7 @@ export default function ProcesoDetalle() {
               Añada partes involucradas en el expediente judicial (demandantes, demandados, víctimas, etc.).
             </p>
 
-            <form onSubmit={handleRegistrarParte} className="space-y-6">
+            <form onSubmit={handleRegistrarParte} className="space-y-4 md:space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
@@ -2509,7 +2509,7 @@ export default function ProcesoDetalle() {
       {/* MODAL - DOCUMENT STATE */}
       {showDocEstadoModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
-          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
+          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-2xl animate-scale-in my-8">
             <button
               onClick={() => setShowDocEstadoModal(false)}
               className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
@@ -2524,7 +2524,7 @@ export default function ProcesoDetalle() {
               Transicione el estado del documento legal a Inactivo o Reemplazado. Tenga en cuenta que no podrá reactivarlo a Activo una vez realizado este cambio.
             </p>
 
-            <form onSubmit={handleUpdateDocEstado} className="space-y-6">
+            <form onSubmit={handleUpdateDocEstado} className="space-y-4 md:space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
@@ -2565,7 +2565,7 @@ export default function ProcesoDetalle() {
       {/* MODAL - DELETE DEFINITIVO (ADMIN ONLY) */}
       {showDeleteDefinitivoModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
-          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
+          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-2xl animate-scale-in my-8">
             <button
               onClick={() => {
                 setShowDeleteDefinitivoModal(false);
@@ -2584,7 +2584,7 @@ export default function ProcesoDetalle() {
               Esta es una acción irreversible y crítica. Eliminará físicamente todas las versiones de <strong className="text-white">{selectedDoc?.nombre}</strong> de Supabase Storage y de la base de datos.
             </p>
 
-            <form onSubmit={handleDeleteDefinitivoSubmit} className="space-y-6">
+            <form onSubmit={handleDeleteDefinitivoSubmit} className="space-y-4 md:space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
@@ -2657,7 +2657,7 @@ export default function ProcesoDetalle() {
       {/* MODAL - REPROGRAM AUDIENCIA */}
       {showReprogramModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
-          <div className="relative w-full max-w-2xl bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
+          <div className="relative w-full max-w-2xl bg-neutral-950 border border-neutral-800 rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-2xl animate-scale-in my-8">
             <button
               onClick={() => setShowReprogramModal(false)}
               className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
@@ -2766,7 +2766,7 @@ export default function ProcesoDetalle() {
                   }
 
                   return (
-                    <div className="relative border-l border-neutral-800 pl-4 ml-2 space-y-6 text-xs">
+                    <div className="relative border-l border-neutral-800 pl-4 ml-2 space-y-4 md:space-y-6 text-xs">
                       {reprogEntries.map((hist) => (
                         <div key={hist.id_historial} className="relative group">
                           <div className="absolute -left-[21px] top-1 w-2 h-2 rounded-full bg-neutral-700 group-hover:bg-white transition-colors" />

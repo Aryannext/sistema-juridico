@@ -137,29 +137,29 @@ export default function UsuariosPage() {
   return (
     <div className="space-y-8 animate-fade-in pb-16">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent flex items-center gap-3">
-            <KeyRound className="text-[#DFB971]" size={32} />
-            <span>Usuarios y Permisos Granulares</span>
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent flex items-center gap-2 md:gap-3">
+            <KeyRound className="text-[#DFB971] w-[24px] h-[24px] md:w-[32px] md:h-[32px]" />
+            <span>Usuarios y Permisos</span>
           </h1>
-          <p className="text-neutral-400 mt-1">
+          <p className="text-neutral-400 text-xs md:text-base mt-1">
             Asigna privilegios específicos de lectura, escritura y eliminación por cada módulo a los abogados del consultorio.
           </p>
         </div>
         <button
           onClick={() => setShowNewUserForm(true)}
-          className="flex items-center gap-2 bg-[#DFB971] hover:bg-[#c29b4f] text-black font-bold px-5 py-2.5 rounded-xl transition-all shadow-[0_0_15px_rgba(223,185,113,0.3)] hover:scale-105 cursor-pointer"
+          className="flex items-center justify-center gap-1.5 md:gap-2 bg-[#DFB971] hover:bg-[#c29b4f] text-black font-bold px-4 py-2 md:px-5 md:py-2.5 rounded-xl transition-all shadow-[0_0_15px_rgba(223,185,113,0.3)] hover:scale-105 cursor-pointer text-xs md:text-sm"
         >
-          <Sparkles size={18} />
+          <Sparkles size={16} className="md:w-[18px] md:h-[18px]" />
           Nuevo Colaborador
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
         
         {/* Left Column: Users List */}
-        <div className="lg:col-span-1 rounded-3xl bg-neutral-950/40 backdrop-blur-xl border border-white/10 p-6 flex flex-col h-[600px] shadow-[0_8px_32px_0_rgba(0,0,0,0.4)]">
+        <div className="lg:col-span-1 rounded-2xl md:rounded-3xl bg-neutral-950/40 backdrop-blur-xl border border-white/10 p-4 md:p-6 flex flex-col h-[400px] md:h-[600px] shadow-[0_8px_32px_0_rgba(0,0,0,0.4)]">
           <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <Users size={18} className="text-neutral-400" />
             Colaboradores de la Firma
@@ -233,7 +233,7 @@ export default function UsuariosPage() {
         </div>
 
         {/* Right Column: Permission Matrix or New User Form */}
-        <div className="lg:col-span-2 rounded-3xl bg-neutral-950/40 backdrop-blur-xl border border-white/10 p-4 lg:p-8 flex flex-col h-[600px] shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] relative overflow-y-auto custom-scrollbar">
+        <div className="lg:col-span-2 rounded-2xl md:rounded-3xl bg-neutral-950/40 backdrop-blur-xl border border-white/10 p-4 lg:p-8 flex flex-col h-[500px] md:h-[600px] shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] relative overflow-y-auto custom-scrollbar">
           
           {showNewUserForm ? (
             <div className="flex-1 flex flex-col animate-fade-in">
@@ -255,7 +255,7 @@ export default function UsuariosPage() {
                     required
                     value={newUser.nombre}
                     onChange={(e) => setNewUser({...newUser, nombre: e.target.value})}
-                    className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-3 text-sm transition-all"
+                    className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-2 md:py-3 text-xs md:text-sm transition-all"
                     placeholder="Ej. Ana Martínez"
                   />
                 </div>
@@ -266,7 +266,7 @@ export default function UsuariosPage() {
                     required
                     value={newUser.email}
                     onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                    className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-3 text-sm transition-all"
+                    className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-2 md:py-3 text-xs md:text-sm transition-all"
                     placeholder="ana@despacho.com"
                   />
                 </div>
@@ -277,7 +277,7 @@ export default function UsuariosPage() {
                     required
                     value={newUser.password}
                     onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                    className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-3 text-sm transition-all"
+                    className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-2 md:py-3 text-xs md:text-sm transition-all"
                     placeholder="Asignar contraseña"
                   />
                 </div>
@@ -286,7 +286,7 @@ export default function UsuariosPage() {
                   <select
                     value={newUser.rol}
                     onChange={(e) => setNewUser({...newUser, rol: e.target.value})}
-                    className="w-full bg-[#111] border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] outline-none rounded-xl px-4 py-3 text-sm transition-all cursor-pointer"
+                    className="w-full bg-[#111] border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] outline-none rounded-xl px-4 py-2 md:py-3 text-xs md:text-sm transition-all cursor-pointer"
                   >
                     <option value="ASISTENTE">Asistente Administrativo</option>
                     <option value="ABOGADO">Abogado Titular</option>
@@ -296,9 +296,9 @@ export default function UsuariosPage() {
                   <button
                     type="submit"
                     disabled={creatingUser}
-                    className="w-full bg-[#DFB971] hover:bg-[#c29b4f] text-black font-bold px-5 py-3.5 rounded-xl transition-all flex justify-center items-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="w-full bg-[#DFB971] hover:bg-[#c29b4f] text-black font-bold px-4 py-2 md:px-5 md:py-3.5 rounded-xl transition-all flex justify-center items-center gap-1.5 md:gap-2 cursor-pointer disabled:opacity-50 text-xs md:text-sm"
                   >
-                    {creatingUser ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+                    {creatingUser ? <Loader2 size={16} className="animate-spin md:w-[18px] md:h-[18px]" /> : <Sparkles size={16} className="md:w-[18px] md:h-[18px]" />}
                     {creatingUser ? 'Registrando...' : 'Crear Colaborador'}
                   </button>
                 </div>
@@ -306,10 +306,10 @@ export default function UsuariosPage() {
             </div>
           ) : (
             <>
-              <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4 shrink-0">
+              <div className="flex justify-between items-center mb-4 md:mb-6 border-b border-white/10 pb-4 shrink-0">
                 <div className="flex items-center gap-2">
-                  <Shield size={20} className="text-[#DFB971]" />
-                  <h2 className="text-xl font-bold text-white">Matriz de Privilegios</h2>
+                  <Shield size={18} className="text-[#DFB971] md:w-[20px] md:h-[20px]" />
+                  <h2 className="text-lg md:text-xl font-bold text-white">Matriz de Privilegios</h2>
                 </div>
                 
                 {selectedUsuario && (

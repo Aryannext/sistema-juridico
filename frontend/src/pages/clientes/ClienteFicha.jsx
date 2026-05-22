@@ -140,7 +140,7 @@ export default function ClienteFicha() {
       <div className="flex items-center gap-4">
         <button
           onClick={() => navigate('/clientes')}
-          className="p-3 bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-neutral-400 hover:text-white rounded-xl transition-all cursor-pointer"
+          className="p-2 md:p-3 bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-neutral-400 hover:text-white rounded-xl transition-all cursor-pointer"
         >
           <ArrowLeft size={18} />
         </button>
@@ -148,7 +148,7 @@ export default function ClienteFicha() {
           <span className="text-xs uppercase font-bold tracking-wider text-neutral-500">
             Ficha de Cliente
           </span>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent">
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent">
             {cliente.nombre}
           </h1>
         </div>
@@ -158,10 +158,10 @@ export default function ClienteFicha() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Profile Card */}
-        <div className="lg:col-span-1 bg-neutral-950/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.6)] space-y-6">
-          <div className="flex flex-col items-center text-center py-4">
-            <div className="w-20 h-20 rounded-2xl bg-[#DFB971]/10 border border-[#DFB971]/30 flex items-center justify-center mb-4 text-[#DFB971] shadow-[0_0_15px_rgba(223,185,113,0.15)]">
-              {cliente.tipo === 'NATURAL' ? <User size={40} /> : <Building2 size={40} />}
+        <div className="lg:col-span-1 bg-neutral-950/40 backdrop-blur-xl border border-white/10 rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.6)] space-y-4 md:space-y-6">
+          <div className="flex flex-col items-center text-center py-2 md:py-4">
+            <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-[#DFB971]/10 border border-[#DFB971]/30 flex items-center justify-center mb-3 md:mb-4 text-[#DFB971] shadow-[0_0_15px_rgba(223,185,113,0.15)]">
+              {cliente.tipo === 'NATURAL' ? <User size={32} className="md:w-[40px] md:h-[40px]"/> : <Building2 size={32} className="md:w-[40px] md:h-[40px]"/>}
             </div>
             <h2 className="text-xl font-bold text-white">{cliente.nombre}</h2>
             <span className={`px-3 py-1 rounded-full text-xs font-semibold mt-2 ${
@@ -265,7 +265,7 @@ export default function ClienteFicha() {
             {cliente.tiene_acceso_portal ? (
               <button
                 disabled
-                className="w-full flex items-center justify-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold px-4 py-2.5 rounded-xl transition-all cursor-not-allowed text-xs"
+                className="w-full flex items-center justify-center gap-1.5 md:gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold px-3 py-2 md:px-4 md:py-2.5 rounded-xl transition-all cursor-not-allowed text-[10px] md:text-xs"
               >
                 <AlertCircle size={14} />
                 <span>Acceso al Portal Habilitado</span>
@@ -273,7 +273,7 @@ export default function ClienteFicha() {
             ) : (
               <button
                 onClick={() => setShowPortalModal(true)}
-                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#C29B4F] to-[#E5C37A] hover:from-[#E5C37A] hover:to-[#C29B4F] text-black font-semibold px-4 py-2.5 rounded-xl transition-all cursor-pointer text-xs shadow-[0_0_15px_rgba(223,185,113,0.3)]"
+                className="w-full flex items-center justify-center gap-1.5 md:gap-2 bg-gradient-to-r from-[#C29B4F] to-[#E5C37A] hover:from-[#E5C37A] hover:to-[#C29B4F] text-black font-semibold px-3 py-2 md:px-4 md:py-2.5 rounded-xl transition-all cursor-pointer text-[10px] md:text-xs shadow-[0_0_15px_rgba(223,185,113,0.3)]"
               >
                 <Award size={14} />
                 <span>Habilitar Acceso al Portal</span>
@@ -283,15 +283,15 @@ export default function ClienteFicha() {
         </div>
 
         {/* Processes/Cases section */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4 md:space-y-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <Briefcase size={22} className="text-[#DFB971]" />
-              <h2 className="text-xl font-bold text-white">Expedientes Asociados</h2>
+            <div className="flex items-center gap-2 md:gap-2.5">
+              <Briefcase size={20} className="text-[#DFB971] md:w-[22px] md:h-[22px]" />
+              <h2 className="text-lg md:text-xl font-bold text-white">Expedientes Asociados</h2>
             </div>
             <button
               onClick={() => setShowProcesoModal(true)}
-              className="flex items-center gap-2 bg-white/5 border border-white/10 hover:border-[#DFB971]/50 hover:bg-white/10 text-[#DFB971] text-xs font-semibold px-4 py-2 rounded-xl transition-all cursor-pointer"
+              className="flex items-center gap-1.5 md:gap-2 bg-white/5 border border-white/10 hover:border-[#DFB971]/50 hover:bg-white/10 text-[#DFB971] text-[10px] md:text-xs font-semibold px-3 py-1.5 md:px-4 md:py-2 rounded-xl transition-all cursor-pointer"
             >
               <Plus size={14} />
               <span>Abrir Expediente</span>
@@ -311,7 +311,7 @@ export default function ClienteFicha() {
                 <div
                   key={proceso.id_proceso}
                   onClick={() => navigate(`/procesos/${proceso.id_proceso}`)}
-                  className="group relative flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-2xl bg-neutral-950/40 backdrop-blur-xl border border-white/10 hover:border-[#DFB971]/50 transition-all duration-300 cursor-pointer shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
+                  className="group relative flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 p-4 md:p-5 rounded-2xl bg-neutral-950/40 backdrop-blur-xl border border-white/10 hover:border-[#DFB971]/50 transition-all duration-300 cursor-pointer shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2.5">
@@ -373,7 +373,7 @@ export default function ClienteFicha() {
                     value={numeroRadicado}
                     onChange={(e) => setNumeroRadicado(e.target.value)}
                     placeholder="Ej. 110014003002202600123"
-                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-2 md:py-3 text-xs md:text-sm"
                   />
                 </div>
 
@@ -387,7 +387,7 @@ export default function ClienteFicha() {
                     value={juzgado}
                     onChange={(e) => setJuzgado(e.target.value)}
                     placeholder="Ej. Juzgado 5 Civil Municipal"
-                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-2 md:py-3 text-xs md:text-sm"
                   />
                 </div>
 
@@ -398,7 +398,7 @@ export default function ClienteFicha() {
                   <select
                     value={tipoProceso}
                     onChange={(e) => setTipoProceso(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-2 md:py-3 text-xs md:text-sm"
                   >
                     <option value="CIVIL">Civil</option>
                     <option value="PENAL">Penal</option>
@@ -418,7 +418,7 @@ export default function ClienteFicha() {
                     value={claseProceso}
                     onChange={(e) => setClaseProceso(e.target.value)}
                     placeholder="Ej. Ejecutivo, Ordinario"
-                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-2 md:py-3 text-xs md:text-sm"
                   />
                 </div>
 
@@ -431,7 +431,7 @@ export default function ClienteFicha() {
                     value={areaDerecho}
                     onChange={(e) => setAreaDerecho(e.target.value)}
                     placeholder="Ej. Comercial, Familia"
-                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-2 md:py-3 text-xs md:text-sm"
                   />
                 </div>
 
@@ -443,7 +443,7 @@ export default function ClienteFicha() {
                     type="date"
                     value={fechaRadicado}
                     onChange={(e) => setFechaRadicado(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-2 md:py-3 text-xs md:text-sm text-neutral-300"
                   />
                 </div>
 
@@ -454,7 +454,7 @@ export default function ClienteFicha() {
                   <select
                     value={idAbogadoResp}
                     onChange={(e) => setIdAbogadoResp(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-2 md:py-3 text-xs md:text-sm"
                   >
                     {abogados.map(abogado => (
                       <option key={abogado.id_usuario} value={abogado.id_usuario}>
@@ -470,13 +470,13 @@ export default function ClienteFicha() {
                 <button
                   type="button"
                   onClick={() => setShowProcesoModal(false)}
-                  className="px-5 py-2.5 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white transition-colors cursor-pointer text-sm font-semibold"
+                  className="px-4 py-2 md:px-5 md:py-2.5 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white transition-colors cursor-pointer text-xs md:text-sm font-semibold"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="bg-gradient-to-r from-[#C29B4F] to-[#E5C37A] hover:from-[#E5C37A] hover:to-[#C29B4F] text-black shadow-[0_0_15px_rgba(223,185,113,0.3)] font-semibold px-6 py-2.5 rounded-xl transition-all cursor-pointer text-sm"
+                  className="bg-gradient-to-r from-[#C29B4F] to-[#E5C37A] hover:from-[#E5C37A] hover:to-[#C29B4F] text-black shadow-[0_0_15px_rgba(223,185,113,0.3)] font-semibold px-4 py-2 md:px-6 md:py-2.5 rounded-xl transition-all cursor-pointer text-xs md:text-sm"
                 >
                   Abrir Expediente
                 </button>
@@ -490,26 +490,20 @@ export default function ClienteFicha() {
       {/* Modal - Habilitar Acceso al Portal */}
       {showPortalModal && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-md bg-neutral-950/90 backdrop-blur-2xl border border-[#DFB971]/30 rounded-3xl p-8 shadow-[0_0_40px_rgba(0,0,0,0.8)] animate-scale-in">
+          <div className="relative w-full max-w-sm bg-neutral-950/90 backdrop-blur-2xl border border-[#DFB971]/30 rounded-2xl p-5 shadow-[0_0_40px_rgba(0,0,0,0.8)] animate-scale-in">
             <button
               onClick={() => {
                 setShowPortalModal(false);
                 setPortalPassword('');
               }}
-              className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              className="absolute top-4 right-4 text-neutral-400 hover:text-white transition-colors cursor-pointer"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
 
-            <h2 className="text-xl font-bold bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent mb-2">
+            <h2 className="text-lg font-bold bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent mb-2">
               Habilitar Acceso al Portal
             </h2>
-            <p className="text-xs text-neutral-400 mb-6">
-              Se creará una cuenta de usuario exclusiva para <span className="text-white font-medium">{cliente.nombre}</span> utilizando su correo electrónico <span className="text-white font-medium">{cliente.email}</span>.
-            </p>
-
-            <form onSubmit={handleEnablePortalAccess} className="space-y-4">
-              <div className="space-y-2">
                 <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
                   Contraseña del Cliente
                 </label>
