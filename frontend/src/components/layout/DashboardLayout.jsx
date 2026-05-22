@@ -1,6 +1,6 @@
 import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Users, Briefcase, LogOut, LayoutDashboard, Shield } from 'lucide-react';
+import { Users, Briefcase, LogOut, LayoutDashboard, Shield, Settings, UserCheck } from 'lucide-react';
 import { Toaster } from 'sonner';
 
 export default function DashboardLayout() {
@@ -38,11 +38,21 @@ export default function DashboardLayout() {
             <span>Expedientes</span>
           </Link>
           {user?.rol === 'ADMINISTRADOR' && (
-            <Link to="/auditoria" className="flex items-center gap-3 px-3 py-2 text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-md transition-colors">
-              <Shield size={20} />
-              <span>Auditoría</span>
-            </Link>
+            <>
+              <Link to="/admin/usuarios" className="flex items-center gap-3 px-3 py-2 text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-md transition-colors">
+                <UserCheck size={20} />
+                <span>Usuarios y Permisos</span>
+              </Link>
+              <Link to="/auditoria" className="flex items-center gap-3 px-3 py-2 text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-md transition-colors">
+                <Shield size={20} />
+                <span>Auditoría</span>
+              </Link>
+            </>
           )}
+          <Link to="/ajustes" className="flex items-center gap-3 px-3 py-2 text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-md transition-colors">
+            <Settings size={20} />
+            <span>Ajustes</span>
+          </Link>
         </nav>
         <div className="p-4 border-t border-neutral-800">
           <button 

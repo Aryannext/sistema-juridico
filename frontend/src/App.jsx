@@ -11,6 +11,8 @@ import ClienteFicha from './pages/clientes/ClienteFicha';
 import ProcesosList from './pages/procesos/ProcesosList';
 import ProcesoDetalle from './pages/procesos/ProcesoDetalle';
 import AuditoriaList from './pages/auditoria/AuditoriaList';
+import AjustesPage from './pages/admin/AjustesPage';
+import UsuariosPage from './pages/admin/UsuariosPage';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -45,6 +47,8 @@ function App() {
             <Route path="/procesos" element={<ProcesosList />} />
             <Route path="/procesos/:id" element={<ProcesoDetalle />} />
             <Route path="/auditoria" element={<AuditoriaList />} />
+            <Route path="/admin/usuarios" element={<UsuariosPage />} />
+            <Route path="/ajustes" element={<AjustesPage />} />
           </Route>
           
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

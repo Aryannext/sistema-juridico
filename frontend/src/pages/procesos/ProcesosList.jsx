@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
-import { Briefcase, Plus, Search, Calendar, User, FileText, ArrowRight, X, UserCheck, ShieldAlert } from 'lucide-react';
+import { 
+  Briefcase, Plus, Search, Calendar, User, FileText, 
+  ArrowRight, X, UserCheck, ShieldAlert, AlertTriangle, 
+  Trash2, Loader2, ChevronLeft, ChevronRight 
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ProcesosList() {
@@ -10,6 +14,21 @@ export default function ProcesosList() {
   const [abogados, setAbogados] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  
+  // Multi-filter states
+  const [filterEstado, setFilterEstado] = useState('');
+  const [filterJurisdiccion, setFilterJurisdiccion] = useState('');
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+
+  // Cascade delete states (HU-34)
+  const [currentUser, setCurrentUser] = useState(() => JSON.parse(localStorage.getItem('user')) || null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingProceso, setDeletingProceso] = useState(null);
+  const [deleteStep, setDeleteStep] = useState(1);
+  const [deleteJustificacion, setDeleteJustificacion] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const [showModal, setShowModal] = useState(false);
   const navigate = useNavigate();
 
@@ -23,16 +42,42 @@ export default function ProcesosList() {
   const [idCliente, setIdCliente] = useState('');
   const [idAbogadoResp, setIdAbogadoResp] = useState('');
 
+  // Fetch paginated processes according to multi-filters (HU-31)
+  const fetchProcesos = async () => {
+    try {
+      const params = {
+        page,
+        limit: 20
+      };
+      
+      // Auto-trigger search on partial inputs >= 3 characters (HU-31)
+      if (search.trim().length >= 3) {
+        params.search = search;
+      }
+      if (filterEstado) {
+        params.estado = filterEstado;
+      }
+      if (filterJurisdiccion) {
+        params.tipo_proceso = filterJurisdiccion;
+      }
+
+      const res = await api.get('/procesos', { params });
+      setProcesos(res.data.procesos || []);
+      setPagination(res.data.pagination || null);
+    } catch (error) {
+      console.error('Error fetching processes:', error);
+      toast.error('Error al obtener expedientes filtrados');
+    }
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [procesosRes, clientesRes, usuariosRes] = await Promise.all([
-        api.get('/procesos'),
+      const [clientesRes, usuariosRes] = await Promise.all([
         api.get('/clientes'),
         api.get('/admin/usuarios').catch(() => null) // Suppress if not admin
       ]);
 
-      setProcesos(procesosRes.data);
       setClientes(clientesRes.data);
       
       if (clientesRes.data.length > 0) {
@@ -45,12 +90,14 @@ export default function ProcesosList() {
           setIdAbogadoResp(usuariosRes.data[0].id_usuario);
         }
       } else {
-        const currentUser = JSON.parse(localStorage.getItem('user'));
-        if (currentUser) {
-          setAbogados([currentUser]);
-          setIdAbogadoResp(currentUser.id_usuario);
+        const cachedUser = JSON.parse(localStorage.getItem('user'));
+        if (cachedUser) {
+          setAbogados([cachedUser]);
+          setIdAbogadoResp(cachedUser.id_usuario);
         }
       }
+
+      await fetchProcesos();
     } catch (error) {
       console.error(error);
       toast.error('Error al cargar la información de expedientes');
@@ -62,6 +109,19 @@ export default function ProcesosList() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Multi-filtering search listener with debounce
+  useEffect(() => {
+    if (!loading) {
+      const timer = setTimeout(() => {
+        // Trigger fetch if search term length is empty OR >= 3 characters
+        if (search.trim().length === 0 || search.trim().length >= 3) {
+          fetchProcesos();
+        }
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [search, filterEstado, filterJurisdiccion, page]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -94,18 +154,32 @@ export default function ProcesosList() {
       toast.error(error.response?.data?.error || 'Error al crear el expediente');
     }
   };
-
-  const filteredProcesos = procesos.filter(proceso => {
-    const term = search.toLowerCase();
-    const matchRadicado = proceso.numero_radicado?.includes(term);
-    const matchJuzgado = proceso.juzgado?.toLowerCase().includes(term);
-    const matchCliente = proceso.cliente?.nombre?.toLowerCase().includes(term) || proceso.cliente?.razon_social?.toLowerCase().includes(term);
-    const matchAbogado = proceso.abogado_resp?.nombre?.toLowerCase().includes(term);
-    return matchRadicado || matchJuzgado || matchCliente || matchAbogado;
-  });
+  const handleDeleteConfirm = async (e) => {
+    e.preventDefault();
+    if (!deleteJustificacion.trim()) {
+      toast.error('Debe ingresar una justificación escrita.');
+      return;
+    }
+    
+    try {
+      setIsDeleting(true);
+      const res = await api.delete(`/procesos/${deletingProceso.id_proceso}`, {
+        data: { justificacion: deleteJustificacion }
+      });
+      toast.success(res.data.message || 'Expediente eliminado definitivamente con éxito.');
+      setShowDeleteModal(false);
+      setDeletingProceso(null);
+      fetchProcesos(); // Reload processes
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.error || 'Error al intentar eliminar el expediente.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8 animate-fade-in pb-16">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -132,18 +206,67 @@ export default function ProcesosList() {
         </button>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative max-w-md">
-        <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500">
-          <Search size={18} />
-        </span>
-        <input
-          type="text"
-          placeholder="Buscar por radicado, cliente, abogado..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-neutral-500 transition-colors"
-        />
+      {/* Multi-Filters Bar (HU-31) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Search */}
+        <div className="relative">
+          <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500">
+            <Search size={18} />
+          </span>
+          <input
+            type="text"
+            placeholder="Buscar por radicado, cliente, abogado..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1); // Reset page on new search
+            }}
+            className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-neutral-500 transition-colors"
+          />
+          {search.trim().length > 0 && search.trim().length < 3 && (
+            <span className="absolute left-3 -bottom-5 text-[10px] text-neutral-500 animate-pulse">
+              Escribe al menos 3 caracteres...
+            </span>
+          )}
+        </div>
+
+        {/* Estado Filter */}
+        <div>
+          <select
+            value={filterEstado}
+            onChange={(e) => {
+              setFilterEstado(e.target.value);
+              setPage(1); // Reset page
+            }}
+            className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 cursor-pointer"
+          >
+            <option value="">Todos los Estados</option>
+            <option value="ACTIVO">Activo</option>
+            <option value="SUSPENDIDO">Suspendido</option>
+            <option value="ARCHIVADO">Archivado</option>
+            <option value="FINALIZADO">Finalizado</option>
+          </select>
+        </div>
+
+        {/* Jurisdicción Filter */}
+        <div>
+          <select
+            value={filterJurisdiccion}
+            onChange={(e) => {
+              setFilterJurisdiccion(e.target.value);
+              setPage(1); // Reset page
+            }}
+            className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 cursor-pointer"
+          >
+            <option value="">Todas las Jurisdicciones</option>
+            <option value="CIVIL">Civil</option>
+            <option value="PENAL">Penal</option>
+            <option value="LABORAL">Laboral</option>
+            <option value="FAMILIA">Familia</option>
+            <option value="ADMINISTRATIVO">Contencioso Administrativo</option>
+            <option value="OTRO">Otro</option>
+          </select>
+        </div>
       </div>
 
       {/* List */}
@@ -153,19 +276,19 @@ export default function ProcesosList() {
             <div key={n} className="h-24 rounded-2xl bg-neutral-950 border border-neutral-900 animate-pulse" />
           ))}
         </div>
-      ) : filteredProcesos.length === 0 ? (
+      ) : procesos.length === 0 ? (
         <div className="text-center py-20 rounded-3xl bg-neutral-950/50 border border-neutral-900">
           <Briefcase className="mx-auto text-neutral-700 mb-4" size={48} />
           <h3 className="text-lg font-semibold text-neutral-300">No se encontraron expedientes</h3>
-          <p className="text-neutral-500 mt-1 text-sm">Crea tu primer expediente jurídico haciendo clic en "Nuevo Expediente".</p>
+          <p className="text-neutral-500 mt-1 text-sm">Pruebe modificando los filtros o cree un expediente.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4">
-          {filteredProcesos.map((proceso) => (
+          {procesos.map((proceso) => (
             <div
               key={proceso.id_proceso}
               onClick={() => navigate(`/procesos/${proceso.id_proceso}`)}
-              className="group relative flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 rounded-2xl bg-gradient-to-b from-neutral-950 to-neutral-900/60 border border-neutral-800 hover:border-neutral-700 transition-all duration-300 cursor-pointer shadow-lg"
+              className="group relative flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 rounded-2xl bg-gradient-to-b from-neutral-950 to-neutral-900/60 border border-neutral-800 hover:border-neutral-700 transition-all duration-300 cursor-pointer shadow-lg animate-fade-in"
             >
               <div className="space-y-1.5 max-w-xl">
                 <div className="flex flex-wrap items-center gap-2.5">
@@ -175,6 +298,8 @@ export default function ProcesosList() {
                   <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold ${
                     proceso.estado === 'ACTIVO' 
                       ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                      : proceso.estado === 'SUSPENDIDO'
+                      ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                       : 'bg-neutral-800 text-neutral-400 border border-neutral-700'
                   }`}>
                     {proceso.estado}
@@ -201,6 +326,21 @@ export default function ProcesosList() {
               </div>
 
               <div className="flex items-center gap-3 self-end md:self-center">
+                {currentUser?.rol === 'ADMINISTRADOR' && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation(); // Avoid card click navigation!
+                      setDeletingProceso(proceso);
+                      setDeleteStep(1);
+                      setDeleteJustificacion('');
+                      setShowDeleteModal(true);
+                    }}
+                    className="p-2 bg-neutral-950 border border-neutral-800 hover:border-rose-500/30 hover:bg-rose-500/10 text-neutral-500 hover:text-rose-400 rounded-xl transition-all cursor-pointer"
+                    title="Eliminar Expediente Definitivamente"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
                 <span className="text-xs text-neutral-500 group-hover:text-neutral-300 transition-colors">Administrar</span>
                 <div className="w-9 h-9 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 group-hover:text-white transition-colors">
                   <ArrowRight size={16} />
@@ -211,6 +351,33 @@ export default function ProcesosList() {
               <div className="absolute inset-y-0 left-0 w-[2px] bg-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-l-2xl" />
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Pagination Controls (HU-31) */}
+      {pagination && pagination.pages > 1 && (
+        <div className="flex items-center justify-between border-t border-neutral-800 pt-6">
+          <p className="text-xs text-neutral-500">
+            Mostrando página <span className="text-white font-bold">{pagination.page}</span> de <span className="text-white font-bold">{pagination.pages}</span> ({pagination.total} registros en total)
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-xl text-neutral-400 hover:text-white disabled:opacity-40 disabled:hover:text-neutral-400 cursor-pointer disabled:cursor-not-allowed transition-all text-xs font-bold flex items-center gap-1"
+            >
+              <ChevronLeft size={14} />
+              <span>Anterior</span>
+            </button>
+            <button
+              onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
+              disabled={page === pagination.pages}
+              className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-xl text-neutral-400 hover:text-white disabled:opacity-40 disabled:hover:text-neutral-400 cursor-pointer disabled:cursor-not-allowed transition-all text-xs font-bold flex items-center gap-1"
+            >
+              <span>Siguiente</span>
+              <ChevronRight size={14} />
+            </button>
+          </div>
         </div>
       )}
 
@@ -239,7 +406,7 @@ export default function ProcesosList() {
                   <select
                     value={idCliente}
                     onChange={(e) => setIdCliente(e.target.value)}
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm"
+                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 cursor-pointer"
                   >
                     {clientes.map(cli => (
                       <option key={cli.id_cliente} value={cli.id_cliente}>
@@ -259,7 +426,7 @@ export default function ProcesosList() {
                     value={numeroRadicado}
                     onChange={(e) => setNumeroRadicado(e.target.value)}
                     placeholder="Ej. 110014003002202600123"
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm"
+                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
                   />
                 </div>
 
@@ -273,7 +440,7 @@ export default function ProcesosList() {
                     value={juzgado}
                     onChange={(e) => setJuzgado(e.target.value)}
                     placeholder="Ej. Juzgado 5 Civil Municipal"
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm"
+                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
                   />
                 </div>
 
@@ -284,7 +451,7 @@ export default function ProcesosList() {
                   <select
                     value={tipoProceso}
                     onChange={(e) => setTipoProceso(e.target.value)}
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm"
+                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 cursor-pointer"
                   >
                     <option value="CIVIL">Civil</option>
                     <option value="PENAL">Penal</option>
@@ -304,7 +471,7 @@ export default function ProcesosList() {
                     value={claseProceso}
                     onChange={(e) => setClaseProceso(e.target.value)}
                     placeholder="Ej. Ejecutivo, Ordinario"
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm"
+                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
                   />
                 </div>
 
@@ -317,7 +484,7 @@ export default function ProcesosList() {
                     value={areaDerecho}
                     onChange={(e) => setAreaDerecho(e.target.value)}
                     placeholder="Ej. Comercial, Civil"
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm"
+                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
                   />
                 </div>
 
@@ -329,7 +496,7 @@ export default function ProcesosList() {
                     type="date"
                     value={fechaRadicado}
                     onChange={(e) => setFechaRadicado(e.target.value)}
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300"
+                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 cursor-pointer"
                   />
                 </div>
 
@@ -340,7 +507,7 @@ export default function ProcesosList() {
                   <select
                     value={idAbogadoResp}
                     onChange={(e) => setIdAbogadoResp(e.target.value)}
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm"
+                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 cursor-pointer"
                   >
                     {abogados.map(abogado => (
                       <option key={abogado.id_usuario} value={abogado.id_usuario}>
@@ -368,6 +535,112 @@ export default function ProcesosList() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal - Cascade Delete Proceso (HU-34) */}
+      {showDeleteModal && deletingProceso && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
+          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
+            <button
+              onClick={() => setShowDeleteModal(false)}
+              className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <X size={24} />
+            </button>
+
+            <div className="flex items-center gap-3 text-rose-500 mb-4">
+              <ShieldAlert size={36} />
+              <h2 className="text-2xl font-bold">
+                Eliminación Definitiva
+              </h2>
+            </div>
+
+            {deleteStep === 1 ? (
+              <div className="space-y-6">
+                <p className="text-sm text-neutral-300 leading-relaxed">
+                  Está a punto de eliminar de forma permanente el expediente con radicado:
+                  <br />
+                  <strong className="text-white text-base font-bold block mt-1">{deletingProceso.numero_radicado}</strong>
+                </p>
+                <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl space-y-2 text-xs text-rose-400">
+                  <p className="font-bold flex items-center gap-1.5">
+                    <AlertTriangle size={14} />
+                    <span>Consecuencias del borrado en cascada:</span>
+                  </p>
+                  <ul className="list-disc pl-4 space-y-1">
+                    <li>Se borrarán los co-defensores y colaboradores asignados.</li>
+                    <li>Se eliminarán partes procesales, audiencias e historial inmutable.</li>
+                    <li>Esta acción quedará registrada permanentemente en la bitácora de auditoría.</li>
+                  </ul>
+                  <p className="font-semibold mt-2">
+                    Nota: El sistema no permitirá la eliminación si el expediente posee documentos soporte activos o términos judiciales pendientes sin gestionar.
+                  </p>
+                </div>
+
+                <div className="flex justify-end gap-4 pt-4 border-t border-neutral-900">
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteModal(false)}
+                    className="px-5 py-2.5 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white transition-colors cursor-pointer text-sm font-semibold"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteStep(2)}
+                    className="bg-rose-600 hover:bg-rose-500 text-white font-semibold px-6 py-2.5 rounded-xl transition-all cursor-pointer text-sm"
+                  >
+                    Entendido, Continuar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleDeleteConfirm} className="space-y-6">
+                <div className="space-y-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    Justificación Escrita (Obligatoria)
+                  </p>
+                  <textarea
+                    required
+                    rows={4}
+                    value={deleteJustificacion}
+                    onChange={(e) => setDeleteJustificacion(e.target.value)}
+                    placeholder="Escriba detalladamente el motivo de la eliminación definitiva para la bitácora de auditoría..."
+                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-white resize-none placeholder-neutral-500"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-4 pt-4 border-t border-neutral-900">
+                  <button
+                    type="button"
+                    disabled={isDeleting}
+                    onClick={() => setDeleteStep(1)}
+                    className="px-5 py-2.5 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white transition-colors cursor-pointer text-sm font-semibold disabled:opacity-40"
+                  >
+                    Atrás
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isDeleting}
+                    className="bg-rose-600 hover:bg-rose-500 disabled:bg-rose-800 text-white font-bold px-6 py-2.5 rounded-xl transition-all cursor-pointer text-sm flex items-center gap-1.5"
+                  >
+                    {isDeleting ? (
+                      <>
+                        <Loader2 className="animate-spin" size={16} />
+                        <span>Eliminando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 size={16} />
+                        <span>Eliminar Definitivamente</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

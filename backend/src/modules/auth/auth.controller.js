@@ -35,6 +35,7 @@ exports.registro = async (req, res) => {
       });
 
       // 2. Create Admin User
+      const isAutoVerify = process.env.DEV_AUTO_VERIFY === 'true';
       const usuario = await tx.usuario.create({
         data: {
           tenant_id: tenant.id_tenant,
@@ -42,25 +43,39 @@ exports.registro = async (req, res) => {
           email,
           password_hash: hashedPassword,
           rol: 'ADMINISTRADOR',
-          activo: false, // Inactive until verified
-          token_verificacion: tokenVerificacion
+          activo: isAutoVerify, // Active if auto-verify is enabled, else inactive until verified
+          token_verificacion: isAutoVerify ? null : tokenVerificacion
         }
       });
 
       return { tenant, usuario };
     });
 
-    // Send verification email
+    const isAutoVerify = process.env.DEV_AUTO_VERIFY === 'true';
     const verificationUrl = `http://localhost:5173/verificacion?token=${tokenVerificacion}`;
-    await sendEmail({
-      to: email,
-      subject: 'Verifica tu cuenta en SGPA',
-      html: `<h1>Bienvenido a SGPA</h1>
-             <p>Por favor verifica tu cuenta haciendo clic en el enlace:</p>
-             <a href="${verificationUrl}">Verificar Cuenta</a>`
-    });
 
-    res.status(201).json({ message: 'Registro exitoso. Revisa tu correo para verificar la cuenta.' });
+    console.log('\n=========================================');
+    console.log('DEV LOCAL REGISTRATION LOG:');
+    console.log('Auto-Verify active:', isAutoVerify);
+    console.log('Verification URL:', verificationUrl);
+    console.log('=========================================\n');
+
+    if (!isAutoVerify) {
+      // Send verification email only if not auto-verified
+      await sendEmail({
+        to: email,
+        subject: 'Verifica tu cuenta en SGPA',
+        html: `<h1>Bienvenido a SGPA</h1>
+               <p>Por favor verifica tu cuenta haciendo clic en el enlace:</p>
+               <a href="${verificationUrl}">Verificar Cuenta</a>`
+      });
+    }
+
+    res.status(201).json({
+      message: isAutoVerify 
+        ? 'Registro exitoso. Tu cuenta ha sido auto-verificada para desarrollo local.'
+        : 'Registro exitoso. Revisa tu correo para verificar la cuenta.'
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error en el registro' });
@@ -148,13 +163,23 @@ exports.login = async (req, res) => {
         data: { codigo_2fa: otp, expira_2fa: expira }
       });
 
-      await sendEmail({
-        to: user.email,
-        subject: 'Código de verificación SGPA',
-        html: `<h1>Tu código de verificación</h1>
-               <p>Ingresa el siguiente código de 6 dígitos: <strong>${otp}</strong></p>
-               <p>El código expira en 5 minutos.</p>`
-      });
+      console.log('\n=========================================');
+      console.log('DEV LOCAL 2FA CODE LOG:');
+      console.log('User:', user.email);
+      console.log('2FA OTP Code:', otp);
+      console.log('=========================================\n');
+
+      try {
+        await sendEmail({
+          to: user.email,
+          subject: 'Código de verificación SGPA',
+          html: `<h1>Tu código de verificación</h1>
+                 <p>Ingresa el siguiente código de 6 dígitos: <strong>${otp}</strong></p>
+                 <p>El código expira en 5 minutos.</p>`
+        });
+      } catch (mailError) {
+        console.error('Failed to send 2FA email, but logged OTP code to console:', mailError.message);
+      }
 
       // Issue temporary token for 2FA step
       const preAuthToken = signToken({ id_usuario: user.id_usuario, pending2FA: true }, '10m');
@@ -254,5 +279,32 @@ exports.configurar2FA = async (req, res) => {
     res.json({ message: `Autenticación de dos factores ${enable ? 'habilitada' : 'deshabilitada'} exitosamente.` });
   } catch (error) {
     res.status(500).json({ error: 'Error configurando 2FA' });
+  }
+};
+
+exports.getPerfil = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'No autorizado' });
+    }
+
+    const user = await prisma.usuario.findUnique({
+      where: { id_usuario: req.user.id_usuario },
+      select: {
+        id_usuario: true,
+        nombre: true,
+        email: true,
+        rol: true,
+        activo: true,
+        dos_factores: true,
+        tenant_id: true,
+        create_at: true
+      }
+    });
+
+    res.json(user);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error obteniendo el perfil del usuario' });
   }
 };

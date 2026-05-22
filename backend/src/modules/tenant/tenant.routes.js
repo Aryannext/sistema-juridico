@@ -16,6 +16,7 @@ const upload = multer({
   }
 });
 
+router.get('/perfil', authMiddleware, tenantController.getPerfil);
 router.put('/perfil', authMiddleware, requireRole(['ADMINISTRADOR']), upload.single('logo'), tenantController.updatePerfil);
 
 module.exports = router;

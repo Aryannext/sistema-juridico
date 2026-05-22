@@ -24,12 +24,21 @@ const tenantRoutes = require('./modules/tenant/tenant.routes');
 const clientesRoutes = require('./modules/clientes/clientes.routes');
 const procesosRoutes = require('./modules/procesos/procesos.routes');
 const adminRoutes = require('./modules/admin/admin.routes');
+const documentosRoutes = require('./modules/documentos/documentos.routes');
+const audienciasRoutes = require('./modules/audiencias/audiencias.routes');
+const terminosRoutes = require('./modules/terminos/terminos.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/tenant', tenantRoutes);
 app.use('/api/clientes', clientesRoutes);
 app.use('/api/procesos', procesosRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/documentos', documentosRoutes);
+app.use('/api/audiencias', audienciasRoutes);
+app.use('/api/terminos', terminosRoutes);
+
+
+
 
 // Basic route for testing
 app.get('/', (req, res) => {

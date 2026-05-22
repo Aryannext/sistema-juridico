@@ -66,3 +66,21 @@ exports.updatePerfil = async (req, res) => {
     res.status(500).json({ error: 'Error actualizando el perfil del tenant' });
   }
 };
+
+exports.getPerfil = async (req, res) => {
+  try {
+    const { tenant_id } = req;
+    const tenant = await prisma.tenant.findUnique({
+      where: { id_tenant: tenant_id }
+    });
+
+    if (!tenant) {
+      return res.status(404).json({ error: 'Perfil de consultorio no encontrado' });
+    }
+
+    res.json(tenant);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error obteniendo el perfil del tenant' });
+  }
+};
