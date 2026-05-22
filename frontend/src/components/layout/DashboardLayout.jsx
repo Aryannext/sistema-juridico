@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Users, Briefcase, LogOut, LayoutDashboard, Shield, Settings, UserCheck, BarChart3, Scale, Bell } from 'lucide-react';
+import { Users, Briefcase, LogOut, LayoutDashboard, Shield, Settings, UserCheck, BarChart3, Scale, Bell, Menu, X } from 'lucide-react';
 import { Toaster } from 'sonner';
 import api from '../../api/axios';
 
@@ -11,6 +11,12 @@ export default function DashboardLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     const checkNotifs = async () => {
@@ -57,20 +63,36 @@ export default function DashboardLayout() {
       <div className="absolute top-[-10%] left-[-5%] w-[30%] h-[30%] bg-[#DFB971]/5 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[10%] w-[40%] h-[40%] bg-[#DFB971]/5 blur-[120px] rounded-full pointer-events-none" />
 
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[50] lg:hidden" 
+          onClick={() => setMobileMenuOpen(false)} 
+        />
+      )}
+
       {/* Sidebar */}
-      <div className="w-72 bg-neutral-950/40 backdrop-blur-xl border-r border-white/10 flex flex-col z-10 shadow-[8px_0_32px_0_rgba(0,0,0,0.5)]">
+      <div className={`fixed inset-y-0 left-0 transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 w-72 bg-neutral-950/90 lg:bg-neutral-950/40 backdrop-blur-xl border-r border-white/10 flex flex-col z-[60] shadow-[8px_0_32px_0_rgba(0,0,0,0.5)] transition-transform duration-300 ease-in-out`}>
         
         {/* Brand */}
-        <div className="p-6 border-b border-white/10 flex items-center gap-3">
-          <div className="inline-flex items-center justify-center p-2 rounded-xl bg-white/5 border border-white/10 shadow-[0_0_15px_rgba(223,185,113,0.1)]">
-            <Scale size={24} className="text-[#DFB971]" />
+        <div className="p-6 border-b border-white/10 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="inline-flex items-center justify-center p-2 rounded-xl bg-white/5 border border-white/10 shadow-[0_0_15px_rgba(223,185,113,0.1)]">
+              <Scale size={24} className="text-[#DFB971]" />
+            </div>
+            <div>
+              <h2 className="text-xl font-extrabold tracking-widest uppercase">
+                <span className="bg-gradient-to-r from-[#DFB971] via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent">SGPA</span>
+              </h2>
+              <p className="text-[10px] tracking-[0.2em] text-neutral-500 uppercase font-medium">Legal System</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl font-extrabold tracking-widest uppercase">
-              <span className="bg-gradient-to-r from-[#DFB971] via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent">SGPA</span>
-            </h2>
-            <p className="text-[10px] tracking-[0.2em] text-neutral-500 uppercase font-medium">Legal System</p>
-          </div>
+          <button 
+            className="lg:hidden p-2 text-neutral-400 hover:text-white rounded-xl hover:bg-white/5"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <X size={20} />
+          </button>
         </div>
 
         {/* Navigation */}
@@ -167,10 +189,16 @@ export default function DashboardLayout() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col relative z-10">
+      <div className="flex-1 flex flex-col relative z-10 overflow-hidden">
         {/* Topbar */}
-        <header className="h-16 border-b border-white/10 bg-neutral-950/20 backdrop-blur-md flex items-center justify-between px-8 relative z-50">
-          <div className="flex items-center gap-2 text-neutral-400 text-sm">
+        <header className="h-16 border-b border-white/10 bg-neutral-950/20 backdrop-blur-md flex items-center justify-between px-4 lg:px-8 relative z-40">
+          <div className="flex items-center gap-3 text-neutral-400 text-sm">
+            <button 
+              className="lg:hidden p-2 -ml-2 text-neutral-400 hover:text-white rounded-xl hover:bg-white/5 transition-colors cursor-pointer"
+              onClick={() => setMobileMenuOpen(true)}
+            >
+              <Menu size={20} />
+            </button>
             <span className="text-white font-semibold tracking-wide">SGPA Workspace</span>
           </div>
           <div className="flex items-center gap-4 relative">
