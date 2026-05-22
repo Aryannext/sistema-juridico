@@ -399,6 +399,7 @@ export default function ClientesList() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
