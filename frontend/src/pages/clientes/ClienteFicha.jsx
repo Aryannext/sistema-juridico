@@ -504,6 +504,12 @@ export default function ClienteFicha() {
             <h2 className="text-lg font-bold bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent mb-2">
               Habilitar Acceso al Portal
             </h2>
+            <p className="text-[10px] md:text-xs text-neutral-400 mb-4 md:mb-6">
+              Se creará una cuenta de usuario exclusiva para <span className="text-white font-medium">{cliente?.nombre}</span> utilizando su correo electrónico <span className="text-white font-medium">{cliente?.email}</span>.
+            </p>
+
+            <form onSubmit={handleEnablePortalAccess} className="space-y-4">
+              <div className="space-y-2">
                 <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
                   Contraseña del Cliente
                 </label>
