@@ -383,9 +383,6 @@ export default function ProcesosList() {
           </div>
         </div>
       )}
-
-        </div>
-      )}
       </div>
 
       {/* Right Column: Side Panel Form */}
