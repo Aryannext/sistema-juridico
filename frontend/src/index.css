@@ -130,7 +130,10 @@
     }
   html {
     @apply font-sans;
-    }
+  }
+  input, select, textarea {
+    @apply text-white placeholder-neutral-500;
+  }
 }
 
 @keyframes fadeIn {
