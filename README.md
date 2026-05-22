@@ -25,7 +25,11 @@ El sistema está diseñado bajo una arquitectura de **microservicios lógicos (m
 
 ## 📖 Manual de Usuario
 
-El SGPA está diseñado para ser intuitivo. Aquí tienes una guía rápida de las funciones principales:
+Hemos preparado un manual de usuario detallado, diseñado para que cualquier persona (incluso sin conocimientos técnicos) aprenda a usar el sistema paso a paso. 
+
+👉 **[Ver el Manual de Usuario Completo Aquí](./docs/MANUAL_USUARIO.md)**
+
+El SGPA está diseñado para ser intuitivo. Aquí tienes un resumen rápido de las funciones principales:
 
 ### 1. Panel de Control (Dashboard)
 Tu centro de comando. Al ingresar, el sistema te muestra métricas clave, una agenda interactiva y un **Semáforo de Riesgos Procesales** que te alerta si tienes términos (fechas límite) a punto de vencer o si un proceso lleva demasiado tiempo inactivo.
