@@ -19,6 +19,9 @@ router.post('/2fa/verificar', authController.verificar2FA);
 // Obtener Perfil de Usuario
 router.get('/perfil', authMiddleware, authController.getPerfil);
 
+// Actualizar Preferencias de Alertas
+router.put('/preferencias', authMiddleware, authController.updatePreferencias);
+
 // Configurar 2FA (Requerirá auth)
 router.post('/2fa/configurar', authMiddleware, authController.configurar2FA);
 

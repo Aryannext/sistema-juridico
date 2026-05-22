@@ -35,7 +35,10 @@ exports.getUsuarios = async (req, res) => {
     const { tenant_id } = req;
     
     const usuarios = await prisma.usuario.findMany({
-      where: { tenant_id },
+      where: { 
+        tenant_id,
+        rol: { not: 'CLIENTE' }
+      },
       select: {
         id_usuario: true,
         nombre: true,

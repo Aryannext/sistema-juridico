@@ -1,74 +1,218 @@
-import { Link, Outlet, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Users, Briefcase, LogOut, LayoutDashboard, Shield, Settings, UserCheck } from 'lucide-react';
+import { Users, Briefcase, LogOut, LayoutDashboard, Shield, Settings, UserCheck, BarChart3, Scale, Bell } from 'lucide-react';
 import { Toaster } from 'sonner';
+import api from '../../api/axios';
 
 export default function DashboardLayout() {
+  const [showNotif, setShowNotif] = useState(false);
+  const [hasUnread, setHasUnread] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const checkNotifs = async () => {
+      try {
+        const res = await api.get('/notificaciones');
+        setHasUnread(res.data.length > 0);
+      } catch (error) {
+        console.error('Error fetching notifs for layout:', error);
+      }
+    };
+    if (user) {
+      checkNotifs();
+    }
+  }, [location.pathname, user]);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
+  const menuItems = [
+    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/clientes', label: 'Clients', icon: Users },
+    { path: '/procesos', label: 'Legal Cases', icon: Briefcase },
+  ];
+
+  const adminItems = [
+    { path: '/admin/usuarios', label: 'Access Control', icon: UserCheck },
+    { path: '/admin/reportes', label: 'Reports', icon: BarChart3 },
+    { path: '/auditoria', label: 'Audit Logs', icon: Shield },
+  ];
+
+  const bottomItems = [
+    { path: '/ajustes', label: 'Settings', icon: Settings },
+  ];
+
+  const isCurrent = (path) => location.pathname.startsWith(path);
+
   return (
-    <div className="flex h-screen bg-neutral-900 text-white">
-      <Toaster richColors />
+    <div className="flex h-screen bg-[#0a0a0c] text-white font-sans overflow-hidden dark relative">
+      <Toaster richColors theme="dark" />
+      
+      {/* Background decorations for depth */}
+      <div className="absolute top-[-10%] left-[-5%] w-[30%] h-[30%] bg-[#DFB971]/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[10%] w-[40%] h-[40%] bg-[#DFB971]/5 blur-[120px] rounded-full pointer-events-none" />
+
       {/* Sidebar */}
-      <div className="w-64 bg-black border-r border-neutral-800 flex flex-col">
-        <div className="p-6 border-b border-neutral-800">
-          <h2 className="text-xl font-bold tracking-tight">SGPA</h2>
-          <p className="text-sm text-neutral-400">{user?.nombre}</p>
-          <span className="text-xs bg-neutral-800 px-2 py-1 rounded mt-2 inline-block">
-            {user?.rol}
-          </span>
+      <div className="w-72 bg-neutral-950/40 backdrop-blur-xl border-r border-white/10 flex flex-col z-10 shadow-[8px_0_32px_0_rgba(0,0,0,0.5)]">
+        
+        {/* Brand */}
+        <div className="p-6 border-b border-white/10 flex items-center gap-3">
+          <div className="inline-flex items-center justify-center p-2 rounded-xl bg-white/5 border border-white/10 shadow-[0_0_15px_rgba(223,185,113,0.1)]">
+            <Scale size={24} className="text-[#DFB971]" />
+          </div>
+          <div>
+            <h2 className="text-xl font-extrabold tracking-widest uppercase">
+              <span className="bg-gradient-to-r from-[#DFB971] via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent">SGPA</span>
+            </h2>
+            <p className="text-[10px] tracking-[0.2em] text-neutral-500 uppercase font-medium">Legal System</p>
+          </div>
         </div>
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          <Link to="/dashboard" className="flex items-center gap-3 px-3 py-2 text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-md transition-colors">
-            <LayoutDashboard size={20} />
-            <span>Dashboard</span>
-          </Link>
-          <Link to="/clientes" className="flex items-center gap-3 px-3 py-2 text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-md transition-colors">
-            <Users size={20} />
-            <span>Clientes</span>
-          </Link>
-          <Link to="/procesos" className="flex items-center gap-3 px-3 py-2 text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-md transition-colors">
-            <Briefcase size={20} />
-            <span>Expedientes</span>
-          </Link>
+
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
+          <div className="mb-6">
+            <p className="px-3 text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-2">Main Menu</p>
+            {menuItems.map((item) => {
+              const active = isCurrent(item.path);
+              return (
+                <Link 
+                  key={item.path}
+                  to={item.path} 
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 ${
+                    active 
+                    ? 'bg-white/10 text-[#DFB971] border border-white/10 shadow-[0_0_15px_rgba(223,185,113,0.1)]' 
+                    : 'text-neutral-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <item.icon size={18} className={active ? 'text-[#DFB971]' : ''} />
+                  <span className="font-medium text-sm tracking-wide">{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+
           {user?.rol === 'ADMINISTRADOR' && (
-            <>
-              <Link to="/admin/usuarios" className="flex items-center gap-3 px-3 py-2 text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-md transition-colors">
-                <UserCheck size={20} />
-                <span>Usuarios y Permisos</span>
-              </Link>
-              <Link to="/auditoria" className="flex items-center gap-3 px-3 py-2 text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-md transition-colors">
-                <Shield size={20} />
-                <span>Auditoría</span>
-              </Link>
-            </>
+            <div className="mb-6">
+              <p className="px-3 text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-2">Administration</p>
+              {adminItems.map((item) => {
+                const active = isCurrent(item.path);
+                return (
+                  <Link 
+                    key={item.path}
+                    to={item.path} 
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 ${
+                      active 
+                      ? 'bg-white/10 text-[#DFB971] border border-white/10 shadow-[0_0_15px_rgba(223,185,113,0.1)]' 
+                      : 'text-neutral-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <item.icon size={18} className={active ? 'text-[#DFB971]' : ''} />
+                    <span className="font-medium text-sm tracking-wide">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
           )}
-          <Link to="/ajustes" className="flex items-center gap-3 px-3 py-2 text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-md transition-colors">
-            <Settings size={20} />
-            <span>Ajustes</span>
-          </Link>
+
+          <div>
+            <p className="px-3 text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-2">System</p>
+            {bottomItems.map((item) => {
+              const active = isCurrent(item.path);
+              return (
+                <Link 
+                  key={item.path}
+                  to={item.path} 
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 ${
+                    active 
+                    ? 'bg-white/10 text-[#DFB971] border border-white/10 shadow-[0_0_15px_rgba(223,185,113,0.1)]' 
+                    : 'text-neutral-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <item.icon size={18} className={active ? 'text-[#DFB971]' : ''} />
+                  <span className="font-medium text-sm tracking-wide">{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
         </nav>
-        <div className="p-4 border-t border-neutral-800">
+
+        {/* User Profile & Logout */}
+        <div className="p-4 border-t border-white/10">
+          <div className="flex items-center gap-3 px-2 mb-4">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#C29B4F] to-[#FFF1C6] p-[2px]">
+              <div className="w-full h-full rounded-full bg-neutral-900 flex items-center justify-center border border-black">
+                <span className="text-[#DFB971] font-bold text-sm">
+                  {user?.nombre?.charAt(0).toUpperCase()}
+                </span>
+              </div>
+            </div>
+            <div className="overflow-hidden">
+              <p className="text-sm font-medium text-white truncate">{user?.nombre}</p>
+              <p className="text-xs text-[#DFB971] tracking-wider uppercase font-semibold">{user?.rol}</p>
+            </div>
+          </div>
           <button 
             onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-3 py-2 text-red-400 hover:bg-red-900/20 rounded-md transition-colors"
+            className="flex items-center justify-center gap-2 w-full px-3 py-2.5 text-neutral-400 hover:text-red-400 hover:bg-red-950/30 rounded-xl transition-all duration-300 border border-transparent hover:border-red-900/50 cursor-pointer"
           >
-            <LogOut size={20} />
-            <span>Cerrar Sesión</span>
+            <LogOut size={16} />
+            <span className="text-sm font-medium">Sign Out</span>
           </button>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        <main className="p-8">
-          <Outlet />
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col relative z-10">
+        {/* Topbar */}
+        <header className="h-16 border-b border-white/10 bg-neutral-950/20 backdrop-blur-md flex items-center justify-between px-8 relative z-50">
+          <div className="flex items-center gap-2 text-neutral-400 text-sm">
+            <span className="text-white font-semibold tracking-wide">SGPA Workspace</span>
+          </div>
+          <div className="flex items-center gap-4 relative">
+            <button 
+              onClick={() => setShowNotif(!showNotif)}
+              className="p-2 text-neutral-400 hover:text-[#DFB971] hover:bg-[#DFB971]/10 rounded-full transition-colors cursor-pointer relative" 
+              title="Centro de Notificaciones"
+            >
+              <Bell size={18} />
+              {hasUnread && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border border-[#0a0a0c] shadow-[0_0_5px_rgba(244,63,94,0.8)]"></span>
+              )}
+            </button>
+
+            {showNotif && (
+              <div className="absolute top-full right-0 mt-3 w-72 bg-neutral-950/80 backdrop-blur-2xl border border-white/10 rounded-2xl p-4 shadow-[0_8px_32px_0_rgba(0,0,0,0.6)] z-50 animate-fade-in">
+                <div className="flex items-center justify-between mb-3 border-b border-white/10 pb-2">
+                  <h3 className="text-white font-bold text-sm">Notificaciones</h3>
+                  <Bell size={14} className="text-[#DFB971]" />
+                </div>
+                <p className="text-xs text-neutral-400 mb-4 leading-relaxed">
+                  Las alertas críticas y notificaciones se gestionan en el panel principal del Dashboard.
+                </p>
+                <button 
+                  onClick={() => {
+                    setShowNotif(false);
+                    navigate('/dashboard');
+                  }} 
+                  className="w-full bg-gradient-to-r from-[#C29B4F] to-[#E5C37A] hover:from-[#E5C37A] hover:to-[#C29B4F] text-black font-bold py-2 rounded-xl text-xs transition-transform transform hover:scale-[1.02] shadow-[0_4px_15px_rgba(223,185,113,0.3)] cursor-pointer"
+                >
+                  Ir al Centro de Alertas
+                </button>
+              </div>
+            )}
+          </div>
+        </header>
+
+        {/* Outlet Content */}
+        <main className="flex-1 overflow-auto p-8 custom-scrollbar">
+          <div className="max-w-7xl mx-auto animate-fade-in">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

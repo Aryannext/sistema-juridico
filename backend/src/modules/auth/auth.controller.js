@@ -298,7 +298,11 @@ exports.getPerfil = async (req, res) => {
         activo: true,
         dos_factores: true,
         tenant_id: true,
-        create_at: true
+        create_at: true,
+        preferencia_canal: true,
+        pref_prioridad_audiencia: true,
+        pref_prioridad_termino: true,
+        pref_prioridad_tarea: true
       }
     });
 
@@ -306,5 +310,41 @@ exports.getPerfil = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error obteniendo el perfil del usuario' });
+  }
+};
+
+exports.updatePreferencias = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'No autorizado' });
+    }
+
+    const { preferencia_canal, pref_prioridad_audiencia, pref_prioridad_termino, pref_prioridad_tarea } = req.body;
+
+    const dataToUpdate = {};
+    if (preferencia_canal) dataToUpdate.preferencia_canal = preferencia_canal;
+    if (pref_prioridad_audiencia) dataToUpdate.pref_prioridad_audiencia = pref_prioridad_audiencia;
+    if (pref_prioridad_termino) dataToUpdate.pref_prioridad_termino = pref_prioridad_termino;
+    if (pref_prioridad_tarea) dataToUpdate.pref_prioridad_tarea = pref_prioridad_tarea;
+
+    const updatedUser = await prisma.usuario.update({
+      where: { id_usuario: req.user.id_usuario },
+      data: dataToUpdate,
+      select: {
+        id_usuario: true,
+        preferencia_canal: true,
+        pref_prioridad_audiencia: true,
+        pref_prioridad_termino: true,
+        pref_prioridad_tarea: true
+      }
+    });
+
+    res.json({
+      message: 'Preferencias de alerta actualizadas con éxito.',
+      preferencias: updatedUser
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error actualizando preferencias de alerta' });
   }
 };

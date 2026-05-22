@@ -114,11 +114,11 @@ export default function UsuariosPage() {
   };
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8 animate-fade-in pb-16">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-neutral-200 to-neutral-500 bg-clip-text text-transparent flex items-center gap-3">
-          <KeyRound className="text-white" size={32} />
+        <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent flex items-center gap-3">
+          <KeyRound className="text-[#DFB971]" size={32} />
           <span>Usuarios y Permisos Granulares</span>
         </h1>
         <p className="text-neutral-400 mt-1">
@@ -129,7 +129,7 @@ export default function UsuariosPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Left Column: Users List */}
-        <div className="lg:col-span-1 rounded-2xl bg-gradient-to-b from-neutral-950 to-neutral-900 border border-neutral-800 p-6 flex flex-col h-[600px] shadow-lg">
+        <div className="lg:col-span-1 rounded-3xl bg-neutral-950/40 backdrop-blur-xl border border-white/10 p-6 flex flex-col h-[600px] shadow-[0_8px_32px_0_rgba(0,0,0,0.4)]">
           <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <Users size={18} className="text-neutral-400" />
             Colaboradores de la Firma
@@ -153,33 +153,36 @@ export default function UsuariosPage() {
                   <div
                     key={userItem.id_usuario}
                     onClick={() => handleSelectUser(userItem)}
-                    className={`p-4 rounded-xl border transition-all duration-200 cursor-pointer flex flex-col gap-1.5 ${
+                    className={`group relative p-4 rounded-2xl border transition-all duration-300 cursor-pointer flex flex-col gap-1.5 overflow-hidden ${
                       isSelected
-                        ? 'bg-white border-white text-black shadow-md transform scale-[1.01]'
-                        : 'bg-neutral-900/50 border-neutral-800 hover:border-neutral-700 text-white'
+                        ? 'bg-white/10 border-[#DFB971]/50 shadow-[0_0_15px_rgba(223,185,113,0.15)] transform scale-[1.02]'
+                        : 'bg-white/5 border-white/10 hover:border-[#DFB971]/30 hover:bg-white/10 text-white'
                     }`}
                   >
-                    <div className="flex justify-between items-start">
-                      <span className="font-bold text-sm truncate max-w-[150px]">{userItem.nombre}</span>
-                      <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                    {/* Decorative gold accent on selection */}
+                    <div className={`absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-[#C29B4F] to-[#E5C37A] transition-all duration-300 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'}`} />
+                    
+                    <div className="flex justify-between items-start pl-2">
+                      <span className={`font-bold text-sm truncate max-w-[150px] transition-colors ${isSelected ? 'text-[#DFB971]' : 'text-white group-hover:text-[#FFF1C6]'}`}>{userItem.nombre}</span>
+                      <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
                         isSelected 
-                          ? 'bg-black/10 text-black' 
-                          : 'bg-neutral-800 text-neutral-300'
+                          ? 'bg-[#DFB971]/10 text-[#DFB971] border-[#DFB971]/20' 
+                          : 'bg-white/5 text-neutral-400 border-white/10'
                       }`}>
                         {userItem.rol}
                       </span>
                     </div>
 
-                    <div className={`flex items-center gap-1.5 text-xs ${
-                      isSelected ? 'text-neutral-700' : 'text-neutral-400'
+                    <div className={`flex items-center gap-1.5 text-xs pl-2 transition-colors ${
+                      isSelected ? 'text-neutral-300' : 'text-neutral-500'
                     }`}>
                       <Mail size={12} className="shrink-0" />
                       <span className="truncate">{userItem.email}</span>
                     </div>
 
-                    <div className="flex justify-between items-center mt-1 pt-1.5 border-t border-dashed border-current/10">
-                      <span className={`text-[10px] flex items-center gap-1 ${
-                        isSelected ? 'text-neutral-800' : 'text-neutral-500'
+                    <div className="flex justify-between items-center mt-1 pt-1.5 border-t border-white/10 pl-2">
+                      <span className={`text-[10px] flex items-center gap-1 transition-colors ${
+                        isSelected ? 'text-neutral-400' : 'text-neutral-600'
                       }`}>
                         <Calendar size={10} />
                         Creado {new Date(userItem.create_at).toLocaleDateString()}
@@ -197,10 +200,10 @@ export default function UsuariosPage() {
         </div>
 
         {/* Right Column: Permission Matrix */}
-        <div className="lg:col-span-2 rounded-2xl bg-gradient-to-b from-neutral-950 to-neutral-900 border border-neutral-800 p-8 flex flex-col h-[600px] shadow-lg">
-          <div className="flex justify-between items-center mb-6 border-b border-neutral-900 pb-4 shrink-0">
+        <div className="lg:col-span-2 rounded-3xl bg-neutral-950/40 backdrop-blur-xl border border-white/10 p-8 flex flex-col h-[600px] shadow-[0_8px_32px_0_rgba(0,0,0,0.4)]">
+          <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4 shrink-0">
             <div className="flex items-center gap-2">
-              <Shield size={20} className="text-neutral-400" />
+              <Shield size={20} className="text-[#DFB971]" />
               <h2 className="text-xl font-bold text-white">Matriz de Privilegios</h2>
             </div>
             
@@ -212,14 +215,14 @@ export default function UsuariosPage() {
           </div>
 
           {selectedUsuario?.rol === 'ADMINISTRADOR' ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-neutral-900/30 rounded-2xl border border-neutral-800/40">
-              <UserCheck className="text-white mb-4 animate-pulse" size={56} />
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm">
+              <UserCheck className="text-[#DFB971] mb-4 animate-pulse drop-shadow-[0_0_10px_rgba(223,185,113,0.4)]" size={56} />
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Sparkles className="text-neutral-300" size={18} />
+                <Sparkles className="text-[#DFB971]" size={18} />
                 Acceso Administrador Total
               </h3>
               <p className="text-neutral-400 text-sm max-w-sm mt-2 leading-relaxed">
-                Este usuario posee el rol principal de <strong>ADMINISTRADOR</strong>. El sistema le otorga acceso ilimitado de creación, edición, lectura y borrado en la totalidad de módulos por diseño.
+                Este usuario posee el rol principal de <strong className="text-[#DFB971]">ADMINISTRADOR</strong>. El sistema le otorga acceso ilimitado de creación, edición, lectura y borrado en la totalidad de módulos por diseño.
               </p>
             </div>
           ) : loadingPermisos ? (
@@ -237,22 +240,22 @@ export default function UsuariosPage() {
               
               {/* Permission Table */}
               <div className="overflow-auto flex-1 pr-1 custom-scrollbar">
-                <table className="w-full text-left text-sm">
+                <table className="w-full text-left text-sm border-collapse">
                   <thead>
-                    <tr className="border-b border-neutral-800 text-neutral-400 text-xs font-semibold uppercase tracking-wider">
-                      <th className="py-3.5 pl-2">Módulo del Sistema</th>
+                    <tr className="border-b border-white/10 text-neutral-400 text-xs font-semibold uppercase tracking-wider bg-white/5 backdrop-blur-sm">
+                      <th className="py-3.5 pl-4 rounded-tl-xl">Módulo del Sistema</th>
                       <th className="py-3.5 text-center">Leer</th>
                       <th className="py-3.5 text-center">Crear</th>
                       <th className="py-3.5 text-center">Editar</th>
-                      <th className="py-3.5 text-center">Eliminar</th>
+                      <th className="py-3.5 text-center rounded-tr-xl">Eliminar</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-neutral-900/60">
+                  <tbody className="divide-y divide-white/5">
                     {permisos.map(p => (
-                      <tr key={p.modulo} className="hover:bg-neutral-900/20 transition-colors">
-                        <td className="py-4 pl-2 font-semibold text-white">
-                          <div>{moduloNombres[p.modulo]}</div>
-                          <span className="text-[10px] text-neutral-500 font-mono tracking-tight uppercase">
+                      <tr key={p.modulo} className="hover:bg-white/5 transition-colors group">
+                        <td className="py-4 pl-4 font-semibold text-white">
+                          <div className="group-hover:text-[#DFB971] transition-colors">{moduloNombres[p.modulo]}</div>
+                          <span className="text-[10px] text-neutral-500 font-mono tracking-tight uppercase group-hover:text-neutral-400 transition-colors">
                             {p.modulo}
                           </span>
                         </td>
@@ -263,7 +266,7 @@ export default function UsuariosPage() {
                             type="checkbox"
                             checked={p.puede_leer}
                             onChange={() => handlePermissionToggle(p.modulo, 'puede_leer')}
-                            className="h-4.5 w-4.5 rounded border-neutral-800 bg-neutral-900 text-white focus:ring-0 focus:ring-offset-0 cursor-pointer accent-white"
+                            className="h-4.5 w-4.5 rounded border-white/20 bg-white/5 text-[#DFB971] focus:ring-[#DFB971]/50 focus:ring-offset-0 cursor-pointer accent-[#DFB971] transition-all"
                           />
                         </td>
 
@@ -273,7 +276,7 @@ export default function UsuariosPage() {
                             type="checkbox"
                             checked={p.puede_crear}
                             onChange={() => handlePermissionToggle(p.modulo, 'puede_crear')}
-                            className="h-4.5 w-4.5 rounded border-neutral-800 bg-neutral-900 text-white focus:ring-0 focus:ring-offset-0 cursor-pointer accent-white"
+                            className="h-4.5 w-4.5 rounded border-white/20 bg-white/5 text-[#DFB971] focus:ring-[#DFB971]/50 focus:ring-offset-0 cursor-pointer accent-[#DFB971] transition-all"
                           />
                         </td>
 
@@ -283,7 +286,7 @@ export default function UsuariosPage() {
                             type="checkbox"
                             checked={p.puede_editar}
                             onChange={() => handlePermissionToggle(p.modulo, 'puede_editar')}
-                            className="h-4.5 w-4.5 rounded border-neutral-800 bg-neutral-900 text-white focus:ring-0 focus:ring-offset-0 cursor-pointer accent-white"
+                            className="h-4.5 w-4.5 rounded border-white/20 bg-white/5 text-[#DFB971] focus:ring-[#DFB971]/50 focus:ring-offset-0 cursor-pointer accent-[#DFB971] transition-all"
                           />
                         </td>
 
@@ -293,7 +296,7 @@ export default function UsuariosPage() {
                             type="checkbox"
                             checked={p.puede_eliminar}
                             onChange={() => handlePermissionToggle(p.modulo, 'puede_eliminar')}
-                            className="h-4.5 w-4.5 rounded border-neutral-800 bg-neutral-900 text-white focus:ring-0 focus:ring-offset-0 cursor-pointer accent-white"
+                            className="h-4.5 w-4.5 rounded border-white/20 bg-white/5 text-rose-500 focus:ring-rose-500/50 focus:ring-offset-0 cursor-pointer accent-rose-500 transition-all"
                           />
                         </td>
                       </tr>
@@ -303,12 +306,12 @@ export default function UsuariosPage() {
               </div>
 
               {/* Action Footer */}
-              <div className="flex justify-end pt-4 border-t border-neutral-900 mt-4 shrink-0">
+              <div className="flex justify-end pt-5 border-t border-white/10 mt-4 shrink-0">
                 <button
                   type="button"
                   onClick={handleSavePermisos}
                   disabled={savingPermisos}
-                  className="flex items-center gap-2 bg-white hover:bg-neutral-200 text-black font-semibold px-6 py-2.5 rounded-xl transition-all duration-300 transform hover:scale-[1.01] cursor-pointer text-sm shadow-[0_4px_20px_rgba(255,255,255,0.15)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 bg-gradient-to-r from-[#C29B4F] to-[#E5C37A] hover:from-[#E5C37A] hover:to-[#C29B4F] text-black font-semibold px-6 py-2.5 rounded-xl transition-all duration-300 transform hover:scale-[1.02] cursor-pointer text-sm shadow-[0_4px_20px_rgba(223,185,113,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {savingPermisos ? (
                     <>

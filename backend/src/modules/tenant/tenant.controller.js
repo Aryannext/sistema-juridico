@@ -5,8 +5,16 @@ const { extname } = require('path');
 exports.updatePerfil = async (req, res) => {
   try {
     const { tenant_id } = req;
-    const { nombre, razon_social, nit, telefono, direccion, ciudad } = req.body;
+    const { nombre, razon_social, nit, telefono, direccion, ciudad, horas_ocultar_notificaciones } = req.body;
     let logo_url = undefined;
+
+    let horas = undefined;
+    if (horas_ocultar_notificaciones !== undefined) {
+      horas = parseInt(horas_ocultar_notificaciones, 10);
+      if (isNaN(horas) || horas < 0) {
+        return res.status(400).json({ error: 'Las horas de ocultamiento de notificaciones deben ser un número entero no negativo' });
+      }
+    }
 
     // Handle Logo upload to Supabase Storage
     if (req.file) {
@@ -41,7 +49,8 @@ exports.updatePerfil = async (req, res) => {
         ...(telefono && { telefono }),
         ...(direccion && { direccion }),
         ...(ciudad && { ciudad }),
-        ...(logo_url && { logo_url })
+        ...(logo_url && { logo_url }),
+        ...(horas !== undefined && { horas_ocultar_notificaciones: horas })
       }
     });
 

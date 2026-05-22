@@ -32,6 +32,7 @@ model Tenant {
   direccion    String?
   ciudad       String?     @db.VarChar(100)
   created_at   DateTime    @default(now())
+  horas_ocultar_notificaciones Int @default(48)
 
   usuarios            Usuario[]
   clientes            Cliente[]
@@ -69,6 +70,11 @@ model Usuario {
   expira_2fa         DateTime?
   token_verificacion String?    @db.VarChar(100)
   create_at          DateTime   @default(now())
+
+  preferencia_canal        CanalNotificacion     @default(AMBOS)
+  pref_prioridad_audiencia PrioridadNotificacion @default(MEDIA)
+  pref_prioridad_termino   PrioridadNotificacion @default(ALTA)
+  pref_prioridad_tarea     PrioridadNotificacion @default(BAJA)
 
   tenant               Tenant              @relation(fields: [tenant_id], references: [id_tenant])
   permisos             PermisoRol[]
@@ -388,6 +394,7 @@ model Notificacion {
   referencia_tipo String?               @db.VarChar(50)
   id_referencia   String?               @db.Uuid
   created_at      DateTime              @default(now())
+  updated_at      DateTime              @default(now()) @updatedAt
 
   tenant  Tenant  @relation(fields: [tenant_id], references: [id_tenant])
   usuario Usuario @relation(fields: [id_usuario], references: [id_usuario])

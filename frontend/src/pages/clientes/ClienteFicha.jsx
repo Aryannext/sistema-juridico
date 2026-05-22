@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import api from '../../api/axios';
 import { 
   ArrowLeft, User, Building2, Phone, Mail, MapPin, Calendar, FileText, 
-  Briefcase, Plus, AlertCircle, Eye, ShieldAlert, Award, FileCode2 
+  Briefcase, Plus, AlertCircle, Eye, ShieldAlert, Award, FileCode2, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -13,6 +14,11 @@ export default function ClienteFicha() {
   const [cliente, setCliente] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showProcesoModal, setShowProcesoModal] = useState(false);
+
+  // Portal Access States
+  const [showPortalModal, setShowPortalModal] = useState(false);
+  const [portalPassword, setPortalPassword] = useState('');
+  const [enablingPortal, setEnablingPortal] = useState(false);
 
   // Form states for creating a Proceso directly for this client
   const [numeroRadicado, setNumeroRadicado] = useState('');
@@ -62,6 +68,27 @@ export default function ClienteFicha() {
     fetchCliente();
     fetchAbogados();
   }, [id]);
+
+  const handleEnablePortalAccess = async (e) => {
+    e.preventDefault();
+    if (!portalPassword) {
+      toast.error('La contraseña es obligatoria');
+      return;
+    }
+    try {
+      setEnablingPortal(true);
+      const res = await api.post(`/clientes/${id}/portal-access`, { password: portalPassword });
+      toast.success(res.data.message || 'Acceso al portal habilitado con éxito.');
+      setShowPortalModal(false);
+      setPortalPassword('');
+      fetchCliente();
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.error || 'Error al habilitar el acceso al portal.');
+    } finally {
+      setEnablingPortal(false);
+    }
+  };
 
   const handleCreateProceso = async (e) => {
     e.preventDefault();
@@ -121,7 +148,7 @@ export default function ClienteFicha() {
           <span className="text-xs uppercase font-bold tracking-wider text-neutral-500">
             Ficha de Cliente
           </span>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-neutral-300 to-neutral-500 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent">
             {cliente.nombre}
           </h1>
         </div>
@@ -131,22 +158,22 @@ export default function ClienteFicha() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Profile Card */}
-        <div className="lg:col-span-1 bg-gradient-to-b from-neutral-950 to-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-xl space-y-6">
+        <div className="lg:col-span-1 bg-neutral-950/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.6)] space-y-6">
           <div className="flex flex-col items-center text-center py-4">
-            <div className="w-20 h-20 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-center mb-4 text-white shadow-inner">
+            <div className="w-20 h-20 rounded-2xl bg-[#DFB971]/10 border border-[#DFB971]/30 flex items-center justify-center mb-4 text-[#DFB971] shadow-[0_0_15px_rgba(223,185,113,0.15)]">
               {cliente.tipo === 'NATURAL' ? <User size={40} /> : <Building2 size={40} />}
             </div>
             <h2 className="text-xl font-bold text-white">{cliente.nombre}</h2>
             <span className={`px-3 py-1 rounded-full text-xs font-semibold mt-2 ${
               cliente.tipo === 'NATURAL' 
-                ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
-                : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                ? 'bg-white/5 text-white border border-white/10' 
+                : 'bg-[#DFB971]/10 text-[#DFB971] border border-[#DFB971]/20'
             }`}>
               {cliente.tipo === 'NATURAL' ? 'Persona Natural' : 'Persona Jurídica'}
             </span>
           </div>
 
-          <div className="border-t border-neutral-800/80 pt-6 space-y-4">
+          <div className="border-t border-white/10 pt-6 space-y-4">
             <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-widest">
               Información de Identificación
             </h3>
@@ -186,14 +213,14 @@ export default function ClienteFicha() {
             </div>
           </div>
 
-          <div className="border-t border-neutral-800/80 pt-6 space-y-4">
+          <div className="border-t border-white/10 pt-6 space-y-4">
             <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-widest">
               Datos de Contacto
             </h3>
             
             <div className="space-y-3.5 text-sm">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400">
+                <div className="w-8 h-8 rounded-lg bg-[#DFB971]/5 border border-[#DFB971]/20 flex items-center justify-center text-[#DFB971]">
                   <Phone size={14} />
                 </div>
                 <div>
@@ -203,7 +230,7 @@ export default function ClienteFicha() {
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400">
+                <div className="w-8 h-8 rounded-lg bg-[#DFB971]/5 border border-[#DFB971]/20 flex items-center justify-center text-[#DFB971]">
                   <Mail size={14} />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -214,7 +241,7 @@ export default function ClienteFicha() {
 
               {cliente.direccion && (
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400">
+                  <div className="w-8 h-8 rounded-lg bg-[#DFB971]/5 border border-[#DFB971]/20 flex items-center justify-center text-[#DFB971]">
                     <MapPin size={14} />
                   </div>
                   <div>
@@ -225,18 +252,46 @@ export default function ClienteFicha() {
               )}
             </div>
           </div>
+
+          {/* Portal Access Trigger */}
+          <div className="border-t border-white/10 pt-6 space-y-3">
+            <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-widest flex items-center gap-1.5">
+              <FileCode2 size={13} />
+              Portal del Cliente
+            </h3>
+            <p className="text-[11px] text-neutral-400">
+              Permite al cliente ingresar a su portal para revisar sus procesos, novedades y documentos.
+            </p>
+            {cliente.tiene_acceso_portal ? (
+              <button
+                disabled
+                className="w-full flex items-center justify-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold px-4 py-2.5 rounded-xl transition-all cursor-not-allowed text-xs"
+              >
+                <AlertCircle size={14} />
+                <span>Acceso al Portal Habilitado</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowPortalModal(true)}
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#C29B4F] to-[#E5C37A] hover:from-[#E5C37A] hover:to-[#C29B4F] text-black font-semibold px-4 py-2.5 rounded-xl transition-all cursor-pointer text-xs shadow-[0_0_15px_rgba(223,185,113,0.3)]"
+              >
+                <Award size={14} />
+                <span>Habilitar Acceso al Portal</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Processes/Cases section */}
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <Briefcase size={22} className="text-neutral-400" />
+              <Briefcase size={22} className="text-[#DFB971]" />
               <h2 className="text-xl font-bold text-white">Expedientes Asociados</h2>
             </div>
             <button
               onClick={() => setShowProcesoModal(true)}
-              className="flex items-center gap-2 bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all cursor-pointer"
+              className="flex items-center gap-2 bg-white/5 border border-white/10 hover:border-[#DFB971]/50 hover:bg-white/10 text-[#DFB971] text-xs font-semibold px-4 py-2 rounded-xl transition-all cursor-pointer"
             >
               <Plus size={14} />
               <span>Abrir Expediente</span>
@@ -245,7 +300,7 @@ export default function ClienteFicha() {
 
           {/* List of Processes */}
           {!cliente.procesos || cliente.procesos.length === 0 ? (
-            <div className="text-center py-20 rounded-3xl bg-neutral-950/50 border border-neutral-900">
+            <div className="text-center py-20 rounded-3xl bg-neutral-950/40 backdrop-blur-xl border border-white/10">
               <Briefcase className="mx-auto text-neutral-800 mb-4" size={48} />
               <h3 className="text-lg font-semibold text-neutral-300">No hay expedientes activos</h3>
               <p className="text-neutral-500 mt-1 text-sm">Este cliente aún no tiene procesos jurídicos registrados.</p>
@@ -256,7 +311,7 @@ export default function ClienteFicha() {
                 <div
                   key={proceso.id_proceso}
                   onClick={() => navigate(`/procesos/${proceso.id_proceso}`)}
-                  className="group relative flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-2xl bg-neutral-950 hover:bg-neutral-900/40 border border-neutral-900 hover:border-neutral-800 transition-all duration-300 cursor-pointer"
+                  className="group relative flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-2xl bg-neutral-950/40 backdrop-blur-xl border border-white/10 hover:border-[#DFB971]/50 transition-all duration-300 cursor-pointer shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2.5">
@@ -276,7 +331,7 @@ export default function ClienteFicha() {
 
                   <div className="flex items-center gap-3">
                     <span className="text-xs text-neutral-500">Ver Detalles</span>
-                    <div className="w-8 h-8 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 group-hover:text-white transition-colors">
+                    <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-neutral-400 group-hover:text-[#DFB971] group-hover:border-[#DFB971]/50 transition-colors">
                       <Eye size={14} />
                     </div>
                   </div>
@@ -288,9 +343,9 @@ export default function ClienteFicha() {
       </div>
 
       {/* Modal - Create Proceso */}
-      {showProcesoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
-          <div className="relative w-full max-w-2xl bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
+      {showProcesoModal && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="relative w-full max-w-4xl bg-neutral-950/90 backdrop-blur-2xl border border-[#DFB971]/30 rounded-3xl p-8 shadow-[0_0_40px_rgba(0,0,0,0.8)] animate-scale-in my-8">
             <button
               onClick={() => setShowProcesoModal(false)}
               className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
@@ -298,7 +353,7 @@ export default function ClienteFicha() {
               <X size={24} />
             </button>
 
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-neutral-400 bg-clip-text text-transparent mb-2">
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent mb-2">
               Abrir Nuevo Expediente
             </h2>
             <p className="text-sm text-neutral-400 mb-6">
@@ -318,7 +373,7 @@ export default function ClienteFicha() {
                     value={numeroRadicado}
                     onChange={(e) => setNumeroRadicado(e.target.value)}
                     placeholder="Ej. 110014003002202600123"
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm"
                   />
                 </div>
 
@@ -332,7 +387,7 @@ export default function ClienteFicha() {
                     value={juzgado}
                     onChange={(e) => setJuzgado(e.target.value)}
                     placeholder="Ej. Juzgado 5 Civil Municipal"
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm"
                   />
                 </div>
 
@@ -343,7 +398,7 @@ export default function ClienteFicha() {
                   <select
                     value={tipoProceso}
                     onChange={(e) => setTipoProceso(e.target.value)}
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm"
                   >
                     <option value="CIVIL">Civil</option>
                     <option value="PENAL">Penal</option>
@@ -363,7 +418,7 @@ export default function ClienteFicha() {
                     value={claseProceso}
                     onChange={(e) => setClaseProceso(e.target.value)}
                     placeholder="Ej. Ejecutivo, Ordinario"
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm"
                   />
                 </div>
 
@@ -376,7 +431,7 @@ export default function ClienteFicha() {
                     value={areaDerecho}
                     onChange={(e) => setAreaDerecho(e.target.value)}
                     placeholder="Ej. Comercial, Familia"
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm"
                   />
                 </div>
 
@@ -388,7 +443,7 @@ export default function ClienteFicha() {
                     type="date"
                     value={fechaRadicado}
                     onChange={(e) => setFechaRadicado(e.target.value)}
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300"
                   />
                 </div>
 
@@ -399,7 +454,7 @@ export default function ClienteFicha() {
                   <select
                     value={idAbogadoResp}
                     onChange={(e) => setIdAbogadoResp(e.target.value)}
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm"
                   >
                     {abogados.map(abogado => (
                       <option key={abogado.id_usuario} value={abogado.id_usuario}>
@@ -421,14 +476,79 @@ export default function ClienteFicha() {
                 </button>
                 <button
                   type="submit"
-                  className="bg-white hover:bg-neutral-200 text-black font-semibold px-6 py-2.5 rounded-xl transition-all cursor-pointer text-sm"
+                  className="bg-gradient-to-r from-[#C29B4F] to-[#E5C37A] hover:from-[#E5C37A] hover:to-[#C29B4F] text-black shadow-[0_0_15px_rgba(223,185,113,0.3)] font-semibold px-6 py-2.5 rounded-xl transition-all cursor-pointer text-sm"
                 >
                   Abrir Expediente
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal - Habilitar Acceso al Portal */}
+      {showPortalModal && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-md bg-neutral-950/90 backdrop-blur-2xl border border-[#DFB971]/30 rounded-3xl p-8 shadow-[0_0_40px_rgba(0,0,0,0.8)] animate-scale-in">
+            <button
+              onClick={() => {
+                setShowPortalModal(false);
+                setPortalPassword('');
+              }}
+              className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <X size={20} />
+            </button>
+
+            <h2 className="text-xl font-bold bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent mb-2">
+              Habilitar Acceso al Portal
+            </h2>
+            <p className="text-xs text-neutral-400 mb-6">
+              Se creará una cuenta de usuario exclusiva para <span className="text-white font-medium">{cliente.nombre}</span> utilizando su correo electrónico <span className="text-white font-medium">{cliente.email}</span>.
+            </p>
+
+            <form onSubmit={handleEnablePortalAccess} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                  Contraseña del Cliente
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={portalPassword}
+                  onChange={(e) => setPortalPassword(e.target.value)}
+                  placeholder="Ingrese contraseña temporal"
+                  className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
+                />
+                <p className="text-[10px] text-neutral-500">
+                  Esta contraseña se le debe proporcionar de forma segura al cliente para su primer inicio de sesión.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-neutral-900">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPortalModal(false);
+                    setPortalPassword('');
+                  }}
+                  className="px-4 py-2 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white transition-colors cursor-pointer text-xs font-semibold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={enablingPortal}
+                  className="bg-gradient-to-r from-[#C29B4F] to-[#E5C37A] hover:from-[#E5C37A] hover:to-[#C29B4F] text-black font-semibold px-4 py-2 rounded-xl transition-all cursor-pointer text-xs flex items-center gap-1.5 disabled:opacity-50 shadow-[0_0_15px_rgba(223,185,113,0.3)]"
+                >
+                  {enablingPortal ? 'Procesando...' : 'Habilitar Acceso'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

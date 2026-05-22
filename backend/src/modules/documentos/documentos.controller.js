@@ -298,9 +298,14 @@ exports.getVersionDownloadUrl = async (req, res) => {
         if (['VISIBLE_COLAB', 'COMPARTIDO_CLIENTE'].includes(doc.visibilidad)) {
           isAuthorized = true;
         }
-      } else if (req.user.rol === 'CLIENTE' && proceso.id_cliente === req.user.id_usuario) {
-        if (doc.visibilidad === 'COMPARTIDO_CLIENTE') {
-          isAuthorized = true;
+      } else if (req.user.rol === 'CLIENTE') {
+        const cliente = await prisma.cliente.findFirst({
+          where: { email: req.user.email, tenant_id: req.tenant_id }
+        });
+        if (cliente && proceso.id_cliente === cliente.id_cliente) {
+          if (doc.visibilidad === 'COMPARTIDO_CLIENTE') {
+            isAuthorized = true;
+          }
         }
       }
 
@@ -311,6 +316,20 @@ exports.getVersionDownloadUrl = async (req, res) => {
       if (req.user.rol === 'CLIENTE') {
         return res.status(403).json({ error: 'No tienes autorización para acceder a este documento general.' });
       }
+    }
+
+    // Registrar acción en la bitácora si es un cliente
+    if (req.user.rol === 'CLIENTE') {
+      await prisma.bitacoraAuditoria.create({
+        data: {
+          tenant_id: req.tenant_id,
+          id_usuario: req.user.id_usuario,
+          accion: 'DESCARGAR_DOCUMENTO_CLIENTE',
+          modulo: 'PORTAL',
+          detalle: `El cliente descargó la versión ${version.numero_version} del documento "${doc.nombre}"`,
+          ip_adress: req.ip || '127.0.0.1'
+        }
+      });
     }
 
     // Generar URL firmada de 15 minutos en Supabase Storage

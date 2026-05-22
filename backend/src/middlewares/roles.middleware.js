@@ -14,6 +14,13 @@ const requirePermission = (modulo, accion) => {
         return next();
       }
 
+      // Clientes pueden leer documentos y expedientes (el controlador valida propiedad)
+      if (user.rol === 'CLIENTE') {
+        if ((modulo === 'DOCS' || modulo === 'PROCESOS' || modulo === 'PORTAL') && accion === 'LEER') {
+          return next();
+        }
+      }
+
       const permiso = await prisma.permisoRol.findFirst({
         where: {
           id_usuario: user.id_usuario,

@@ -11,5 +11,6 @@ router.post('/', requirePermission('CLIENTES', 'CREAR'), auditMiddleware('CLIENT
 router.get('/', requirePermission('CLIENTES', 'LEER'), clientesController.getClientes);
 router.get('/:id', requirePermission('CLIENTES', 'LEER'), clientesController.getClienteById);
 router.put('/:id', requirePermission('CLIENTES', 'EDITAR'), auditMiddleware('CLIENTES'), clientesController.updateCliente);
+router.post('/:id/portal-access', requirePermission('CLIENTES', 'EDITAR'), auditMiddleware('CLIENTES'), clientesController.createPortalAccess);
 
 module.exports = router;

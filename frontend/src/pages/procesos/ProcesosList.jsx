@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import api from '../../api/axios';
 import { 
   Briefcase, Plus, Search, Calendar, User, FileText, 
@@ -183,7 +184,7 @@ export default function ProcesosList() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-neutral-200 to-neutral-500 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent">
             Expedientes Jurídicos
           </h1>
           <p className="text-neutral-400 mt-1">
@@ -199,7 +200,7 @@ export default function ProcesosList() {
             }
             setShowModal(true);
           }}
-          className="flex items-center justify-center gap-2 bg-white hover:bg-neutral-200 text-black font-semibold px-5 py-2.5 rounded-xl transition-all duration-300 transform hover:scale-[1.02] shadow-[0_4px_20px_rgba(255,255,255,0.15)] cursor-pointer text-sm"
+          className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#C29B4F] to-[#E5C37A] hover:from-[#E5C37A] hover:to-[#C29B4F] text-black font-semibold px-5 py-2.5 rounded-xl transition-all duration-300 transform hover:scale-[1.02] shadow-[0_4px_20px_rgba(223,185,113,0.3)] cursor-pointer text-sm"
         >
           <Plus size={18} />
           <span>Nuevo Expediente</span>
@@ -221,7 +222,7 @@ export default function ProcesosList() {
               setSearch(e.target.value);
               setPage(1); // Reset page on new search
             }}
-            className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-neutral-500 transition-colors"
+            className="w-full bg-neutral-950/40 backdrop-blur-xl border border-white/10 focus:border-[#DFB971] shadow-[0_4px_16px_rgba(0,0,0,0.4)] focus:outline-none rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-neutral-500 transition-colors"
           />
           {search.trim().length > 0 && search.trim().length < 3 && (
             <span className="absolute left-3 -bottom-5 text-[10px] text-neutral-500 animate-pulse">
@@ -238,7 +239,7 @@ export default function ProcesosList() {
               setFilterEstado(e.target.value);
               setPage(1); // Reset page
             }}
-            className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 cursor-pointer"
+            className="w-full bg-neutral-950/40 backdrop-blur-xl border border-white/10 focus:border-[#DFB971] shadow-[0_4px_16px_rgba(0,0,0,0.4)] focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 cursor-pointer"
           >
             <option value="">Todos los Estados</option>
             <option value="ACTIVO">Activo</option>
@@ -256,7 +257,7 @@ export default function ProcesosList() {
               setFilterJurisdiccion(e.target.value);
               setPage(1); // Reset page
             }}
-            className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 cursor-pointer"
+            className="w-full bg-neutral-950/40 backdrop-blur-xl border border-white/10 focus:border-[#DFB971] shadow-[0_4px_16px_rgba(0,0,0,0.4)] focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 cursor-pointer"
           >
             <option value="">Todas las Jurisdicciones</option>
             <option value="CIVIL">Civil</option>
@@ -273,11 +274,11 @@ export default function ProcesosList() {
       {loading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((n) => (
-            <div key={n} className="h-24 rounded-2xl bg-neutral-950 border border-neutral-900 animate-pulse" />
+            <div key={n} className="h-24 rounded-2xl bg-neutral-950/40 backdrop-blur-xl border border-white/10 animate-pulse" />
           ))}
         </div>
       ) : procesos.length === 0 ? (
-        <div className="text-center py-20 rounded-3xl bg-neutral-950/50 border border-neutral-900">
+        <div className="text-center py-20 rounded-3xl bg-neutral-950/40 backdrop-blur-xl border border-white/10">
           <Briefcase className="mx-auto text-neutral-700 mb-4" size={48} />
           <h3 className="text-lg font-semibold text-neutral-300">No se encontraron expedientes</h3>
           <p className="text-neutral-500 mt-1 text-sm">Pruebe modificando los filtros o cree un expediente.</p>
@@ -288,11 +289,11 @@ export default function ProcesosList() {
             <div
               key={proceso.id_proceso}
               onClick={() => navigate(`/procesos/${proceso.id_proceso}`)}
-              className="group relative flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 rounded-2xl bg-gradient-to-b from-neutral-950 to-neutral-900/60 border border-neutral-800 hover:border-neutral-700 transition-all duration-300 cursor-pointer shadow-lg animate-fade-in"
+              className="group relative flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 rounded-2xl bg-neutral-950/40 backdrop-blur-xl border border-white/10 hover:border-[#DFB971]/50 transition-all duration-300 cursor-pointer shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] animate-fade-in"
             >
               <div className="space-y-1.5 max-w-xl">
                 <div className="flex flex-wrap items-center gap-2.5">
-                  <span className="text-base font-bold text-white group-hover:text-neutral-200 transition-colors">
+                  <span className="text-base font-bold text-white group-hover:text-[#DFB971] transition-colors">
                     Radicado: {proceso.numero_radicado}
                   </span>
                   <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold ${
@@ -300,7 +301,7 @@ export default function ProcesosList() {
                       ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                       : proceso.estado === 'SUSPENDIDO'
                       ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                      : 'bg-neutral-800 text-neutral-400 border border-neutral-700'
+                      : 'bg-white/5 text-neutral-400 border border-white/10'
                   }`}>
                     {proceso.estado}
                   </span>
@@ -335,20 +336,20 @@ export default function ProcesosList() {
                       setDeleteJustificacion('');
                       setShowDeleteModal(true);
                     }}
-                    className="p-2 bg-neutral-950 border border-neutral-800 hover:border-rose-500/30 hover:bg-rose-500/10 text-neutral-500 hover:text-rose-400 rounded-xl transition-all cursor-pointer"
+                    className="p-2 bg-white/5 border border-white/10 hover:border-rose-500/50 hover:bg-rose-500/10 text-neutral-500 hover:text-rose-400 rounded-xl transition-all cursor-pointer"
                     title="Eliminar Expediente Definitivamente"
                   >
                     <Trash2 size={16} />
                   </button>
                 )}
                 <span className="text-xs text-neutral-500 group-hover:text-neutral-300 transition-colors">Administrar</span>
-                <div className="w-9 h-9 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 group-hover:text-white transition-colors">
+                <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-neutral-400 group-hover:text-[#DFB971] group-hover:border-[#DFB971]/50 transition-colors">
                   <ArrowRight size={16} />
                 </div>
               </div>
               
               {/* Decorative premium card accent */}
-              <div className="absolute inset-y-0 left-0 w-[2px] bg-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-l-2xl" />
+              <div className="absolute inset-y-0 left-0 w-[2px] bg-[#DFB971] opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-l-2xl" />
             </div>
           ))}
         </div>
@@ -356,7 +357,7 @@ export default function ProcesosList() {
 
       {/* Pagination Controls (HU-31) */}
       {pagination && pagination.pages > 1 && (
-        <div className="flex items-center justify-between border-t border-neutral-800 pt-6">
+        <div className="flex items-center justify-between border-t border-white/10 pt-6">
           <p className="text-xs text-neutral-500">
             Mostrando página <span className="text-white font-bold">{pagination.page}</span> de <span className="text-white font-bold">{pagination.pages}</span> ({pagination.total} registros en total)
           </p>
@@ -364,7 +365,7 @@ export default function ProcesosList() {
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-xl text-neutral-400 hover:text-white disabled:opacity-40 disabled:hover:text-neutral-400 cursor-pointer disabled:cursor-not-allowed transition-all text-xs font-bold flex items-center gap-1"
+              className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-neutral-400 hover:text-[#DFB971] disabled:opacity-40 disabled:hover:text-neutral-400 cursor-pointer disabled:cursor-not-allowed transition-all text-xs font-bold flex items-center gap-1"
             >
               <ChevronLeft size={14} />
               <span>Anterior</span>
@@ -372,7 +373,7 @@ export default function ProcesosList() {
             <button
               onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
               disabled={page === pagination.pages}
-              className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-xl text-neutral-400 hover:text-white disabled:opacity-40 disabled:hover:text-neutral-400 cursor-pointer disabled:cursor-not-allowed transition-all text-xs font-bold flex items-center gap-1"
+              className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-neutral-400 hover:text-[#DFB971] disabled:opacity-40 disabled:hover:text-neutral-400 cursor-pointer disabled:cursor-not-allowed transition-all text-xs font-bold flex items-center gap-1"
             >
               <span>Siguiente</span>
               <ChevronRight size={14} />
@@ -382,9 +383,9 @@ export default function ProcesosList() {
       )}
 
       {/* Modal - Create Proceso */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
-          <div className="relative w-full max-w-2xl bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
+      {showModal && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="relative w-full max-w-4xl bg-neutral-950/90 backdrop-blur-2xl border border-[#DFB971]/30 rounded-3xl p-8 shadow-[0_0_40px_rgba(0,0,0,0.8)] animate-scale-in my-8">
             <button
               onClick={() => setShowModal(false)}
               className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
@@ -392,7 +393,7 @@ export default function ProcesosList() {
               <X size={24} />
             </button>
 
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-neutral-400 bg-clip-text text-transparent mb-6">
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent mb-6">
               Abrir Nuevo Expediente
             </h2>
 
@@ -406,7 +407,7 @@ export default function ProcesosList() {
                   <select
                     value={idCliente}
                     onChange={(e) => setIdCliente(e.target.value)}
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 cursor-pointer"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 cursor-pointer"
                   >
                     {clientes.map(cli => (
                       <option key={cli.id_cliente} value={cli.id_cliente}>
@@ -426,7 +427,7 @@ export default function ProcesosList() {
                     value={numeroRadicado}
                     onChange={(e) => setNumeroRadicado(e.target.value)}
                     placeholder="Ej. 110014003002202600123"
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
                   />
                 </div>
 
@@ -440,7 +441,7 @@ export default function ProcesosList() {
                     value={juzgado}
                     onChange={(e) => setJuzgado(e.target.value)}
                     placeholder="Ej. Juzgado 5 Civil Municipal"
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
                   />
                 </div>
 
@@ -451,7 +452,7 @@ export default function ProcesosList() {
                   <select
                     value={tipoProceso}
                     onChange={(e) => setTipoProceso(e.target.value)}
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 cursor-pointer"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 cursor-pointer"
                   >
                     <option value="CIVIL">Civil</option>
                     <option value="PENAL">Penal</option>
@@ -471,7 +472,7 @@ export default function ProcesosList() {
                     value={claseProceso}
                     onChange={(e) => setClaseProceso(e.target.value)}
                     placeholder="Ej. Ejecutivo, Ordinario"
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
                   />
                 </div>
 
@@ -484,7 +485,7 @@ export default function ProcesosList() {
                     value={areaDerecho}
                     onChange={(e) => setAreaDerecho(e.target.value)}
                     placeholder="Ej. Comercial, Civil"
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
                   />
                 </div>
 
@@ -496,7 +497,7 @@ export default function ProcesosList() {
                     type="date"
                     value={fechaRadicado}
                     onChange={(e) => setFechaRadicado(e.target.value)}
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 cursor-pointer"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 cursor-pointer"
                   />
                 </div>
 
@@ -507,7 +508,7 @@ export default function ProcesosList() {
                   <select
                     value={idAbogadoResp}
                     onChange={(e) => setIdAbogadoResp(e.target.value)}
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 cursor-pointer"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 cursor-pointer"
                   >
                     {abogados.map(abogado => (
                       <option key={abogado.id_usuario} value={abogado.id_usuario}>
@@ -529,20 +530,21 @@ export default function ProcesosList() {
                 </button>
                 <button
                   type="submit"
-                  className="bg-white hover:bg-neutral-200 text-black font-semibold px-6 py-2.5 rounded-xl transition-all cursor-pointer text-sm"
+                  className="bg-gradient-to-r from-[#C29B4F] to-[#E5C37A] hover:from-[#E5C37A] hover:to-[#C29B4F] text-black shadow-[0_0_15px_rgba(223,185,113,0.3)] font-semibold px-6 py-2.5 rounded-xl transition-all cursor-pointer text-sm"
                 >
                   Abrir Expediente
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal - Cascade Delete Proceso (HU-34) */}
-      {showDeleteModal && deletingProceso && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
-          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
+      {showDeleteModal && deletingProceso && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="relative w-full max-w-lg bg-neutral-950/90 backdrop-blur-2xl border border-rose-500/30 rounded-3xl p-8 shadow-[0_0_40px_rgba(225,29,72,0.3)] animate-scale-in my-8">
             <button
               onClick={() => setShowDeleteModal(false)}
               className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
@@ -608,7 +610,7 @@ export default function ProcesosList() {
                     value={deleteJustificacion}
                     onChange={(e) => setDeleteJustificacion(e.target.value)}
                     placeholder="Escriba detalladamente el motivo de la eliminación definitiva para la bitácora de auditoría..."
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-white resize-none placeholder-neutral-500"
+                    className="w-full bg-white/5 border border-white/10 focus:border-rose-500 focus:outline-none rounded-xl px-4 py-3 text-sm text-white resize-none placeholder-neutral-500"
                   />
                 </div>
 
@@ -642,7 +644,8 @@ export default function ProcesosList() {
               </form>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
