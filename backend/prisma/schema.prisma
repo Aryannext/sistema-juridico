@@ -1,0 +1,425 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum TipoTenant {
+  CONSULTORIO
+  INDEPENDIENTE
+}
+
+enum PlanTenant {
+  BASICO
+  PRO
+}
+
+model Tenant {
+  id_tenant    String      @id @default(uuid()) @db.Uuid
+  nombre       String      @db.VarChar(150)
+  tipo         TipoTenant
+  razon_social String?     @db.VarChar(200)
+  nit          String?     @db.VarChar(20)
+  email_admin  String      @db.VarChar(150)
+  plan         PlanTenant?
+  activo       Boolean     @default(true)
+  logo_url     String?
+  telefono     String?     @db.VarChar(20)
+  direccion    String?
+  ciudad       String?     @db.VarChar(100)
+  created_at   DateTime    @default(now())
+
+  usuarios            Usuario[]
+  clientes            Cliente[]
+  procesos            Proceso[]
+  partes_procesales   ParteProcesal[]
+  documentos          Documento[]
+  audiencias          Audiencia[]
+  terminos_judiciales TerminoJudicial[]
+  notificaciones      Notificacion[]
+  bitacora_auditoria  BitacoraAuditoria[]
+  historial_proceso   HistorialProceso[]
+
+  @@map("tenants")
+}
+
+enum RolUsuario {
+  ADMINISTRADOR
+  ABOGADO
+  ASISTENTE
+  CLIENTE
+}
+
+model Usuario {
+  id_usuario    String     @id @default(uuid()) @db.Uuid
+  tenant_id     String     @db.Uuid
+  nombre        String     @db.VarChar(100)
+  email         String     @unique @db.VarChar(150)
+  password_hash String
+  rol           RolUsuario
+  activo        Boolean    @default(true)
+  dos_factores  Boolean    @default(false)
+  create_at     DateTime   @default(now())
+
+  tenant               Tenant              @relation(fields: [tenant_id], references: [id_tenant])
+  permisos             PermisoRol[]
+  clientes_creados     Cliente[]
+  procesos_resp        Proceso[]
+  proceso_abogados     ProcesoAbogado[]
+  documentos_subidos   Documento[]
+  versiones_subidas    VersionDocumento[]
+  audiencias_creadas   Audiencia[]
+  terminos_gestionados TerminoJudicial[]   @relation("TerminoGestionado")
+  terminos_creados     TerminoJudicial[]   @relation("TerminoCreado")
+  notificaciones       Notificacion[]
+  bitacora             BitacoraAuditoria[]
+  historial_realizado  HistorialProceso[]
+
+  @@map("usuario")
+}
+
+enum ModuloPermiso {
+  PROCESOS
+  DOCS
+  CLIENTES
+  AUDIENCIAS
+  TERMINO
+  REPORTES
+  PORTAL
+}
+
+model PermisoRol {
+  id_permiso     String        @id @default(uuid()) @db.Uuid
+  id_usuario     String        @db.Uuid
+  modulo         ModuloPermiso
+  puede_leer     Boolean       @default(false)
+  puede_crear    Boolean       @default(false)
+  puede_editar   Boolean       @default(false)
+  puede_eliminar Boolean       @default(false)
+
+  usuario Usuario @relation(fields: [id_usuario], references: [id_usuario])
+
+  @@map("permiso_rol")
+}
+
+enum TipoCliente {
+  NATURAL
+  JURIDICA
+}
+
+model Cliente {
+  id_cliente       String      @id @default(uuid()) @db.Uuid
+  tenant_id        String      @db.Uuid
+  tipo             TipoCliente
+  nombre           String      @db.VarChar(150)
+  razon_social     String?     @db.VarChar(150)
+  tipo_documento   String      @db.VarChar(20)
+  numero_documento String      @unique @db.VarChar(30)
+  nit              String?     @db.VarChar(20)
+  representante    String?     @db.VarChar(100)
+  telefono         String      @db.VarChar(20)
+  email            String      @db.VarChar(150)
+  direccion        String?
+  fecha_nacimiento DateTime?   @db.Date
+  id_usuario       String      @db.Uuid
+  create_at        DateTime    @default(now())
+
+  tenant          Tenant    @relation(fields: [tenant_id], references: [id_tenant])
+  usuario_creador Usuario   @relation(fields: [id_usuario], references: [id_usuario])
+  procesos        Proceso[]
+
+  @@map("clientes")
+}
+
+enum EstadoProceso {
+  ACTIVO
+  SUSPENDIDO
+  ARCHIVADO
+  FINALIZADO
+}
+
+model Proceso {
+  id_proceso      String        @id @default(uuid()) @db.Uuid
+  tenant_id       String        @db.Uuid
+  numero_radicado String        @unique @db.VarChar(50)
+  juzgado         String?       @db.VarChar(150)
+  tipo_proceso    String        @db.VarChar(100)
+  clase_proceso   String?       @db.VarChar(100)
+  area_derecho    String?       @db.VarChar(100)
+  estado          EstadoProceso
+  fecha_radicado  DateTime?     @db.Date
+  id_cliente      String        @db.Uuid
+  id_abogado_resp String        @db.Uuid
+  create_at       DateTime      @default(now())
+  update_at       DateTime      @updatedAt
+
+  tenant       Tenant  @relation(fields: [tenant_id], references: [id_tenant])
+  cliente      Cliente @relation(fields: [id_cliente], references: [id_cliente])
+  abogado_resp Usuario @relation(fields: [id_abogado_resp], references: [id_usuario])
+
+  abogados   ProcesoAbogado[]
+  partes     ParteProcesal[]
+  documentos Documento[]
+  audiencias Audiencia[]
+  terminos   TerminoJudicial[]
+  historial  HistorialProceso[]
+
+  @@map("procesos")
+}
+
+enum RolProcesoAbogado {
+  ABOGADO
+  ASISTENTE
+}
+
+model ProcesoAbogado {
+  id             String            @default(uuid()) @db.Uuid
+  id_proceso     String            @db.Uuid
+  id_usuario     String            @db.Uuid
+  rol_en_proceso RolProcesoAbogado
+  asigned_at     DateTime          @default(now())
+
+  proceso Proceso @relation(fields: [id_proceso], references: [id_proceso])
+  usuario Usuario @relation(fields: [id_usuario], references: [id_usuario])
+
+  @@id([id_proceso, id_usuario])
+  @@map("proceso_abogados")
+}
+
+enum TipoParte {
+  DEMANDANTE
+  DEMANDADO
+  VICTIMA
+  TERCEROS
+  CLIENTE
+  OTRO
+}
+
+model ParteProcesal {
+  id_procesal  String    @id @default(uuid()) @db.Uuid
+  tenant_id    String    @db.Uuid
+  id_proceso   String    @db.Uuid
+  nombre       String    @db.VarChar(150)
+  tipo         TipoParte
+  id_documento String?   @db.VarChar(30)
+  created_at   DateTime  @default(now())
+
+  tenant  Tenant  @relation(fields: [tenant_id], references: [id_tenant])
+  proceso Proceso @relation(fields: [id_proceso], references: [id_proceso])
+
+  @@map("partes_procesales")
+}
+
+enum CategoriaDocumento {
+  DEMANDA
+  PRUEBA
+  CONTRATO
+  NOTIFICACION
+  PROVIDENCIA
+  OTRO
+}
+
+enum VisibilidadDocumento {
+  PRIVADO
+  COMPARTIDO_CLIENTE
+  VISIBLE_COLAB
+}
+
+enum EstadoDocumento {
+  ACTIVO
+  INACTIVO
+  REEMPLAZADO
+}
+
+model Documento {
+  id_documento      String               @id @default(uuid()) @db.Uuid
+  tenant_id         String               @db.Uuid
+  id_proceso        String?              @db.Uuid
+  nombre            String               @db.VarChar(200)
+  categoria         CategoriaDocumento
+  visibilidad       VisibilidadDocumento
+  estado            EstadoDocumento
+  id_version_actual String?              @db.Uuid
+  subido_por        String               @db.Uuid
+  created_at        DateTime             @default(now())
+
+  tenant         Tenant            @relation(fields: [tenant_id], references: [id_tenant])
+  proceso        Proceso?          @relation(fields: [id_proceso], references: [id_proceso])
+  usuario        Usuario           @relation(fields: [subido_por], references: [id_usuario])
+  version_actual VersionDocumento? @relation("VersionActual", fields: [id_version_actual], references: [id_version])
+
+  versiones VersionDocumento[] @relation("VersionesDocumento")
+
+  @@map("documentos")
+}
+
+model VersionDocumento {
+  id_version     String   @id @default(uuid()) @db.Uuid
+  id_documento   String   @db.Uuid
+  numero_version Int
+  url_archivo    String
+  nombre_archivo String   @db.VarChar(255)
+  tamano_bytes   Int
+  formato        String   @db.VarChar(10)
+  subido_por     String   @db.Uuid
+  created_at     DateTime @default(now())
+
+  documento           Documento   @relation("VersionesDocumento", fields: [id_documento], references: [id_documento])
+  usuario             Usuario     @relation(fields: [subido_por], references: [id_usuario])
+  documentos_actuales Documento[] @relation("VersionActual")
+
+  @@map("versiones_documentos")
+}
+
+enum EstadoAudiencia {
+  PROGRAMADA
+  REALIZADA
+  CANCELADA
+}
+
+model Audiencia {
+  id_audiencia String          @id @default(uuid()) @db.Uuid
+  tenant_id    String          @db.Uuid
+  id_proceso   String          @db.Uuid
+  nombre       String          @db.VarChar(150)
+  tipo         String          @db.VarChar(100)
+  fecha_hora   DateTime
+  lugar        String          @db.VarChar(200)
+  estado       EstadoAudiencia
+  created_by   String          @db.Uuid
+  created_at   DateTime        @default(now())
+
+  tenant  Tenant  @relation(fields: [tenant_id], references: [id_tenant])
+  proceso Proceso @relation(fields: [id_proceso], references: [id_proceso])
+  creador Usuario @relation(fields: [created_by], references: [id_usuario])
+
+  recordatorios RecordatorioAudiencia[]
+
+  @@map("audiencias")
+}
+
+enum CanalNotificacion {
+  PLATAFORMA
+  EMAIL
+  AMBOS
+}
+
+model RecordatorioAudiencia {
+  id_recordatorio String            @id @default(uuid()) @db.Uuid
+  id_audiencia    String            @db.Uuid
+  minutos_antes   Int
+  canal           CanalNotificacion
+  enviado         Boolean           @default(false)
+  fecha_envio     DateTime?
+
+  audiencia Audiencia @relation(fields: [id_audiencia], references: [id_audiencia])
+
+  @@map("recordatorios_audiencia")
+}
+
+enum EstadoTermino {
+  PENDIENTE
+  CUMPLIDO
+  CUMPLIDO_TARDIO
+  INCUMPLIDO
+}
+
+model TerminoJudicial {
+  id_termino        String        @id @default(uuid()) @db.Uuid
+  tenant_id         String        @db.Uuid
+  id_proceso        String        @db.Uuid
+  nombre            String        @db.VarChar(150)
+  fecha_vencimiento DateTime
+  es_critico        Boolean       @default(false)
+  estado            EstadoTermino
+  gestionado_por    String?       @db.Uuid
+  fecha_gestion     DateTime?
+  justificacion     String?
+  created_by        String        @db.Uuid
+  created_at        DateTime      @default(now())
+
+  tenant          Tenant   @relation(fields: [tenant_id], references: [id_tenant])
+  proceso         Proceso  @relation(fields: [id_proceso], references: [id_proceso])
+  usuario_gestion Usuario? @relation("TerminoGestionado", fields: [gestionado_por], references: [id_usuario])
+  usuario_creador Usuario  @relation("TerminoCreado", fields: [created_by], references: [id_usuario])
+
+  recordatorios RecordatorioTermino[]
+
+  @@map("terminos_judiciales")
+}
+
+model RecordatorioTermino {
+  id_recordatorio  String            @id @default(uuid()) @db.Uuid
+  id_termino       String            @db.Uuid
+  fecha_hora_envio DateTime
+  canal            CanalNotificacion
+  enviado          Boolean           @default(false)
+  fecha_envio_real DateTime?
+
+  termino TerminoJudicial @relation(fields: [id_termino], references: [id_termino])
+
+  @@map("recordatorios_termino")
+}
+
+enum PrioridadNotificacion {
+  ALTA
+  MEDIA
+  BAJA
+}
+
+model Notificacion {
+  id_notificacion String                @id @default(uuid()) @db.Uuid
+  tenant_id       String                @db.Uuid
+  id_usuario      String                @db.Uuid
+  titulo          String                @db.VarChar(200)
+  mensaje         String
+  prioridad       PrioridadNotificacion
+  leida           Boolean               @default(false)
+  gestionada      Boolean               @default(false)
+  referencia_tipo String?               @db.VarChar(50)
+  id_referencia   String?               @db.Uuid
+  created_at      DateTime              @default(now())
+
+  tenant  Tenant  @relation(fields: [tenant_id], references: [id_tenant])
+  usuario Usuario @relation(fields: [id_usuario], references: [id_usuario])
+
+  @@map("notificaciones")
+}
+
+model BitacoraAuditoria {
+  id_bitacora String   @id @default(uuid()) @db.Uuid
+  tenant_id   String   @db.Uuid
+  id_usuario  String   @db.Uuid
+  accion      String   @db.VarChar(100)
+  modulo      String   @db.VarChar(50)
+  detalle     String
+  ip_adress   String   @db.VarChar(45)
+  create_at   DateTime @default(now())
+
+  tenant  Tenant  @relation(fields: [tenant_id], references: [id_tenant])
+  usuario Usuario @relation(fields: [id_usuario], references: [id_usuario])
+
+  @@map("bitacora_auditoria")
+}
+
+model HistorialProceso {
+  id_historial     String   @id @default(uuid()) @db.Uuid
+  tenant_id        String   @db.Uuid
+  id_proceso       String   @db.Uuid
+  campo_modificado String   @db.VarChar(100)
+  valor_anterior   String?
+  valor_nuevo      String?
+  accion           String   @db.VarChar(100)
+  realizado_por    String   @db.Uuid
+  created_at       DateTime @default(now())
+
+  tenant  Tenant  @relation(fields: [tenant_id], references: [id_tenant])
+  proceso Proceso @relation(fields: [id_proceso], references: [id_proceso])
+  usuario Usuario @relation(fields: [realizado_por], references: [id_usuario])
+
+  @@map("historial_proceso")
+}
