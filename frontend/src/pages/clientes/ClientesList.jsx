@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
+
 import api from '../../api/axios';
 import { Plus, Search, User, Building2, Phone, Mail, FileText, ArrowRight, X, Calendar, MapPin, Eye } from 'lucide-react';
 import { toast } from 'sonner';
