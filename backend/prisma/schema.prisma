@@ -55,15 +55,20 @@ enum RolUsuario {
 }
 
 model Usuario {
-  id_usuario    String     @id @default(uuid()) @db.Uuid
-  tenant_id     String     @db.Uuid
-  nombre        String     @db.VarChar(100)
-  email         String     @unique @db.VarChar(150)
-  password_hash String
-  rol           RolUsuario
-  activo        Boolean    @default(true)
-  dos_factores  Boolean    @default(false)
-  create_at     DateTime   @default(now())
+  id_usuario         String     @id @default(uuid()) @db.Uuid
+  tenant_id          String     @db.Uuid
+  nombre             String     @db.VarChar(100)
+  email              String     @unique @db.VarChar(150)
+  password_hash      String
+  rol                RolUsuario
+  activo             Boolean    @default(true)
+  dos_factores       Boolean    @default(false)
+  intentos_fallidos  Int        @default(0)
+  bloqueado_hasta    DateTime?
+  codigo_2fa         String?    @db.VarChar(10)
+  expira_2fa         DateTime?
+  token_verificacion String?    @db.VarChar(100)
+  create_at          DateTime   @default(now())
 
   tenant               Tenant              @relation(fields: [tenant_id], references: [id_tenant])
   permisos             PermisoRol[]
