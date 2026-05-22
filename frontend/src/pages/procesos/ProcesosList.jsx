@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import { 
   Briefcase, Plus, Search, Calendar, User, FileText, 
@@ -180,7 +180,9 @@ export default function ProcesosList() {
   };
 
   return (
-    <div className="space-y-8 animate-fade-in pb-16">
+    <div className="flex flex-col lg:flex-row gap-8 animate-fade-in relative items-start pb-16">
+      {/* Left Column: List */}
+      <div className={`transition-all duration-300 space-y-8 ${showModal ? 'w-full lg:w-2/3' : 'w-full'}`}>
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -382,23 +384,27 @@ export default function ProcesosList() {
         </div>
       )}
 
-      {/* Modal - Create Proceso */}
-      {showModal && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="relative w-full max-w-4xl bg-neutral-950/90 backdrop-blur-2xl border border-[#DFB971]/30 rounded-3xl p-8 shadow-[0_0_40px_rgba(0,0,0,0.8)] animate-scale-in my-8">
+        </div>
+      )}
+      </div>
+
+      {/* Right Column: Side Panel Form */}
+      {showModal && (
+        <div className="w-full lg:w-1/3 bg-neutral-950/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] sticky top-0 h-[calc(100vh-8rem)] overflow-y-auto custom-scrollbar animate-fade-in">
+          <div className="relative">
             <button
               onClick={() => setShowModal(false)}
-              className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              className="absolute top-0 right-0 text-neutral-400 hover:text-white transition-colors cursor-pointer"
             >
-              <X size={24} />
+              <X size={20} />
             </button>
 
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent mb-6">
+            <h2 className="text-xl font-bold bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent mb-6 pr-8">
               Abrir Nuevo Expediente
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-5">
                 
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
@@ -407,7 +413,7 @@ export default function ProcesosList() {
                   <select
                     value={idCliente}
                     onChange={(e) => setIdCliente(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 cursor-pointer"
+                    className="w-full bg-[#111] border border-white/10 text-white focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm cursor-pointer"
                   >
                     {clientes.map(cli => (
                       <option key={cli.id_cliente} value={cli.id_cliente}>
@@ -427,7 +433,7 @@ export default function ProcesosList() {
                     value={numeroRadicado}
                     onChange={(e) => setNumeroRadicado(e.target.value)}
                     placeholder="Ej. 110014003002202600123"
-                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-500"
                   />
                 </div>
 
@@ -441,7 +447,7 @@ export default function ProcesosList() {
                     value={juzgado}
                     onChange={(e) => setJuzgado(e.target.value)}
                     placeholder="Ej. Juzgado 5 Civil Municipal"
-                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-500"
                   />
                 </div>
 
@@ -452,7 +458,7 @@ export default function ProcesosList() {
                   <select
                     value={tipoProceso}
                     onChange={(e) => setTipoProceso(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 cursor-pointer"
+                    className="w-full bg-[#111] border border-white/10 text-white focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm cursor-pointer"
                   >
                     <option value="CIVIL">Civil</option>
                     <option value="PENAL">Penal</option>
@@ -472,7 +478,7 @@ export default function ProcesosList() {
                     value={claseProceso}
                     onChange={(e) => setClaseProceso(e.target.value)}
                     placeholder="Ej. Ejecutivo, Ordinario"
-                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-500"
                   />
                 </div>
 
@@ -485,7 +491,7 @@ export default function ProcesosList() {
                     value={areaDerecho}
                     onChange={(e) => setAreaDerecho(e.target.value)}
                     placeholder="Ej. Comercial, Civil"
-                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-500"
                   />
                 </div>
 
@@ -497,7 +503,7 @@ export default function ProcesosList() {
                     type="date"
                     value={fechaRadicado}
                     onChange={(e) => setFechaRadicado(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 cursor-pointer"
+                    className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm cursor-pointer"
                   />
                 </div>
 
@@ -508,7 +514,7 @@ export default function ProcesosList() {
                   <select
                     value={idAbogadoResp}
                     onChange={(e) => setIdAbogadoResp(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 cursor-pointer"
+                    className="w-full bg-[#111] border border-white/10 text-white focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm cursor-pointer"
                   >
                     {abogados.map(abogado => (
                       <option key={abogado.id_usuario} value={abogado.id_usuario}>
@@ -537,8 +543,7 @@ export default function ProcesosList() {
               </div>
             </form>
           </div>
-        </div>,
-        document.body
+        </div>
       )}
 
       {/* Modal - Cascade Delete Proceso (HU-34) */}

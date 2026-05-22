@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import { Plus, Search, User, Building2, Phone, Mail, FileText, ArrowRight, X, Calendar, MapPin, Eye } from 'lucide-react';
 import { toast } from 'sonner';
@@ -91,17 +91,19 @@ export default function ClientesList() {
   });
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent">
-            Gestión de Clientes
-          </h1>
-          <p className="text-neutral-400 mt-1">
-            Administra los expedientes de personas naturales y jurídicas de tu consultorio.
-          </p>
-        </div>
+    <div className="flex flex-col lg:flex-row gap-8 animate-fade-in relative items-start">
+      {/* Left Column: List */}
+      <div className={`transition-all duration-300 space-y-8 ${showModal ? 'w-full lg:w-2/3' : 'w-full'}`}>
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent">
+              Gestión de Clientes
+            </h1>
+            <p className="text-neutral-400 mt-1">
+              Administra los expedientes de personas naturales y jurídicas de tu consultorio.
+            </p>
+          </div>
         <button
           onClick={() => setShowModal(true)}
           className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#C29B4F] to-[#E5C37A] hover:from-[#E5C37A] hover:to-[#C29B4F] text-black font-semibold px-5 py-2.5 rounded-xl transition-all duration-300 transform hover:scale-[1.02] shadow-[0_4px_20px_rgba(223,185,113,0.3)] cursor-pointer"
@@ -187,20 +189,22 @@ export default function ClientesList() {
             </div>
           ))}
         </div>
+        </div>
       )}
+      </div>
 
-      {/* Modal - Create Cliente */}
-      {showModal && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="relative w-full max-w-4xl bg-neutral-950/90 backdrop-blur-2xl border border-[#DFB971]/30 rounded-3xl p-8 shadow-[0_0_40px_rgba(0,0,0,0.8)] animate-scale-in my-8">
+      {/* Right Column: Side Panel Form */}
+      {showModal && (
+        <div className="w-full lg:w-1/3 bg-neutral-950/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] sticky top-0 h-[calc(100vh-8rem)] overflow-y-auto custom-scrollbar animate-fade-in">
+          <div className="relative">
             <button
               onClick={() => setShowModal(false)}
-              className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              className="absolute top-0 right-0 text-neutral-400 hover:text-white transition-colors cursor-pointer"
             >
-              <X size={24} />
+              <X size={20} />
             </button>
 
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent mb-6">
+            <h2 className="text-xl font-bold bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent mb-6 pr-8">
               Registrar Nuevo Cliente
             </h2>
 
@@ -234,7 +238,7 @@ export default function ClientesList() {
               </div>
 
               {/* Dynamic Inputs depending on type */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-5">
                 {tipo === 'NATURAL' ? (
                   <>
                     <div className="space-y-2">
@@ -247,7 +251,7 @@ export default function ClientesList() {
                         value={nombre}
                         onChange={(e) => setNombre(e.target.value)}
                         placeholder="Ej. Juan Pérez"
-                        className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm"
+                        className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-3 text-sm transition-all"
                       />
                     </div>
                     <div className="space-y-2">
@@ -257,7 +261,7 @@ export default function ClientesList() {
                       <select
                         value={tipoDocumento}
                         onChange={(e) => setTipoDocumento(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm"
+                        className="w-full bg-[#111] border border-white/10 text-white focus:border-[#DFB971] outline-none rounded-xl px-4 py-3 text-sm transition-all cursor-pointer"
                       >
                         <option value="CC">Cédula de Ciudadanía</option>
                         <option value="CE">Cédula de Extranjería</option>
@@ -274,7 +278,7 @@ export default function ClientesList() {
                         value={numeroDocumento}
                         onChange={(e) => setNumeroDocumento(e.target.value)}
                         placeholder="Ej. 10293847"
-                        className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm"
+                        className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-3 text-sm transition-all"
                       />
                     </div>
                     <div className="space-y-2">
@@ -285,7 +289,7 @@ export default function ClientesList() {
                         type="date"
                         value={fechaNacimiento}
                         onChange={(e) => setFechaNacimiento(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300"
+                        className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-3 text-sm transition-all"
                       />
                     </div>
                   </>
@@ -301,7 +305,7 @@ export default function ClientesList() {
                         value={razonSocial}
                         onChange={(e) => setRazonSocial(e.target.value)}
                         placeholder="Ej. Inversiones SAS"
-                        className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm"
+                        className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-3 text-sm transition-all"
                       />
                     </div>
                     <div className="space-y-2">
@@ -314,7 +318,7 @@ export default function ClientesList() {
                         value={nit}
                         onChange={(e) => setNit(e.target.value)}
                         placeholder="Ej. 900.123.456-7"
-                        className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm"
+                        className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-3 text-sm transition-all"
                       />
                     </div>
                     <div className="space-y-2">
@@ -327,7 +331,7 @@ export default function ClientesList() {
                         value={representante}
                         onChange={(e) => setRepresentante(e.target.value)}
                         placeholder="Nombre completo"
-                        className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm"
+                        className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-3 text-sm transition-all"
                       />
                     </div>
                   </>
@@ -344,7 +348,7 @@ export default function ClientesList() {
                     value={telefono}
                     onChange={(e) => setTelefono(e.target.value)}
                     placeholder="Ej. 3001234567"
-                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm"
+                    className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-3 text-sm transition-all"
                   />
                 </div>
                 <div className="space-y-2">
@@ -357,7 +361,7 @@ export default function ClientesList() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="correo@ejemplo.com"
-                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm"
+                    className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-3 text-sm transition-all"
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
@@ -369,7 +373,7 @@ export default function ClientesList() {
                     value={direccion}
                     onChange={(e) => setDireccion(e.target.value)}
                     placeholder="Calle 123 # 45 - 67, Oficina 101"
-                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm"
+                    className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-3 text-sm transition-all"
                   />
                 </div>
               </div>
@@ -392,8 +396,7 @@ export default function ClientesList() {
               </div>
             </form>
           </div>
-        </div>,
-        document.body
+        </div>
       )}
     </div>
   );

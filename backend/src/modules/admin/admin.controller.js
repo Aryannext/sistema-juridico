@@ -1,4 +1,68 @@
 const prisma = require('../../config/prisma');
+const { hashPassword } = require('../../utils/bcrypt');
+
+// Crear un nuevo colaborador (Abogado o Asistente)
+exports.createUsuario = async (req, res) => {
+  try {
+    const { nombre, email, password, rol } = req.body;
+    const { tenant_id } = req;
+
+    if (!nombre || !email || !password || !rol) {
+      return res.status(400).json({ error: 'Todos los campos son requeridos' });
+    }
+
+    if (!['ABOGADO', 'ASISTENTE'].includes(rol)) {
+      return res.status(400).json({ error: 'Rol inválido' });
+    }
+
+    const existingUser = await prisma.usuario.findUnique({
+      where: { email }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ error: 'El correo electrónico ya está en uso' });
+    }
+
+    const hashedPassword = await hashPassword(password);
+
+    const newUser = await prisma.usuario.create({
+      data: {
+        tenant_id,
+        nombre,
+        email,
+        password_hash: hashedPassword,
+        rol,
+        activo: true
+      }
+    });
+
+    await prisma.bitacoraAuditoria.create({
+      data: {
+        tenant_id,
+        id_usuario: req.user.id_usuario,
+        accion: 'CREAR_COLABORADOR',
+        modulo: 'CONFIGURACION',
+        detalle: `Colaborador creado: ${nombre} (${email}) con rol ${rol}`,
+        ip_adress: req.ip || '127.0.0.1'
+      }
+    });
+
+    res.status(201).json({
+      message: 'Colaborador creado exitosamente',
+      user: {
+        id_usuario: newUser.id_usuario,
+        nombre: newUser.nombre,
+        email: newUser.email,
+        rol: newUser.rol,
+        activo: newUser.activo,
+        create_at: newUser.create_at
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al crear el colaborador' });
+  }
+};
 
 // Obtener bitácora de auditoría para el tenant
 exports.getAuditoria = async (req, res) => {

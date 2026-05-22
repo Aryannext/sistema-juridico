@@ -10,6 +10,10 @@ export default function UsuariosPage() {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [loadingPermisos, setLoadingPermisos] = useState(false);
   const [savingPermisos, setSavingPermisos] = useState(false);
+  
+  const [showNewUserForm, setShowNewUserForm] = useState(false);
+  const [newUser, setNewUser] = useState({ nombre: '', email: '', password: '', rol: 'ASISTENTE' });
+  const [creatingUser, setCreatingUser] = useState(false);
 
   // Available modules for granular control
   const modulos = ['CLIENTES', 'PROCESOS', 'DOCS', 'AUDIENCIAS', 'TERMINO'];
@@ -113,17 +117,43 @@ export default function UsuariosPage() {
     }
   };
 
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    try {
+      setCreatingUser(true);
+      const res = await api.post('/admin/usuarios', newUser);
+      toast.success(res.data.message || 'Colaborador creado con éxito.');
+      setShowNewUserForm(false);
+      setNewUser({ nombre: '', email: '', password: '', rol: 'ASISTENTE' });
+      fetchUsers(); // Refresh list
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.error || 'Error al crear el colaborador.');
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-fade-in pb-16">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent flex items-center gap-3">
-          <KeyRound className="text-[#DFB971]" size={32} />
-          <span>Usuarios y Permisos Granulares</span>
-        </h1>
-        <p className="text-neutral-400 mt-1">
-          Asigna privilegios específicos de lectura, escritura y eliminación por cada módulo a los abogados del consultorio.
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent flex items-center gap-3">
+            <KeyRound className="text-[#DFB971]" size={32} />
+            <span>Usuarios y Permisos Granulares</span>
+          </h1>
+          <p className="text-neutral-400 mt-1">
+            Asigna privilegios específicos de lectura, escritura y eliminación por cada módulo a los abogados del consultorio.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowNewUserForm(true)}
+          className="flex items-center gap-2 bg-[#DFB971] hover:bg-[#c29b4f] text-black font-bold px-5 py-2.5 rounded-xl transition-all shadow-[0_0_15px_rgba(223,185,113,0.3)] hover:scale-105 cursor-pointer"
+        >
+          <Sparkles size={18} />
+          Nuevo Colaborador
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -148,11 +178,14 @@ export default function UsuariosPage() {
           ) : (
             <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
               {usuarios.map(userItem => {
-                const isSelected = selectedUsuario?.id_usuario === userItem.id_usuario;
+                const isSelected = selectedUsuario?.id_usuario === userItem.id_usuario && !showNewUserForm;
                 return (
                   <div
                     key={userItem.id_usuario}
-                    onClick={() => handleSelectUser(userItem)}
+                    onClick={() => {
+                      setShowNewUserForm(false);
+                      handleSelectUser(userItem);
+                    }}
                     className={`group relative p-4 rounded-2xl border transition-all duration-300 cursor-pointer flex flex-col gap-1.5 overflow-hidden ${
                       isSelected
                         ? 'bg-white/10 border-[#DFB971]/50 shadow-[0_0_15px_rgba(223,185,113,0.15)] transform scale-[1.02]'
@@ -199,20 +232,92 @@ export default function UsuariosPage() {
           )}
         </div>
 
-        {/* Right Column: Permission Matrix */}
-        <div className="lg:col-span-2 rounded-3xl bg-neutral-950/40 backdrop-blur-xl border border-white/10 p-8 flex flex-col h-[600px] shadow-[0_8px_32px_0_rgba(0,0,0,0.4)]">
-          <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4 shrink-0">
-            <div className="flex items-center gap-2">
-              <Shield size={20} className="text-[#DFB971]" />
-              <h2 className="text-xl font-bold text-white">Matriz de Privilegios</h2>
+        {/* Right Column: Permission Matrix or New User Form */}
+        <div className="lg:col-span-2 rounded-3xl bg-neutral-950/40 backdrop-blur-xl border border-white/10 p-8 flex flex-col h-[600px] shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] relative overflow-y-auto custom-scrollbar">
+          
+          {showNewUserForm ? (
+            <div className="flex-1 flex flex-col animate-fade-in">
+              <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
+                <div className="flex items-center gap-2">
+                  <UserCheck size={20} className="text-[#DFB971]" />
+                  <h2 className="text-xl font-bold text-white">Registrar Nuevo Colaborador</h2>
+                </div>
+                <button onClick={() => setShowNewUserForm(false)} className="text-neutral-400 hover:text-white transition-colors cursor-pointer text-sm">
+                  Cancelar
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateUser} className="space-y-4 max-w-lg mx-auto w-full mt-4">
+                <div>
+                  <label className="block text-xs text-neutral-400 uppercase tracking-wider mb-1 font-semibold">Nombre Completo</label>
+                  <input
+                    type="text"
+                    required
+                    value={newUser.nombre}
+                    onChange={(e) => setNewUser({...newUser, nombre: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-3 text-sm transition-all"
+                    placeholder="Ej. Ana Martínez"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-neutral-400 uppercase tracking-wider mb-1 font-semibold">Correo Electrónico</label>
+                  <input
+                    type="email"
+                    required
+                    value={newUser.email}
+                    onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-3 text-sm transition-all"
+                    placeholder="ana@despacho.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-neutral-400 uppercase tracking-wider mb-1 font-semibold">Contraseña Inicial</label>
+                  <input
+                    type="password"
+                    required
+                    value={newUser.password}
+                    onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-3 text-sm transition-all"
+                    placeholder="Asignar contraseña"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-neutral-400 uppercase tracking-wider mb-1 font-semibold">Rol del Sistema</label>
+                  <select
+                    value={newUser.rol}
+                    onChange={(e) => setNewUser({...newUser, rol: e.target.value})}
+                    className="w-full bg-[#111] border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] outline-none rounded-xl px-4 py-3 text-sm transition-all cursor-pointer"
+                  >
+                    <option value="ASISTENTE">Asistente Administrativo</option>
+                    <option value="ABOGADO">Abogado Titular</option>
+                  </select>
+                </div>
+                <div className="pt-6">
+                  <button
+                    type="submit"
+                    disabled={creatingUser}
+                    className="w-full bg-[#DFB971] hover:bg-[#c29b4f] text-black font-bold px-5 py-3.5 rounded-xl transition-all flex justify-center items-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {creatingUser ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+                    {creatingUser ? 'Registrando...' : 'Crear Colaborador'}
+                  </button>
+                </div>
+              </form>
             </div>
-            
-            {selectedUsuario && (
-              <span className="text-xs text-neutral-400">
-                Configurando para: <strong className="text-white">{selectedUsuario.nombre}</strong>
-              </span>
-            )}
-          </div>
+          ) : (
+            <>
+              <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4 shrink-0">
+                <div className="flex items-center gap-2">
+                  <Shield size={20} className="text-[#DFB971]" />
+                  <h2 className="text-xl font-bold text-white">Matriz de Privilegios</h2>
+                </div>
+                
+                {selectedUsuario && (
+                  <span className="text-xs text-neutral-400">
+                    Configurando para: <strong className="text-white">{selectedUsuario.nombre}</strong>
+                  </span>
+                )}
+              </div>
 
           {selectedUsuario?.rol === 'ADMINISTRADOR' ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm">
@@ -329,6 +434,8 @@ export default function UsuariosPage() {
 
             </div>
           )}
+          </>
+        )}
         </div>
 
       </div>

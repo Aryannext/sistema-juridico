@@ -12,6 +12,7 @@ router.get('/auditoria', adminController.getAuditoria);
 
 // Rutas de gestión de usuarios y sus permisos
 router.get('/usuarios', adminController.getUsuarios);
+router.post('/usuarios', adminController.createUsuario);
 router.get('/permisos/:id_usuario', adminController.getPermisos);
 router.put('/permisos/:id_usuario', adminController.updatePermisos);
 
