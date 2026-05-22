@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Briefcase, LogOut, LayoutDashboard, Settings, User, Scale, Bell, Menu, X } from 'lucide-react';
+import { Briefcase, LogOut, LayoutDashboard, Settings, User, Scale, Bell } from 'lucide-react';
 import { Toaster } from 'sonner';
 import api from '../../api/axios';
 
@@ -11,12 +11,6 @@ export default function PortalLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  // Close mobile menu on route change
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [location.pathname]);
 
   useEffect(() => {
     const checkNotifs = async () => {
@@ -52,36 +46,20 @@ export default function PortalLayout() {
       <div className="absolute top-[10%] left-[-5%] w-[30%] h-[30%] bg-[#DFB971]/5 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[20%] w-[40%] h-[40%] bg-white/5 blur-[120px] rounded-full pointer-events-none" />
 
-      {/* Mobile Menu Overlay */}
-      {mobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[50] lg:hidden" 
-          onClick={() => setMobileMenuOpen(false)} 
-        />
-      )}
-
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 w-72 bg-neutral-950/90 lg:bg-neutral-950/40 backdrop-blur-xl border-r border-white/10 flex flex-col z-[60] shadow-[8px_0_32px_0_rgba(0,0,0,0.5)] transition-transform duration-300 ease-in-out`}>
+      <div className="hidden lg:flex w-72 bg-neutral-950/40 backdrop-blur-xl border-r border-white/10 flex-col z-10 shadow-[8px_0_32px_0_rgba(0,0,0,0.5)]">
         
         {/* Brand */}
-        <div className="p-6 border-b border-white/10 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="inline-flex items-center justify-center p-2 rounded-xl bg-white/5 border border-white/10 shadow-[0_0_15px_rgba(223,185,113,0.1)]">
-              <Scale size={24} className="text-[#DFB971]" />
-            </div>
-            <div>
-              <h2 className="text-xl font-extrabold tracking-widest uppercase">
-                <span className="bg-gradient-to-r from-[#DFB971] via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent">SGPA</span>
-              </h2>
-              <p className="text-[10px] tracking-[0.2em] text-neutral-500 uppercase font-medium">Client Portal</p>
-            </div>
+        <div className="p-6 border-b border-white/10 flex items-center gap-3">
+          <div className="inline-flex items-center justify-center p-2 rounded-xl bg-white/5 border border-white/10 shadow-[0_0_15px_rgba(223,185,113,0.1)]">
+            <Scale size={24} className="text-[#DFB971]" />
           </div>
-          <button 
-            className="lg:hidden p-2 text-neutral-400 hover:text-white rounded-xl hover:bg-white/5"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <X size={20} />
-          </button>
+          <div>
+            <h2 className="text-xl font-extrabold tracking-widest uppercase">
+              <span className="bg-gradient-to-r from-[#DFB971] via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent">SGPA</span>
+            </h2>
+            <p className="text-[10px] tracking-[0.2em] text-neutral-500 uppercase font-medium">Client Portal</p>
+          </div>
         </div>
 
         {/* Navigation */}
@@ -136,14 +114,9 @@ export default function PortalLayout() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col relative z-10 overflow-hidden">
         {/* Topbar */}
-        <header className="h-16 border-b border-white/10 bg-neutral-950/20 backdrop-blur-md flex items-center justify-between px-4 lg:px-8 relative z-40">
+        <header className="h-16 border-b border-white/10 bg-neutral-950/20 backdrop-blur-md flex items-center justify-between px-6 lg:px-8 relative z-40">
           <div className="flex items-center gap-3 text-neutral-400 text-sm">
-            <button 
-              className="lg:hidden p-2 -ml-2 text-neutral-400 hover:text-white rounded-xl hover:bg-white/5 transition-colors cursor-pointer"
-              onClick={() => setMobileMenuOpen(true)}
-            >
-              <Menu size={20} />
-            </button>
+            <Scale size={20} className="lg:hidden text-[#DFB971]" />
             <span className="text-white font-semibold tracking-wide">Portal Workspace</span>
           </div>
           <div className="flex items-center gap-4 relative">
@@ -182,11 +155,32 @@ export default function PortalLayout() {
         </header>
 
         {/* Outlet Content */}
-        <main className="flex-1 overflow-auto p-8 custom-scrollbar">
+        <main className="flex-1 overflow-auto p-4 lg:p-8 custom-scrollbar pb-24 lg:pb-8">
           <div className="max-w-7xl mx-auto animate-fade-in">
             <Outlet />
           </div>
         </main>
+
+        {/* Mobile Bottom Navigation */}
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#0a0a0c]/95 backdrop-blur-xl border-t border-white/10 flex items-center justify-around px-2 z-50 shadow-[0_-8px_32px_0_rgba(0,0,0,0.5)] pb-safe">
+          {menuItems.map((item) => {
+            const active = isCurrent(item.path);
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-all duration-300 ${
+                  active ? 'text-[#DFB971]' : 'text-neutral-500 hover:text-neutral-300'
+                }`}
+              >
+                <div className={`p-1.5 rounded-full transition-colors ${active ? 'bg-[#DFB971]/10' : ''}`}>
+                  <item.icon size={20} />
+                </div>
+                <span className="text-[10px] font-medium tracking-wide">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
       </div>
     </div>
   );
