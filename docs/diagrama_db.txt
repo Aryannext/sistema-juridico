@@ -1,0 +1,251 @@
+table tenants {
+  id_tenant uuid [pk]
+  nombre varchar(150)
+  tipo enum("consultorio/independiente")
+  razon_social varchar(200) [null]
+  nit varchar(20) [null]
+  email_admin varchar(150)
+  plan enum("basico/pro")
+  activo bool
+  logo_url text [null]
+  telefono varchar(20) [null]
+  direccion text [null]
+  ciudad varchar(100) [null]
+  created_at timestamp
+}
+
+table usuario {
+  id_usuario uuid [pk]
+  tenant_id uuid
+  nombre varchar(100)
+  email varchar(150) [unique]
+  password_hash text
+  rol enum("admin/abogado/asistente/cliente")
+  activo bool
+  dos_factores bool
+  create_at timestamp
+}
+
+table permiso_rol {
+  id_permiso uuid [pk]
+  id_usuario uuid
+  modulo enum("procesos/docs/clientes/audiencias/termino/reportes/portal")
+  puede_leer bool
+  puede_crear bool
+  puede_editar bool
+  puede_eliminar bool
+}
+
+table clientes {
+  id_cliente uuid [pk]
+  tenant_id uuid
+  tipo enum("natural/juridica")
+  nombre varchar(150)
+  razon_social varchar(150) [null]
+  tipo_documento varchar(20)
+  numero_documento varchar(30) [unique]
+  nit varchar(20) [null]
+  representante varchar(100) [null]
+  telefono varchar(20)
+  email varchar(150)
+  direccion text [null]
+  fecha_nacimiento date [null]
+  id_usuario uuid
+  create_at timestamp
+}
+
+table procesos {
+  id_proceso uuid [pk]
+  tenant_id uuid
+  numero_radicado varchar(50) [unique]
+  juzgado varchar(150) [null]
+  tipo_proceso varchar(100)
+  clase_proceso varchar(100) [null]
+  area_derecho varchar(100) [null]
+  estado enum("activo/suspendido/archivado/finalizado")
+  fecha_radicado date [null]
+  id_cliente uuid
+  id_abogado_resp uuid
+  create_at timestamp
+  update_at timestamp
+}
+
+table proceso_abogados {
+  id uuid
+  id_proceso uuid
+  id_usuario uuid
+  indexes {
+    (id_proceso, id_usuario) [pk]
+  }
+  rol_en_proceso enum("abogado/asistente")
+  asigned_at timestamp
+}
+
+table partes_procesales {
+  id_procesal uuid
+  tenant_id uuid
+  id_proceso uuid
+  nombre varchar(150)
+  tipo enum("demandante/demandado/victima/terceros/cliente/otro")
+  id_documento varchar(30) [null]
+  created_at timestamp
+}
+
+table documentos {
+  id_documento uuid [pk]
+  tenant_id uuid
+  id_proceso uuid [null]
+  nombre varchar(200)
+  categoria enum("demanda/prueba/contrato/notif/providencia/otro")
+  visibilidad enum("privado/compartido_cliente/visible_colab")
+  estado enum("activo/inactivo/reemplazado")
+  id_version_actual uuid [null]
+  subido_por uuid
+  created_at timestamp
+}
+
+table versiones_documentos {
+  id_version uuid [pk]
+  id_documento uuid
+  numero_version integer
+  url_archivo text
+  nombre_archivo varchar(20)
+  tamano_bytes integer
+  formato varchar(10)
+  subido_por uuid
+  created_at timestamp
+}
+
+table audiencias {
+  id_audiencia uuid [pk]
+  tenant_id uuid
+  id_proceso uuid
+  nombre varchar(150)
+  tipo varchar(100)
+  fecha_hora timestamp
+  lugar varchar(200)
+  estado enum("programada/realizada/cancelada")
+  created_by uuid
+  created_at timestamp
+}
+
+table recordatorios_audiencia {
+  id_recordatorio uuid [pk]
+  id_audiencia uuid
+  minutos_antes integer
+  canal enum("plataforma/email/ambos")
+  enviado bool
+  fecha_envio timestamp [null]
+}
+
+table terminos_judiciales {
+  id_termino uuid [pk]
+  tenant_id uuid
+  id_proceso uuid
+  nombre varchar(150)
+  fecha_vencimiento timestamp
+  es_critico bool
+  estado enum("pendiente/cumplido/cumplido_tardio/incumplido")
+  gestionado_por uuid [null]
+  fecha_gestion timestamp [null]
+  justificacion text [null]
+  created_by uuid
+  created_at timestamp
+}
+
+table recordatorios_termino {
+  id_recordatorio uuid [pk]
+  id_termino uuid
+  fecha_hora_envio timestamp
+  canal enum("plataforma/email/ambos")
+  enviado bool
+  fecha_envio_real timestamp [null]
+}
+
+table notificaciones {
+  id_notificacion uuid [pk]
+  tenant_id uuid
+  id_usuario uuid
+  titulo varchar(200)
+  mensaje text
+  prioridad enum("alta/media/baja")
+  leida bool
+  gestionada bool
+  referencia_tipo varchar(50)
+  id_referencia uuid
+  created_at timestamp
+}
+
+table bitacora_auditoria {
+  id_bitacora uuid [pk]
+  tenant_id uuid
+  id_usuario uuid
+  accion varchar(100)
+  modulo varchar(50)
+  detalle text
+  ip_adress varchar(45)
+  create_at timestamp
+}
+
+table historial_proceso {
+  id_historial uuid [pk]
+  tenant_id uuid
+  id_proceso uuid
+  campo_modificado varchar(100)
+  valor_anterior text [null]
+  valor_nuevo text [null]
+  accion varchar(100)
+  realizado_por uuid
+  created_at timestamp
+}
+
+// ==========================================
+// RELACIONES (REFS)
+// ==========================================
+
+// Relaciones de Tenants
+Ref: "tenants"."id_tenant" < "usuario"."tenant_id"
+Ref: "tenants"."id_tenant" < "clientes"."tenant_id"
+Ref: "tenants"."id_tenant" < "procesos"."tenant_id"
+Ref: "tenants"."id_tenant" < "partes_procesales"."tenant_id"
+Ref: "tenants"."id_tenant" < "documentos"."tenant_id"
+Ref: "tenants"."id_tenant" < "audiencias"."tenant_id"
+Ref: "tenants"."id_tenant" < "terminos_judiciales"."tenant_id"
+Ref: "tenants"."id_tenant" < "notificaciones"."tenant_id"
+Ref: "tenants"."id_tenant" < "bitacora_auditoria"."tenant_id"
+Ref: "tenants"."id_tenant" < "historial_proceso"."tenant_id"
+
+// Relaciones de Usuarios con Configuración y Clientes
+Ref: "usuario"."id_usuario" < "permiso_rol"."id_usuario"
+Ref: "usuario"."id_usuario" < "clientes"."id_usuario"
+
+// Relaciones del Proceso y Abogados
+Ref: "clientes"."id_cliente" < "procesos"."id_cliente"
+Ref: "usuario"."id_usuario" < "procesos"."id_abogado_resp"
+Ref: "procesos"."id_proceso" < "proceso_abogados"."id_proceso"
+Ref: "usuario"."id_usuario" < "proceso_abogados"."id_usuario"
+Ref: "procesos"."id_proceso" < "partes_procesales"."id_proceso"
+
+// Relaciones de Documentos y sus Versiones
+Ref: "procesos"."id_proceso" < "documentos"."id_proceso"
+Ref: "usuario"."id_usuario" < "documentos"."subido_por"
+Ref: "documentos"."id_documento" < "versiones_documentos"."id_documento"
+Ref: "versiones_documentos"."id_version" < "documentos"."id_version_actual"
+Ref: "usuario"."id_usuario" < "versiones_documentos"."subido_por"
+
+// Relaciones de Audiencias
+Ref: "procesos"."id_proceso" < "audiencias"."id_proceso"
+Ref: "usuario"."id_usuario" < "audiencias"."created_by"
+Ref: "audiencias"."id_audiencia" < "recordatorios_audiencia"."id_audiencia"
+
+// Relaciones de Términos Judiciales
+Ref: "procesos"."id_proceso" < "terminos_judiciales"."id_proceso"
+Ref: "usuario"."id_usuario" < "terminos_judiciales"."gestionado_por"
+Ref: "usuario"."id_usuario" < "terminos_judiciales"."created_by"
+Ref: "terminos_judiciales"."id_termino" < "recordatorios_termino"."id_termino"
+
+// Relaciones del Sistema (Notificaciones y Auditoría)
+Ref: "usuario"."id_usuario" < "notificaciones"."id_usuario"
+Ref: "usuario"."id_usuario" < "bitacora_auditoria"."id_usuario"
+Ref: "procesos"."id_proceso" < "historial_proceso"."id_proceso"
+Ref: "usuario"."id_usuario" < "historial_proceso"."realizado_por"

@@ -1,0 +1,640 @@
+# Plan de Sprints — Proyecto SGPA (Jira)
+
+Este documento resume las **36 Historias de Usuario** agrupadas por los sprints definidos en la propuesta del proyecto. Se incluye el detalle de cada historia para facilitar la carga en Jira.
+
+## 📅 Sprint 1: Registro de clientes y creación de expedientes
+**Duración:** 1 Semana | **Esfuerzo Estimado:** 54 Story Points | **Total Historias:** 11
+
+| ID | Historia de Usuario | Prioridad | Puntos | RF/RN Asociados |
+| :--- | :--- | :---: | :---: | :--- |
+| **HU-01** | Inicio de sesión en el sistema | Alta | 5 | `RF01 | RNF01 | RNF02` |
+| **HU-02** | Gestión de roles y permisos por módulo | Alta | 8 | `RF02 | RF03 | RF04 | RF05 | RN02` |
+| **HU-03** | Registro de acciones en bitácora de auditoría | Alta | 5 | `RF05 | RNF03 | RN01` |
+| **HU-04** | Registrar cliente persona natural | Alta | 3 | `RF06 | RF05` |
+| **HU-05** | Registrar cliente persona jurídica | Alta | 3 | `RF06 | RF05` |
+| **HU-06** | Consultar y gestionar ficha del cliente | Alta | 3 | `RF07 | RF08 | RNF06 | RNF10` |
+| **HU-07** | Crear expediente jurídico digital | Alta | 8 | `RF09 | RF10 | RF11 | RF05` |
+| **HU-32** | Habilitar y configurar autenticación de doble factor (2FA) | Alta | 5 | `RNF02` |
+| **HU-33** | Modificar información general del expediente | Alta | 3 | `RF11 | RF05` |
+| **HU-35** | Registro en la plataforma | Alta | 8 | `RF51 | RF54` |
+| **HU-36** | Configurar perfil del tenant | Media | 3 | `RF53` |
+
+---
+
+### 🔲 HU-01: Inicio de sesión en el sistema
+- **Prioridad:** Alta
+- **Estimación:** 5 Story Points
+- **Requerimientos Asociados:** `RF01 | RNF01 | RNF02`
+
+#### Historia de Usuario
+> Como usuario registrado (Administrador, Abogado, Colaborador o Cliente), quiero iniciar sesión con mi correo electrónico o nombre de usuario y contraseña, para acceder a las funcionalidades del sistema según mi rol.
+
+#### Criterios de Aceptación
+- [ ] El formulario de login acepta correo electrónico o nombre de usuario junto con contraseña.
+- [ ] Si las credenciales son correctas, el sistema redirige al usuario al módulo correspondiente según su rol.
+- [ ] Si las credenciales son incorrectas, el sistema muestra un mensaje de error genérico sin revelar cuál campo es incorrecto.
+- [ ] Después de 5 intentos fallidos consecutivos, la cuenta se bloquea temporalmente y se notifica al usuario.
+- [ ] El usuario puede recuperar el acceso mediante correo de recuperación o con ayuda del Administrador.
+- [ ] La contraseña debe tener mínimo 8 caracteres, al menos una mayúscula, un número y un carácter especial.
+- [ ] La sesión inactiva se cierra automáticamente tras 30 minutos sin actividad.
+- [ ] El token JWT tiene vigencia máxima de 8 horas y es renovable mediante reautenticación.
+
+### 🔲 HU-02: Gestión de roles y permisos por módulo
+- **Prioridad:** Alta
+- **Estimación:** 8 Story Points
+- **Requerimientos Asociados:** `RF02 | RF03 | RF04 | RF05 | RN02`
+
+#### Historia de Usuario
+> Como Administrador, quiero asignar y modificar roles y permisos granulares (leer / crear / editar / eliminar) a cada usuario por módulo, para garantizar que cada persona acceda únicamente a la información y acciones que le corresponden.
+
+#### Criterios de Aceptación
+- [ ] El sistema maneja 4 roles: Administrador, Abogado, Colaborador y Cliente.
+- [ ] El Administrador puede asignar permisos de lectura, creación, edición y eliminación sobre los módulos: Procesos, Documentos, Clientes, Audiencias, Términos, Reportes y Portal del cliente.
+- [ ] Un Abogado solo visualiza los procesos que le fueron asignados, a menos que el Administrador le otorgue permisos adicionales.
+- [ ] Un Colaborador solo accede a las tareas que le han sido asignadas.
+- [ ] Un Cliente solo accede a su propio portal.
+- [ ] Al modificar permisos, el sistema registra en la bitácora: usuario que hizo el cambio, fecha/hora, IP y detalle de la modificación.
+- [ ] El sistema impide que el Administrador se quite a sí mismo el rol de Administrador si es el único con ese rol.
+
+### 🔲 HU-03: Registro de acciones en bitácora de auditoría
+- **Prioridad:** Alta
+- **Estimación:** 5 Story Points
+- **Requerimientos Asociados:** `RF05 | RNF03 | RN01`
+
+#### Historia de Usuario
+> Como sistema (proceso automatizado), quiero registrar automáticamente cada acción relevante con usuario, fecha/hora UTC, IP, módulo y descripción, para garantizar trazabilidad completa e inmutable de todas las operaciones críticas.
+
+#### Criterios de Aceptación
+- [ ] El sistema registra automáticamente: inicio/cierre de sesión, creación/edición/eliminación de procesos, documentos y clientes, cambio de estado de proceso, asignación de permisos y descarga de documentos.
+- [ ] Cada registro incluye: usuario, fecha y hora exacta en UTC, dirección IP, módulo afectado y descripción de la acción.
+- [ ] La bitácora es de solo lectura para todos los roles, incluido el Administrador.
+- [ ] Ningún usuario ni proceso automatizado puede editar o eliminar registros de auditoría (invariante absoluta).
+- [ ] Los registros se conservan por mínimo 5 años desde su creación.
+- [ ] El Administrador puede exportar la bitácora en CSV o PDF, con filtros por usuario, módulo y rango de fechas.
+
+### 🔲 HU-04: Registrar cliente persona natural
+- **Prioridad:** Alta
+- **Estimación:** 3 Story Points
+- **Requerimientos Asociados:** `RF06 | RF05`
+
+#### Historia de Usuario
+> Como Abogado o Administrador, quiero registrar un cliente persona natural con sus datos personales obligatorios y opcionales, para tener su información centralizada y poder asociarlo a procesos jurídicos.
+
+#### Criterios de Aceptación
+- [ ] El formulario solicita campos obligatorios: nombre completo, tipo de documento, número de documento, teléfono y correo electrónico.
+- [ ] Los campos opcionales incluyen: fecha de nacimiento y dirección.
+- [ ] El sistema valida que el número de documento no esté duplicado.
+- [ ] Al guardar, el sistema crea la ficha del cliente y la deja disponible para asociarla a procesos.
+- [ ] El sistema muestra mensaje de error descriptivo si se omite un campo obligatorio.
+- [ ] La creación del cliente queda registrada en la bitácora de auditoría.
+
+### 🔲 HU-05: Registrar cliente persona jurídica
+- **Prioridad:** Alta
+- **Estimación:** 3 Story Points
+- **Requerimientos Asociados:** `RF06 | RF05`
+
+#### Historia de Usuario
+> Como Abogado o Administrador, quiero registrar un cliente persona jurídica con sus datos corporativos, para gestionar entidades empresariales como clientes dentro del sistema.
+
+#### Criterios de Aceptación
+- [ ] El formulario solicita campos obligatorios: razón social, NIT, representante legal, teléfono y correo electrónico.
+- [ ] Los campos opcionales incluyen: dirección y datos adicionales del representante.
+- [ ] El sistema valida que el NIT no esté duplicado.
+- [ ] Al seleccionar tipo de cliente, el formulario cambia dinámicamente entre persona natural y persona jurídica.
+- [ ] La creación queda registrada en la bitácora de auditoría.
+
+### 🔲 HU-06: Consultar y gestionar ficha del cliente
+- **Prioridad:** Alta
+- **Estimación:** 3 Story Points
+- **Requerimientos Asociados:** `RF07 | RF08 | RNF06 | RNF10`
+
+#### Historia de Usuario
+> Como Abogado o Administrador, quiero consultar la ficha de un cliente y ver todos sus procesos asociados desde un solo lugar, para tener una visión completa del historial jurídico del cliente sin navegar por múltiples módulos.
+
+#### Criterios de Aceptación
+- [ ] La ficha del cliente muestra todos sus datos registrados (persona natural o jurídica).
+- [ ] La ficha incluye una sección con la lista de todos los procesos jurídicos asociados a ese cliente.
+- [ ] Desde la lista de procesos en la ficha, el abogado puede acceder directamente a cada expediente con un clic.
+- [ ] El Abogado puede editar los datos del cliente; la modificación queda registrada en bitácora.
+- [ ] No es posible eliminar definitivamente un cliente que tenga procesos activos asociados.
+
+### 🔲 HU-07: Crear expediente jurídico digital
+- **Prioridad:** Alta
+- **Estimación:** 8 Story Points
+- **Requerimientos Asociados:** `RF09 | RF10 | RF11 | RF05`
+
+#### Historia de Usuario
+> Como Abogado o Administrador, quiero crear un expediente jurídico digital asociado a un número de radicado único, para centralizar toda la información del caso en un solo lugar digital.
+
+#### Criterios de Aceptación
+- [ ] El formulario de creación solicita campos obligatorios: número de radicado, tipo de proceso, estado procesal y abogado responsable.
+- [ ] Los campos opcionales incluyen: juzgado, clase de proceso, área del derecho y fecha de radicación.
+- [ ] El sistema valida que no exista otro proceso con el mismo número de radicado; si hay duplicado, muestra error descriptivo.
+- [ ] Al guardar, el expediente queda creado con estado inicial 'Activo'.
+- [ ] El sistema asocia automáticamente el expediente al cliente seleccionado.
+- [ ] La creación queda registrada en bitácora con usuario, fecha/hora e IP.
+
+### 🔲 HU-32: Habilitar y configurar autenticación de doble factor (2FA)
+- **Prioridad:** Alta
+- **Estimación:** 5 Story Points
+- **Requerimientos Asociados:** `RNF02`
+
+#### Historia de Usuario
+> Como usuario registrado, quiero habilitar y configurar la autenticación de doble factor (2FA) en mi cuenta, para añadir una capa adicional de seguridad al iniciar sesión en la plataforma.
+
+#### Criterios de Aceptación
+- [ ] El usuario puede activar o desactivar la autenticación de doble factor (2FA) desde su perfil.
+- [ ] Al iniciar sesión con 2FA activo, el sistema solicita un código de verificación de un solo uso después del login básico.
+- [ ] El código de verificación se envía por correo electrónico (o canal configurado) y tiene una validez estricta de 5 minutos.
+- [ ] Si el código ingresado es incorrecto o expira, el sistema muestra un mensaje descriptivo y bloquea el acceso.
+- [ ] El sistema registra en la bitácora de auditoría la habilitación, deshabilitación y uso de 2FA.
+
+### 🔲 HU-33: Modificar información general del expediente
+- **Prioridad:** Alta
+- **Estimación:** 3 Story Points
+- **Requerimientos Asociados:** `RF11 | RF05`
+
+#### Historia de Usuario
+> Como Abogado responsable o Administrador, quiero editar los datos generales de un expediente (juzgado, clase de proceso, área del derecho, fecha de radicación), para corregir errores de digitación o registrar actualizaciones del proceso.
+
+#### Criterios de Aceptación
+- [ ] El usuario con permisos de edición puede modificar: juzgado, clase de proceso, área del derecho y fecha de radicación.
+- [ ] No se puede modificar el número de radicado original para evitar duplicidades o inconsistencias en auditoría.
+- [ ] Cada modificación queda registrada en el historial del proceso y en la bitácora de auditoría, indicando el usuario, fecha/hora, IP y los campos modificados.
+
+
+
+### 🔲 HU-35: Registro en la plataforma
+- **Prioridad:** Alta
+- **Estimación:** 8 Story Points
+- **Requerimientos Asociados:** `RF51 | RF54`
+
+#### Historia de Usuario
+> Como consultorio jurídico o abogado independiente, quiero registrarme desde una página pública eligiendo mi tipo de perfil, para obtener mi propio espacio aislado en el sistema.
+
+#### Criterios de Aceptación
+- [ ] La página /registro permite elegir entre abogado independiente o consultorio.
+- [ ] El formulario cambia dinámicamente según el tipo elegido.
+- [ ] Los campos obligatorios para independiente son: nombre, email y contraseña.
+- [ ] Los campos obligatorios para consultorio son: nombre del consultorio, email y contraseña.
+- [ ] Los campos opcionales para consultorio son: razón social, NIT, teléfono y ciudad.
+- [ ] El sistema envía un email de verificación al registrarse.
+- [ ] El enlace de verificación es válido por 24 horas.
+- [ ] Si expira el enlace, el usuario puede solicitar reenvío.
+- [ ] Al verificar, se crea el tenant y el usuario administrador automáticamente.
+- [ ] El nuevo usuario puede iniciar sesión de inmediato tras verificar.
+
+### 🔲 HU-36: Configurar perfil del tenant
+- **Prioridad:** Media
+- **Estimación:** 3 Story Points
+- **Requerimientos Asociados:** `RF53`
+
+#### Historia de Usuario
+> Como Administrador del tenant, quiero actualizar los datos de mi consultorio, para mantener la información actualizada.
+
+#### Criterios de Aceptación
+- [ ] El Administrador puede editar: nombre, razón social, NIT, logo, teléfono, dirección y ciudad.
+- [ ] Los cambios quedan guardados inmediatamente.
+- [ ] El logo acepta formato JPG y PNG con un tamaño máximo de 2 MB.
+- [ ] Los cambios quedan registrados en la bitácora de auditoría.
+- [ ] Ningún otro tenant puede ver ni modificar esta configuración.
+
+---
+
+## 📅 Sprint 2: Documentación y actuaciones procesales
+**Duración:** 1 Semana | **Esfuerzo Estimado:** 39 Story Points | **Total Historias:** 9
+
+| ID | Historia de Usuario | Prioridad | Puntos | RF/RN Asociados |
+| :--- | :--- | :---: | :---: | :--- |
+| **HU-08** | Asignar múltiples abogados y colaboradores a un proceso | Alta | 5 | `RF12 | RN04` |
+| **HU-09** | Cambiar el estado del proceso | Alta | 5 | `RF13 | RF14 | RN03 | RN05` |
+| **HU-10** | Consultar historial de cambios del proceso | Media | 3 | `RF14 | RNF03` |
+| **HU-11** | Registrar partes procesales de un expediente | Alta | 5 | `RF15 | RF16 | RF17` |
+| **HU-12** | Cargar documentos al expediente | Alta | 5 | `RF18 | RF20 | RF24` |
+| **HU-13** | Clasificar y organizar documentos por categoría | Alta | 3 | `RF19 | RF20 | RF21` |
+| **HU-14** | Controlar la visibilidad de documentos | Alta | 5 | `RF22 | RF43 | RF44 | RF46` |
+| **HU-31** | Buscar y filtrar procesos/expedientes | Alta | 5 | `RNF05 | RNF08` |
+| **HU-34** | Eliminar de forma definitiva expedientes (Admin) | Alta | 3 | `RNF06 | RNF10 | RF05` |
+
+---
+
+### 🔲 HU-08: Asignar múltiples abogados y colaboradores a un proceso
+- **Prioridad:** Alta
+- **Estimación:** 5 Story Points
+- **Requerimientos Asociados:** `RF12 | RN04`
+
+#### Historia de Usuario
+> Como Administrador o Abogado responsable, quiero asignar o desasignar abogados y colaboradores adicionales a un proceso, para permitir el trabajo colaborativo en casos complejos que requieren más de un profesional.
+
+#### Criterios de Aceptación
+- [ ] El sistema permite asignar uno o más abogados y/o colaboradores a un mismo proceso.
+- [ ] El proceso siempre debe tener al menos un abogado responsable asignado.
+- [ ] El sistema impide eliminar al único abogado responsable de un proceso activo sin designar simultáneamente a otro.
+- [ ] Los colaboradores asignados reciben notificaciones de audiencias y términos del proceso.
+- [ ] El cambio de asignación queda registrado en el historial del proceso y en bitácora.
+
+### 🔲 HU-09: Cambiar el estado del proceso
+- **Prioridad:** Alta
+- **Estimación:** 5 Story Points
+- **Requerimientos Asociados:** `RF13 | RF14 | RN03 | RN05`
+
+#### Historia de Usuario
+> Como Abogado responsable o Administrador, quiero modificar el estado de un proceso jurídico (activo, suspendido, archivado, finalizado), para reflejar con exactitud la situación actual del caso y controlar el ciclo de vida del expediente.
+
+#### Criterios de Aceptación
+- [ ] Los estados disponibles son: Activo, Suspendido, Archivado y Finalizado.
+- [ ] Un proceso no puede cambiar a 'Archivado' si tiene términos vencidos sin gestionar o audiencias programadas en los próximos 30 días; el sistema muestra los pendientes específicos.
+- [ ] El Administrador puede forzar el archivado con confirmación explícita, lo cual queda registrado en auditoría.
+- [ ] Un proceso en estado Finalizado o Archivado no puede regresar a Activo sin autorización del Administrador y justificación escrita registrada en historial y bitácora.
+- [ ] Cada cambio de estado queda reflejado en el historial del proceso con usuario, fecha/hora y descripción.
+
+### 🔲 HU-10: Consultar historial de cambios del proceso
+- **Prioridad:** Media
+- **Estimación:** 3 Story Points
+- **Requerimientos Asociados:** `RF14 | RNF03`
+
+#### Historia de Usuario
+> Como Abogado o Administrador, quiero visualizar el historial completo de cambios realizados sobre un expediente, para auditar internamente las modificaciones y tener trazabilidad del avance del caso.
+
+#### Criterios de Aceptación
+- [ ] El historial muestra todos los cambios registrados: modificaciones de datos, cambios de estado, reasignaciones de abogados y novedades.
+- [ ] Cada entrada del historial indica: usuario responsable, fecha y hora del cambio y descripción de la acción.
+- [ ] El historial está ordenado cronológicamente de más reciente a más antiguo.
+- [ ] El historial es de solo lectura; ningún usuario puede editarlo.
+
+### 🔲 HU-11: Registrar partes procesales de un expediente
+- **Prioridad:** Alta
+- **Estimación:** 5 Story Points
+- **Requerimientos Asociados:** `RF15 | RF16 | RF17`
+
+#### Historia de Usuario
+> Como Abogado o Administrador, quiero registrar las partes involucradas en un proceso (demandante, demandado, víctima, tercero, cliente u otras), para tener identificados todos los actores del caso y su rol dentro del proceso.
+
+#### Criterios de Aceptación
+- [ ] El sistema permite registrar partes con los roles: demandante, demandado, víctima, tercero, cliente y otros.
+- [ ] Se puede crear un proceso sin registrar todas las partes desde el inicio.
+- [ ] Si un proceso activo no tiene al menos un demandante y un demandado registrados, el sistema lo marca como incompleto.
+- [ ] El proceso incompleto muestra un aviso visible en el dashboard y en la ficha del expediente.
+- [ ] Se pueden agregar, editar o eliminar partes mientras el proceso está activo.
+
+### 🔲 HU-12: Cargar documentos al expediente
+- **Prioridad:** Alta
+- **Estimación:** 5 Story Points
+- **Requerimientos Asociados:** `RF18 | RF20 | RF24`
+
+#### Historia de Usuario
+> Como Abogado o Colaborador, quiero subir documentos digitales al expediente de un proceso, para centralizar toda la documentación del caso y eliminar el uso de carpetas físicas.
+
+#### Criterios de Aceptación
+- [ ] Los formatos aceptados son: PDF, DOCX, XLSX, JPG y PNG.
+- [ ] El tamaño máximo por archivo es 10 MB.
+- [ ] El sistema muestra un error descriptivo si el archivo supera el límite o el formato no es válido.
+- [ ] Al cargar, el sistema registra automáticamente la fecha y hora de carga.
+- [ ] El documento queda asociado al expediente seleccionado.
+- [ ] El sistema conserva un historial de creación, modificación y carga de cada documento.
+
+### 🔲 HU-13: Clasificar y organizar documentos por categoría
+- **Prioridad:** Alta
+- **Estimación:** 3 Story Points
+- **Requerimientos Asociados:** `RF19 | RF20 | RF21`
+
+#### Historia de Usuario
+> Como Abogado o Colaborador, quiero clasificar cada documento en una categoría al momento de subirlo o editarlo, para mantener el expediente organizado y poder localizar documentos rápidamente.
+
+#### Criterios de Aceptación
+- [ ] Las categorías disponibles son: Demandas, Pruebas, Contratos, Escritos, Notificaciones, Providencias y Otros.
+- [ ] El abogado puede cambiar la categoría de un documento después de cargarlo.
+- [ ] La vista del expediente permite filtrar documentos por categoría.
+- [ ] Los documentos se listan cronológicamente por fecha y hora de carga dentro de cada categoría.
+- [ ] El sistema permite asociar documentos generales no vinculados a un proceso específico.
+
+### 🔲 HU-14: Controlar la visibilidad de documentos
+- **Prioridad:** Alta
+- **Estimación:** 5 Story Points
+- **Requerimientos Asociados:** `RF22 | RF43 | RF44 | RF46`
+
+#### Historia de Usuario
+> Como Abogado o Administrador, quiero definir la visibilidad de cada documento entre tres niveles: privado, compartido con cliente o visible para colaboradores, para proteger información confidencial y controlar qué puede ver cada actor del proceso.
+
+#### Criterios de Aceptación
+- [ ] Al cargar o editar un documento, el abogado elige la visibilidad: Privado, Compartido con cliente, o Visible para colaboradores.
+- [ ] Los documentos marcados como Privados solo los ve el abogado responsable y el Administrador.
+- [ ] Los documentos 'Compartidos con cliente' aparecen en el portal del cliente para descarga.
+- [ ] Los documentos 'Visibles para colaboradores' son accesibles para los colaboradores asignados al proceso.
+- [ ] El cliente nunca puede ver notas internas, estrategias jurídicas ni documentos privados.
+
+### 🔲 HU-31: Buscar y filtrar procesos/expedientes
+- **Prioridad:** Alta
+- **Estimación:** 5 Story Points
+- **Requerimientos Asociados:** `RNF05 | RNF08`
+
+#### Historia de Usuario
+> Como Abogado o Administrador, quiero buscar y filtrar expedientes jurídicos en el sistema por radicado, nombre de cliente, juzgado, abogado responsable, estado procesal y tipo de proceso, para localizar rápidamente la información de un caso específico.
+
+#### Criterios de Aceptación
+- [ ] La búsqueda permite filtrar por: número de radicado, nombre del cliente, juzgado, abogado responsable, estado procesal y tipo de proceso.
+- [ ] El sistema muestra los resultados en menos de 2 segundos bajo carga normal.
+- [ ] La búsqueda se activa automáticamente al ingresar al menos 3 caracteres (búsqueda parcial).
+- [ ] Es posible combinar múltiples filtros de búsqueda de forma simultánea.
+- [ ] Los resultados de búsqueda se muestran paginados en grupos de 20 registros.
+- [ ] La búsqueda está disponible únicamente para Administradores, Abogados y Colaboradores en sus respectivos niveles de visibilidad.
+
+### 🔲 HU-34: Eliminar de forma definitiva expedientes (Admin)
+- **Prioridad:** Alta
+- **Estimación:** 3 Story Points
+- **Requerimientos Asociados:** `RNF06 | RNF10 | RF05`
+
+#### Historia de Usuario
+> Como Administrador, quiero eliminar de forma definitiva un expediente de proceso del sistema, para depurar información errónea bajo condiciones estrictas de seguridad.
+
+#### Criterios de Aceptación
+- [ ] La eliminación definitiva está restringida exclusivamente al usuario con rol Administrador.
+- [ ] El sistema requiere una confirmación en dos pasos antes de ejecutar la eliminación definitiva.
+- [ ] No se permite eliminar procesos que tengan documentos activos o términos judiciales pendientes sin gestionar.
+- [ ] La eliminación del expediente se registra en la bitácora de auditoría de forma inmutable, indicando el radicado, el Administrador que ejecutó la acción, la justificación, fecha/hora e IP.
+
+
+---
+
+## 📅 Sprint 3: Calendario de audiencias y control de términos
+**Duración:** 1 Semana | **Esfuerzo Estimado:** 37 Story Points | **Total Historias:** 9
+
+| ID | Historia de Usuario | Prioridad | Puntos | RF/RN Asociados |
+| :--- | :--- | :---: | :---: | :--- |
+| **HU-15** | Versionar documentos y consultar versiones anteriores | Alta | 5 | `RF23 | RN06` |
+| **HU-16** | Restringir y gestionar eliminación de documentos | Alta | 5 | `RF25 | RF26 | RN06 | RNF06` |
+| **HU-17** | Registrar audiencia o diligencia | Alta | 3 | `RF27` |
+| **HU-18** | Configurar recordatorios de audiencia | Alta | 5 | `RF28 | RF29 | RF47` |
+| **HU-19** | Reprogramar audiencia con historial de cambios | Alta | 3 | `RF30 | RF05` |
+| **HU-20** | Archivar audiencias realizadas al historial | Media | 3 | `RF31` |
+| **HU-21** | Registrar término judicial con fecha de vencimiento | Alta | 3 | `RF32 | RF34 | RF37` |
+| **HU-22** | Configurar recordatorios de término judicial | Alta | 5 | `RF33 | RF36 | RF37` |
+| **HU-23** | Gestionar el estado de un término judicial | Alta | 5 | `RF35 | RF37 | RN07 | RN08 | RN02` |
+
+---
+
+### 🔲 HU-15: Versionar documentos y consultar versiones anteriores
+- **Prioridad:** Alta
+- **Estimación:** 5 Story Points
+- **Requerimientos Asociados:** `RF23 | RN06`
+
+#### Historia de Usuario
+> Como Abogado o Administrador, quiero subir nuevas versiones de un documento y consultar o descargar cualquier versión anterior, para mantener el historial completo del documento sin perder versiones previas relevantes para el proceso.
+
+#### Criterios de Aceptación
+- [ ] Al subir un archivo sobre un documento existente, el sistema lo guarda como nueva versión sin eliminar las anteriores.
+- [ ] La versión activa siempre es la más reciente.
+- [ ] El abogado puede visualizar la lista de versiones anteriores con fecha, hora y usuario que la cargó.
+- [ ] El abogado puede descargar cualquier versión anterior.
+- [ ] Un documento marcado como Reemplazado o Inactivo no puede ser reactivado; si se necesita su contenido, debe cargarse como nueva versión.
+
+### 🔲 HU-16: Restringir y gestionar eliminación de documentos
+- **Prioridad:** Alta
+- **Estimación:** 5 Story Points
+- **Requerimientos Asociados:** `RF25 | RF26 | RN06 | RNF06`
+
+#### Historia de Usuario
+> Como Abogado o Administrador, quiero marcar documentos erróneos como reemplazados o inactivos, y restringir la eliminación definitiva de documentos críticos, para garantizar la integridad del expediente y cumplir con los estándares de trazabilidad documental.
+
+#### Criterios de Aceptación
+- [ ] El sistema no permite eliminar definitivamente documentos que hayan sido utilizados en actuaciones procesales.
+- [ ] El abogado puede marcar un documento como 'Reemplazado' o 'Inactivo' sin perder trazabilidad.
+- [ ] Un documento inactivo o reemplazado no puede ser reactivado.
+- [ ] La eliminación definitiva de un documento solo la puede realizar el Administrador tras confirmar la acción en dos pasos.
+- [ ] Toda eliminación definitiva queda registrada en la bitácora de auditoría.
+
+### 🔲 HU-17: Registrar audiencia o diligencia
+- **Prioridad:** Alta
+- **Estimación:** 3 Story Points
+- **Requerimientos Asociados:** `RF27`
+
+#### Historia de Usuario
+> Como Abogado o Administrador, quiero registrar una audiencia o diligencia asociada a un proceso con fecha, hora y lugar, para centralizar el calendario de compromisos judiciales y evitar olvidos que generen sanciones disciplinarias.
+
+#### Criterios de Aceptación
+- [ ] El formulario solicita: nombre/tipo de audiencia, fecha, hora, lugar y proceso asociado.
+- [ ] La audiencia queda vinculada al expediente del proceso.
+- [ ] Al registrar la audiencia, el sistema la muestra en el calendario general y en la ficha del proceso.
+- [ ] El sistema permite registrar múltiples audiencias para un mismo proceso.
+- [ ] El registro de la audiencia queda en bitácora.
+
+### 🔲 HU-18: Configurar recordatorios de audiencia
+- **Prioridad:** Alta
+- **Estimación:** 5 Story Points
+- **Requerimientos Asociados:** `RF28 | RF29 | RF47`
+
+#### Historia de Usuario
+> Como Abogado o Administrador, quiero configurar hasta 3 recordatorios con intervalos personalizados para cada audiencia, para recibir avisos con suficiente anticipación y garantizar que no se pierda ninguna diligencia.
+
+#### Criterios de Aceptación
+- [ ] Al crear o editar una audiencia, el sistema permite configurar hasta 3 recordatorios.
+- [ ] El intervalo de cada recordatorio es configurable por el usuario (ejemplo: 7 días, 3 días, 1 día antes).
+- [ ] El sistema sugiere valores predeterminados al crear la audiencia: 48 horas antes, 24 horas antes y el mismo día de la audiencia.
+- [ ] El abogado puede elegir el canal de notificación: solo plataforma, solo correo electrónico o ambos.
+- [ ] Las notificaciones se envían al abogado responsable y a los colaboradores asignados al proceso.
+
+### 🔲 HU-19: Reprogramar audiencia con historial de cambios
+- **Prioridad:** Alta
+- **Estimación:** 3 Story Points
+- **Requerimientos Asociados:** `RF30 | RF05`
+
+#### Historia de Usuario
+> Como Abogado o Administrador, quiero reprogramar una audiencia a una nueva fecha u hora manteniendo un historial de los cambios, para reflejar modificaciones judiciales sin perder el registro de las fechas anteriores.
+
+#### Criterios de Aceptación
+- [ ] El abogado puede modificar fecha, hora y lugar de una audiencia existente.
+- [ ] El sistema mantiene el historial de todas las versiones anteriores de la audiencia (fechas y horas originales).
+- [ ] Al reprogramar, los recordatorios se recalculan automáticamente con base en la nueva fecha.
+- [ ] Se notifica al abogado responsable y colaboradores sobre la reprogramación.
+- [ ] El cambio queda registrado en el historial del proceso y en bitácora.
+
+### 🔲 HU-20: Archivar audiencias realizadas al historial
+- **Prioridad:** Media
+- **Estimación:** 3 Story Points
+- **Requerimientos Asociados:** `RF31`
+
+#### Historia de Usuario
+> Como sistema (proceso automatizado), quiero mover automáticamente las audiencias cuya fecha ya pasó al historial del proceso, para mantener el panel de audiencias pendientes limpio y organizado, sin mezclar compromisos pasados con futuros.
+
+#### Criterios de Aceptación
+- [ ] El sistema detecta audiencias con fecha y hora ya vencida y las mueve automáticamente al historial.
+- [ ] Las audiencias archivadas siguen siendo consultables desde la ficha del proceso.
+- [ ] El movimiento al historial queda registrado con fecha y hora de la operación.
+- [ ] El abogado puede marcar manualmente una audiencia como realizada antes de que el sistema lo haga.
+
+### 🔲 HU-21: Registrar término judicial con fecha de vencimiento
+- **Prioridad:** Alta
+- **Estimación:** 3 Story Points
+- **Requerimientos Asociados:** `RF32 | RF34 | RF37`
+
+#### Historia de Usuario
+> Como Abogado o Administrador, quiero registrar manualmente un término judicial con su fecha y hora de vencimiento, para hacer seguimiento a plazos legales críticos y evitar su vencimiento por falta de atención.
+
+#### Criterios de Aceptación
+- [ ] El formulario solicita: nombre del término, fecha de vencimiento, proceso asociado e indicador de criticidad.
+- [ ] El término queda asociado al expediente del proceso.
+- [ ] El sistema mantiene visibles los términos vencidos hasta que el abogado los gestione manualmente.
+- [ ] Los términos marcados como críticos envían una alerta adicional al Administrador.
+- [ ] El registro queda en bitácora.
+
+### 🔲 HU-22: Configurar recordatorios de término judicial
+- **Prioridad:** Alta
+- **Estimación:** 5 Story Points
+- **Requerimientos Asociados:** `RF33 | RF36 | RF37`
+
+#### Historia de Usuario
+> Como Abogado o Administrador, quiero configurar hasta 3 recordatorios con fechas y horas específicas para cada término judicial, para recibir avisos oportunos antes del vencimiento y actuar dentro del plazo.
+
+#### Criterios de Aceptación
+- [ ] El sistema permite configurar hasta 3 recordatorios por término, con fecha y hora configurables.
+- [ ] Los valores predeterminados sugeridos son: 5 días, 1 día y el día del vencimiento.
+- [ ] El sistema notifica al abogado asignado y a los colaboradores del proceso.
+- [ ] El abogado elige entre notificación en plataforma, correo o ambos.
+- [ ] Los términos críticos envían adicionalmente una alerta al Administrador.
+- [ ] El sistema mantiene historial completo de todas las alertas enviadas por cada término.
+
+### 🔲 HU-23: Gestionar el estado de un término judicial
+- **Prioridad:** Alta
+- **Estimación:** 5 Story Points
+- **Requerimientos Asociados:** `RF35 | RF37 | RN07 | RN08 | RN02`
+
+#### Historia de Usuario
+> Como Abogado asignado o Administrador, quiero marcar un término judicial como cumplido, cumplido tardíamente o incumplido, para documentar oficialmente el resultado de cada plazo judicial y mantener el expediente actualizado.
+
+#### Criterios de Aceptación
+- [ ] Los estados disponibles para un término son: Cumplido, Cumplido tardíamente e Incumplido.
+- [ ] Si la gestión se registra después de la fecha de vencimiento, el sistema clasifica automáticamente el término como 'Cumplido tardíamente', sin permitir al usuario sobrescribir esa clasificación.
+- [ ] Solo el Administrador puede corregir una clasificación tardía, con justificación escrita registrada en bitácora.
+- [ ] El sistema registra quién gestionó el término y la fecha/hora exacta.
+- [ ] Una alerta crítica de término solo puede ser cerrada por el usuario destinatario o por el Administrador (únicamente si el usuario destinatario está inactivo en el sistema), de forma manual y explícita.
+
+
+---
+
+## 📅 Sprint 4: Portal del cliente y reportes
+**Duración:** 1 Semana | **Esfuerzo Estimado:** 35 Story Points | **Total Historias:** 7
+
+| ID | Historia de Usuario | Prioridad | Puntos | RF/RN Asociados |
+| :--- | :--- | :---: | :---: | :--- |
+| **HU-24** | Ver panel principal personalizado según rol | Alta | 8 | `RF38 | RF39 | RF40 | RN09` |
+| **HU-25** | Gestionar notificaciones del panel | Alta | 5 | `RF41 | RF47 | RF48 | RF49 | RF50` |
+| **HU-26** | Consultar estadísticas y reportes generales | Media | 5 | `RF42` |
+| **HU-27** | Acceder al portal del cliente | Alta | 5 | `RF43 | RF46 | RN02 | RNF02 | RNF04` |
+| **HU-28** | Descargar documentos autorizados desde el portal | Alta | 3 | `RF44 | RF45 | RF46 | RF05` |
+| **HU-29** | Configurar canal y preferencias de notificación | Media | 4 | `RF47 | RF48` |
+| **HU-30** | Visualizar y gestionar alertas críticas | Alta | 5 | `RF48 | RF49 | RF50 | RN08 | RN02` |
+
+---
+
+### 🔲 HU-24: Ver panel principal personalizado según rol
+- **Prioridad:** Alta
+- **Estimación:** 8 Story Points
+- **Requerimientos Asociados:** `RF38 | RF39 | RF40 | RN09`
+
+#### Historia de Usuario
+> Como usuario autenticado, quiero acceder a un panel principal que muestre la información más relevante según mi rol, para tener visión inmediata del estado de mis responsabilidades sin revisar módulos individuales.
+
+#### Criterios de Aceptación
+- [ ] El Administrador ve: todos los procesos, estadísticas globales, usuarios activos y alertas del sistema.
+- [ ] El Abogado ve: sus procesos asignados, términos próximos a vencer, audiencias próximas y tareas pendientes.
+- [ ] El Colaborador ve: tareas asignadas y los procesos en que participa.
+- [ ] El Cliente solo accede a su portal personal.
+- [ ] El panel prioriza visualmente: términos por vencer, términos vencidos, audiencias próximas, tareas pendientes y novedades judiciales.
+- [ ] Los elementos en riesgo (términos vencidos, audiencias sin confirmar <24h, procesos sin movimiento) se marcan en rojo.
+- [ ] El color rojo solo se usa para condiciones de riesgo procesal o disciplinario, nunca para elementos decorativos o recordatorios de baja prioridad.
+
+### 🔲 HU-25: Gestionar notificaciones del panel
+- **Prioridad:** Alta
+- **Estimación:** 5 Story Points
+- **Requerimientos Asociados:** `RF41 | RF47 | RF48 | RF49 | RF50`
+
+#### Historia de Usuario
+> Como Abogado o Administrador, quiero ver, leer y gestionar las notificaciones desde el panel principal, para mantener el panel ordenado y asegurarme de haber atendido cada alerta relevante.
+
+#### Criterios de Aceptación
+- [ ] Las notificaciones leídas y tareas completadas se ocultan del panel pasadas 48 horas desde su gestión.
+- [ ] El Administrador puede ajustar el tiempo de ocultación en la configuración general del sistema.
+- [ ] Las alertas de prioridad alta (rojo) no se pueden desactivar y permanecen visibles hasta que el usuario las gestione manualmente.
+- [ ] Las alertas de prioridad media se resaltan en naranja; las de baja prioridad, en gris.
+- [ ] Si el mismo evento genera más de 5 alertas en 10 minutos, el sistema las agrupa en un resumen.
+- [ ] El historial de notificaciones enviadas es consultable por el usuario.
+
+### 🔲 HU-26: Consultar estadísticas y reportes generales
+- **Prioridad:** Media
+- **Estimación:** 5 Story Points
+- **Requerimientos Asociados:** `RF42`
+
+#### Historia de Usuario
+> Como Administrador o Abogado, quiero consultar estadísticas de procesos (activos, finalizados, archivados, carga por abogado) con filtros por fecha, para tomar decisiones informadas sobre la distribución de trabajo y el rendimiento del consultorio.
+
+#### Criterios de Aceptación
+- [ ] Las estadísticas muestran: procesos activos, finalizados, archivados y carga procesal por abogado.
+- [ ] Las estadísticas son visibles únicamente para Administrador y Abogados.
+- [ ] El usuario puede filtrar las estadísticas por rango de fechas: mes, trimestre, año o rango personalizado.
+- [ ] Los datos se actualizan en tiempo real al aplicar filtros.
+- [ ] El Administrador puede exportar el reporte en formato PDF o CSV.
+
+### 🔲 HU-27: Acceder al portal del cliente
+- **Prioridad:** Alta
+- **Estimación:** 5 Story Points
+- **Requerimientos Asociados:** `RF43 | RF46 | RN02 | RNF02 | RNF04`
+
+#### Historia de Usuario
+> Como Cliente, quiero acceder a un portal personalizado donde pueda ver el estado de mis procesos y próximas audiencias, para estar informado sobre el avance de mi caso sin necesidad de llamar al abogado constantemente.
+
+#### Criterios de Aceptación
+- [ ] El portal del cliente muestra: lista de sus procesos con estado actual, próximas audiencias autorizadas y últimas novedades registradas por el abogado.
+- [ ] El cliente no puede ver notas internas, estrategias jurídicas ni información de otros clientes.
+- [ ] El portal es accesible desde el navegador sin instalación de software adicional.
+- [ ] El acceso requiere autenticación con las credenciales del cliente.
+- [ ] La sesión del cliente expira tras 30 minutos de inactividad.
+
+### 🔲 HU-28: Descargar documentos autorizados desde el portal
+- **Prioridad:** Alta
+- **Estimación:** 3 Story Points
+- **Requerimientos Asociados:** `RF44 | RF45 | RF46 | RF05`
+
+#### Historia de Usuario
+> Como Cliente, quiero descargar desde mi portal los documentos que el abogado me ha habilitado, para obtener copias de mis documentos legales de forma autónoma y segura sin depender de visitas presenciales.
+
+#### Criterios de Aceptación
+- [ ] El portal muestra únicamente los documentos marcados por el abogado como 'Compartido con cliente'.
+- [ ] El cliente puede descargar cualquier documento visible en su portal.
+- [ ] La descarga queda registrada en la bitácora de auditoría (usuario, fecha/hora, IP, documento).
+- [ ] El cliente no puede subir, modificar ni eliminar documentos.
+- [ ] Si un documento ha sido marcado como inactivo o reemplazado por el abogado, deja de aparecer en el portal del cliente.
+
+### 🔲 HU-29: Configurar canal y preferencias de notificación
+- **Prioridad:** Media
+- **Estimación:** 4 Story Points
+- **Requerimientos Asociados:** `RF47 | RF48`
+
+#### Historia de Usuario
+> Como Abogado o Colaborador, quiero elegir si quiero recibir notificaciones dentro de la plataforma, por correo electrónico o por ambos canales, para adaptar el sistema de alertas a mi forma de trabajo y no perder avisos importantes.
+
+#### Criterios de Aceptación
+- [ ] El usuario puede activar o desactivar el canal: notificación en plataforma, correo electrónico o ambos.
+- [ ] La configuración se guarda por usuario y puede modificarse en cualquier momento.
+- [ ] El usuario puede ajustar la prioridad predeterminada por tipo de evento (audiencia, término, tarea).
+- [ ] Las alertas de prioridad alta no pueden desactivarse independientemente del canal seleccionado.
+- [ ] El cambio de preferencias queda registrado en bitácora.
+
+### 🔲 HU-30: Visualizar y gestionar alertas críticas
+- **Prioridad:** Alta
+- **Estimación:** 5 Story Points
+- **Requerimientos Asociados:** `RF48 | RF49 | RF50 | RN08 | RN02`
+
+#### Historia de Usuario
+> Como Abogado responsable o Administrador, quiero visualizar y cerrar manualmente las alertas de prioridad alta que me corresponden, para asegurar que ninguna alerta crítica desaparezca del panel sin haber sido atendida conscientemente.
+
+#### Criterios de Aceptación
+- [ ] Las alertas críticas (prioridad alta) se resaltan en rojo y permanecen visibles en el panel hasta ser gestionadas manualmente.
+- [ ] Una alerta crítica solo puede cerrarse por el usuario destinatario de la alerta o por el Administrador (únicamente si el usuario destinatario está inactivo en el sistema), de forma manual y explícita.
+- [ ] Ningún proceso automatizado del sistema puede cerrar una alerta de prioridad alta.
+- [ ] El Administrador puede gestionar alertas críticas de un abogado inactivo.
+- [ ] Al cerrar una alerta, el sistema registra quién la gestionó, cuándo y desde qué IP.
+- [ ] El usuario puede consultar el historial completo de notificaciones enviadas y gestionadas.
+
+
+---
+
