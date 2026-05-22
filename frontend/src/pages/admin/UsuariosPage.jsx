@@ -233,7 +233,7 @@ export default function UsuariosPage() {
         </div>
 
         {/* Right Column: Permission Matrix or New User Form */}
-        <div className="lg:col-span-2 rounded-3xl bg-neutral-950/40 backdrop-blur-xl border border-white/10 p-8 flex flex-col h-[600px] shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] relative overflow-y-auto custom-scrollbar">
+        <div className="lg:col-span-2 rounded-3xl bg-neutral-950/40 backdrop-blur-xl border border-white/10 p-4 lg:p-8 flex flex-col h-[600px] shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] relative overflow-y-auto custom-scrollbar">
           
           {showNewUserForm ? (
             <div className="flex-1 flex flex-col animate-fade-in">

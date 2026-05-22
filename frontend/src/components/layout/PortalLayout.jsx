@@ -162,21 +162,21 @@ export default function PortalLayout() {
         </main>
 
         {/* Mobile Bottom Navigation */}
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#0a0a0c]/95 backdrop-blur-xl border-t border-white/10 flex items-center justify-around px-2 z-50 shadow-[0_-8px_32px_0_rgba(0,0,0,0.5)] pb-safe">
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#0a0a0c]/95 backdrop-blur-xl border-t border-white/10 flex items-center overflow-x-auto hide-scrollbar z-50 shadow-[0_-8px_32px_0_rgba(0,0,0,0.5)] pb-safe px-2 gap-4">
           {menuItems.map((item) => {
             const active = isCurrent(item.path);
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-all duration-300 ${
+                className={`flex flex-col items-center justify-center w-[72px] shrink-0 h-full gap-1 transition-all duration-300 ${
                   active ? 'text-[#DFB971]' : 'text-neutral-500 hover:text-neutral-300'
                 }`}
               >
                 <div className={`p-1.5 rounded-full transition-colors ${active ? 'bg-[#DFB971]/10' : ''}`}>
                   <item.icon size={20} />
                 </div>
-                <span className="text-[10px] font-medium tracking-wide">{item.label}</span>
+                <span className="text-[10px] font-medium tracking-wide truncate w-full text-center px-1">{item.label}</span>
               </Link>
             );
           })}

@@ -114,9 +114,9 @@ export default function DashboardIndex() {
   const localRiesgosInactivos = []; // will populate if needed
 
   return (
-    <div className="space-y-10 animate-fade-in pb-12">
+    <div className="space-y-6 md:space-y-10 animate-fade-in pb-12">
       {/* Welcome Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-neutral-950/40 backdrop-blur-xl border border-white/10 p-8 md:p-10 shadow-[0_8px_32px_0_rgba(0,0,0,0.6)]">
+      <div className="relative overflow-hidden rounded-3xl bg-neutral-950/40 backdrop-blur-xl border border-white/10 p-6 md:p-10 shadow-[0_8px_32px_0_rgba(0,0,0,0.6)]">
         <div className="relative z-10 space-y-2 max-w-2xl">
           <span className="text-xs uppercase font-extrabold tracking-wider bg-white/5 text-[#DFB971] px-3 py-1 rounded-full border border-[#DFB971]/20">
             {user?.rol === 'ADMINISTRADOR' ? 'Consultorio Administrativo Principal' : 'Escritorio del Abogado'}

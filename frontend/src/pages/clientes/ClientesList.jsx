@@ -116,7 +116,7 @@ export default function ClientesList() {
         {/* Left Column: List */}
         <div className={`transition-all duration-300 space-y-6 ${showModal ? 'w-full lg:w-2/3' : 'w-full'}`}>
           {/* Search and Filters */}
-          <div className="relative max-w-md">
+          <div className="relative w-full md:max-w-md">
         <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500">
           <Search size={18} />
         </span>
