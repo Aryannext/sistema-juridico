@@ -294,7 +294,7 @@ export default function ClientesList() {
                   </>
                 ) : (
                   <>
-                    <div className="space-y-2 md:col-span-2">
+                    <div className="space-y-2">
                       <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
                         Razón Social
                       </label>
@@ -363,7 +363,7 @@ export default function ClientesList() {
                     className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-3 text-sm transition-all"
                   />
                 </div>
-                <div className="space-y-2 md:col-span-2">
+                <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
                     <MapPin size={14} /> Dirección de correspondencia
                   </label>

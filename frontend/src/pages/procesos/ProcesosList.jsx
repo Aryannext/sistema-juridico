@@ -403,7 +403,7 @@ export default function ProcesosList() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 gap-5">
                 
-                <div className="space-y-2 md:col-span-2">
+                <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
                     Cliente del Proceso
                   </label>
@@ -504,7 +504,7 @@ export default function ProcesosList() {
                   />
                 </div>
 
-                <div className="space-y-2 md:col-span-2">
+                <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
                     Abogado Responsable del Caso
                   </label>
