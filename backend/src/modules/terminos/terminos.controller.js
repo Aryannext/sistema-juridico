@@ -1,9 +1,9 @@
 const prisma = require('../../config/prisma');
 
-// 1. Crear un nuevo vencimiento de término judicial
+// 1. Crear un nuevo vencimiento de término judicial (HU-21, HU-22)
 exports.createTermino = async (req, res) => {
   try {
-    const { id_proceso, nombre, fecha_vencimiento, es_critico } = req.body;
+    const { id_proceso, nombre, fecha_vencimiento, es_critico, recordatorios } = req.body;
 
     if (!id_proceso || !nombre || !fecha_vencimiento) {
       return res.status(400).json({ error: 'Faltan campos requeridos para crear el término judicial' });
@@ -32,32 +32,106 @@ exports.createTermino = async (req, res) => {
         }
       });
 
-      // Crear alertas automáticas en RecordatorioTermino
-      const alertDates = [];
-      const vDate = new Date(fecha_vencimiento);
+      // Configurar recordatorios (máximo 3) - HU-22
+      let recordatoriosData = [];
+      const now = new Date();
 
-      // Alerta 1: Momento del vencimiento
-      alertDates.push(vDate);
+      if (recordatorios && Array.isArray(recordatorios) && recordatorios.length > 0) {
+        recordatoriosData = recordatorios.slice(0, 3).map(r => {
+          let sendDate;
+          let canal = 'EMAIL';
+          if (typeof r === 'object') {
+            sendDate = new Date(r.fecha_hora_envio);
+            canal = r.canal || 'EMAIL';
+          } else {
+            sendDate = new Date(r);
+          }
+          return {
+            id_termino: termino.id_termino,
+            fecha_hora_envio: sendDate,
+            canal,
+            enviado: false
+          };
+        });
+      } else {
+        // Valores predeterminados sugeridos: 5 días antes, 1 día antes, y el día del vencimiento
+        const vDate = new Date(fecha_vencimiento);
+        const defaults = [
+          { date: new Date(vDate.getTime() - 5 * 24 * 60 * 60 * 1000), canal: 'EMAIL' },
+          { date: new Date(vDate.getTime() - 1 * 24 * 60 * 60 * 1000), canal: 'EMAIL' },
+          { date: vDate, canal: 'EMAIL' }
+        ];
 
-      // Alerta 2: 24 horas antes del vencimiento (solo si es crítico)
-      if (es_critico) {
-        const preDate = new Date(vDate.getTime() - 24 * 60 * 60 * 1000);
-        // Solo agregar si la fecha 24h antes es posterior al momento actual
-        if (preDate > new Date()) {
-          alertDates.push(preDate);
-        }
+        defaults.forEach(item => {
+          if (item.date > now) {
+            recordatoriosData.push({
+              id_termino: termino.id_termino,
+              fecha_hora_envio: item.date,
+              canal: item.canal,
+              enviado: false
+            });
+          }
+        });
       }
-
-      const recordatoriosData = alertDates.map(date => ({
-        id_termino: termino.id_termino,
-        fecha_hora_envio: date,
-        canal: 'EMAIL',
-        enviado: false
-      }));
 
       if (recordatoriosData.length > 0) {
         await tx.recordatorioTermino.createMany({
           data: recordatoriosData
+        });
+      }
+
+      // Crear notificaciones correspondientes (HU-21, HU-22)
+      const destinatariosIds = new Set();
+      
+      // Abogado responsable
+      if (proceso.id_abogado_resp) {
+        destinatariosIds.add(proceso.id_abogado_resp);
+      }
+
+      // Colaboradores asignados al proceso
+      const procesoAbogados = await tx.procesoAbogado.findMany({
+        where: { id_proceso },
+        select: { id_usuario: true }
+      });
+      procesoAbogados.forEach(pa => {
+        destinatariosIds.add(pa.id_usuario);
+      });
+
+      // Administradores del tenant (si es crítico)
+      if (es_critico || es_critico === 'true') {
+        const admins = await tx.usuario.findMany({
+          where: { tenant_id: req.tenant_id, rol: 'ADMINISTRADOR', activo: true },
+          select: { id_usuario: true }
+        });
+        admins.forEach(admin => {
+          destinatariosIds.add(admin.id_usuario);
+        });
+      }
+
+      // Filtrar usuarios activos
+      const activeUsers = await tx.usuario.findMany({
+        where: {
+          id_usuario: { in: Array.from(destinatariosIds) },
+          activo: true
+        },
+        select: { id_usuario: true }
+      });
+
+      const notificationsData = activeUsers.map(user => ({
+        tenant_id: req.tenant_id,
+        id_usuario: user.id_usuario,
+        titulo: `${es_critico ? '🚨 TÉRMINO CRÍTICO:' : '⚖️ Nuevo Término:'} ${nombre}`,
+        mensaje: `Se ha registrado el término judicial "${nombre}" en el expediente ${proceso.numero_radicado}. Vence el ${new Date(fecha_vencimiento).toLocaleString('es-CO')}.`,
+        prioridad: es_critico ? 'ALTA' : 'MEDIA',
+        leida: false,
+        gestionada: false,
+        referencia_tipo: 'TERMINO',
+        id_referencia: termino.id_termino
+      }));
+
+      if (notificationsData.length > 0) {
+        await tx.notificacion.createMany({
+          data: notificationsData
         });
       }
 
@@ -145,7 +219,7 @@ exports.getAlertasVencimientos = async (req, res) => {
   }
 };
 
-// 4. Gestionar/Completar un término judicial con justificación obligatoria
+// 4. Gestionar/Completar un término judicial con justificación obligatoria (HU-23)
 exports.gestionarTermino = async (req, res) => {
   try {
     const { id } = req.params;
@@ -169,23 +243,55 @@ exports.gestionarTermino = async (req, res) => {
       return res.status(404).json({ error: 'Término judicial no encontrado o no pertenece a su consultorio' });
     }
 
+    // HU-23: Si el término ya fue resuelto como tardío o incumplido, bloquear edición posterior a no-admins
+    if (existingTermino.estado === 'CUMPLIDO_TARDIO' || existingTermino.estado === 'INCUMPLIDO') {
+      if (req.user.rol !== 'ADMINISTRADOR') {
+        return res.status(403).json({
+          error: 'Acceso denegado. Solo el Administrador puede modificar la clasificación de un término resuelto tardíamente o incumplido.'
+        });
+      }
+    }
+
+    let finalEstado = estado;
+    const now = new Date();
+    const vencimiento = new Date(existingTermino.fecha_vencimiento);
+
+    // Auto-clasificar como tardío si se gestiona tras la fecha de vencimiento y se marca como CUMPLIDO
+    if (now > vencimiento && estado === 'CUMPLIDO') {
+      finalEstado = 'CUMPLIDO_TARDIO';
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       // 1. Actualizar el término
       const updatedTermino = await tx.terminoJudicial.update({
         where: { id_termino: id },
         data: {
-          estado,
+          estado: finalEstado,
           justificacion,
           gestionado_por: req.user.id_usuario,
-          fecha_gestion: new Date()
+          fecha_gestion: now
         }
       });
 
       // 2. Silenciar recordatorios pendientes puesto que ya se resolvió/gestionó el término
       await tx.recordatorioTermino.updateMany({
         where: { id_termino: id, enviado: false },
-        data: { enviado: true, fecha_envio_real: new Date() } // Se marcan como completados para no enviar spam
+        data: { enviado: true, fecha_envio_real: now }
       });
+
+      // Si es una corrección/edición hecha por el Administrador sobre un estado tardío/incumplido existente, registramos auditoría explícita
+      if (existingTermino.estado === 'CUMPLIDO_TARDIO' || existingTermino.estado === 'INCUMPLIDO') {
+        await tx.bitacoraAuditoria.create({
+          data: {
+            tenant_id: req.tenant_id,
+            id_usuario: req.user.id_usuario,
+            accion: 'SOBREESCRITURA_TERMINO_TARDIO',
+            modulo: 'TERMINO',
+            detalle: `Administrador modificó término judicial "${existingTermino.nombre}" de estado ${existingTermino.estado} a ${finalEstado}. Justificación: ${justificacion}`,
+            ip_adress: req.ip || '127.0.0.1'
+          }
+        });
+      }
 
       return updatedTermino;
     });

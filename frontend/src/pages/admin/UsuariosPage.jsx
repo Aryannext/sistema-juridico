@@ -12,7 +12,7 @@ export default function UsuariosPage() {
   const [savingPermisos, setSavingPermisos] = useState(false);
 
   // Available modules for granular control
-  const modulos = ['CLIENTES', 'PROCESOS', 'DOCS', 'AUDIENCIAS', 'TERMINOS'];
+  const modulos = ['CLIENTES', 'PROCESOS', 'DOCS', 'AUDIENCIAS', 'TERMINO'];
 
   // Map Spanish names for cleaner UI
   const moduloNombres = {
@@ -20,7 +20,7 @@ export default function UsuariosPage() {
     PROCESOS: 'Expedientes Jurídicos',
     DOCS: 'Documentos y Expedientes',
     AUDIENCIAS: 'Agenda de Audiencias',
-    TERMINOS: 'Control de Términos'
+    TERMINO: 'Control de Términos'
   };
 
   // Fetch all users

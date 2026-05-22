@@ -27,6 +27,7 @@ const adminRoutes = require('./modules/admin/admin.routes');
 const documentosRoutes = require('./modules/documentos/documentos.routes');
 const audienciasRoutes = require('./modules/audiencias/audiencias.routes');
 const terminosRoutes = require('./modules/terminos/terminos.routes');
+const notificacionesRoutes = require('./modules/notificaciones/notificaciones.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/tenant', tenantRoutes);
@@ -36,6 +37,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/documentos', documentosRoutes);
 app.use('/api/audiencias', audienciasRoutes);
 app.use('/api/terminos', terminosRoutes);
+app.use('/api/notificaciones', notificacionesRoutes);
 
 
 

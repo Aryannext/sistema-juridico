@@ -56,6 +56,22 @@ router.get(
   documentosController.getVersionDownloadUrl
 );
 
+// PATCH /api/documentos/:id/estado - Update document status
+router.patch(
+  '/:id/estado',
+  requirePermission('DOCS', 'EDITAR'),
+  auditMiddleware('DOCS'),
+  documentosController.updateDocumentoEstado
+);
+
+// DELETE /api/documentos/:id/definitivo - Definitive delete of a document (Admin only)
+router.delete(
+  '/:id/definitivo',
+  requirePermission('DOCS', 'ELIMINAR'),
+  auditMiddleware('DOCS'),
+  documentosController.deleteDocumentoDefinitivo
+);
+
 // DELETE /api/documentos/:id - Logical delete of a document
 router.delete(
   '/:id',

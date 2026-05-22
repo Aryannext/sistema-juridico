@@ -34,6 +34,12 @@ export default function ProcesoDetalle() {
   const [showVersionesModal, setShowVersionesModal] = useState(false);
   const [docVersiones, setDocVersiones] = useState([]);
   const [loadingVersiones, setLoadingVersiones] = useState(false);
+  const [showDocEstadoModal, setShowDocEstadoModal] = useState(false);
+  const [docEstadoNuevo, setDocEstadoNuevo] = useState('INACTIVO');
+  const [showDeleteDefinitivoModal, setShowDeleteDefinitivoModal] = useState(false);
+  const [deleteJustificacion, setDeleteJustificacion] = useState('');
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleteConfirmCheckbox, setDeleteConfirmCheckbox] = useState(false);
 
   // Document upload form states
   const [docNombre, setDocNombre] = useState('');
@@ -49,7 +55,13 @@ export default function ProcesoDetalle() {
   const [audTipo, setAudTipo] = useState('');
   const [audFechaHora, setAudFechaHora] = useState('');
   const [audLugar, setAudLugar] = useState('');
-  const [audRecordatorios, setAudRecordatorios] = useState(['120', '1440']); // mins before: 2h and 24h
+  const [customRecordatorios, setCustomRecordatorios] = useState([{ minutos_antes: 1440, canal: 'EMAIL' }]);
+  const [showReprogramModal, setShowReprogramModal] = useState(false);
+  const [selectedAudiencia, setSelectedAudiencia] = useState(null);
+  const [reprogramFechaHora, setReprogramFechaHora] = useState('');
+  const [reprogramLugar, setReprogramLugar] = useState('');
+  const [reprogramNombre, setReprogramNombre] = useState('');
+  const [reprogramTipo, setReprogramTipo] = useState('');
 
   // Component 3: Terminos States
   const [terminos, setTerminos] = useState([]);
@@ -62,6 +74,10 @@ export default function ProcesoDetalle() {
   const [termEsCritico, setTermEsCritico] = useState(false);
   const [termEstadoGestion, setTermEstadoGestion] = useState('CUMPLIDO');
   const [termJustificacion, setTermJustificacion] = useState('');
+  const [termRecordatoriosList, setTermRecordatoriosList] = useState([]);
+  const [newTermRecValor, setNewTermRecValor] = useState(24);
+  const [newTermRecUnidad, setNewTermRecUnidad] = useState('HORAS');
+  const [newTermRecCanal, setNewTermRecCanal] = useState('EMAIL');
 
   // Sprint 2 - Cambiar Estado, Equipo, and Partes States
   const [showChangeEstadoModal, setShowChangeEstadoModal] = useState(false);
@@ -286,6 +302,39 @@ export default function ProcesoDetalle() {
     }
   };
 
+  const handleUpdateDocEstado = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await api.patch(`/documentos/${selectedDoc.id_documento}/estado`, { estado: docEstadoNuevo });
+      toast.success(res.data.message || 'Estado del documento actualizado');
+      setShowDocEstadoModal(false);
+      fetchDocuments();
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.error || 'Error al actualizar el estado del documento');
+    }
+  };
+
+  const handleDeleteDefinitivoSubmit = async (e) => {
+    e.preventDefault();
+    if (!deleteJustificacion.trim()) {
+      toast.error('La justificación es obligatoria');
+      return;
+    }
+    try {
+      const res = await api.delete(`/documentos/${selectedDoc.id_documento}/definitivo`, {
+        data: { justificacion: deleteJustificacion }
+      });
+      toast.success(res.data.message || 'Documento eliminado de forma física y definitiva');
+      setShowDeleteDefinitivoModal(false);
+      setDeleteJustificacion('');
+      fetchDocuments();
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.error || 'Error al eliminar definitivamente el documento');
+    }
+  };
+
   // Audiencias scheduling handlers
   const handleAddAudienciaSubmit = async (e) => {
     e.preventDefault();
@@ -296,7 +345,10 @@ export default function ProcesoDetalle() {
         tipo: audTipo,
         fecha_hora: audFechaHora,
         lugar: audLugar,
-        recordatorios: audRecordatorios.map(m => parseInt(m))
+        recordatorios: customRecordatorios.map(r => ({
+          minutos_antes: parseInt(r.minutos_antes),
+          canal: r.canal
+        }))
       };
 
       const res = await api.post('/audiencias', data);
@@ -306,6 +358,7 @@ export default function ProcesoDetalle() {
       setAudTipo('');
       setAudFechaHora('');
       setAudLugar('');
+      setCustomRecordatorios([{ minutos_antes: 1440, canal: 'EMAIL' }]);
       fetchAudiencias();
     } catch (error) {
       console.error(error);
@@ -313,11 +366,35 @@ export default function ProcesoDetalle() {
     }
   };
 
-  const handleToggleRecordatorio = (minutes) => {
-    if (audRecordatorios.includes(minutes)) {
-      setAudRecordatorios(audRecordatorios.filter(m => m !== minutes));
-    } else {
-      setAudRecordatorios([...audRecordatorios, minutes]);
+  const handleReprogramSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const data = {
+        nombre: reprogramNombre,
+        tipo: reprogramTipo,
+        fecha_hora: reprogramFechaHora,
+        lugar: reprogramLugar
+      };
+
+      const res = await api.put(`/audiencias/${selectedAudiencia.id_audiencia}`, data);
+      toast.success(res.data.message || 'Audiencia reprogramada con éxito');
+      setShowReprogramModal(false);
+      fetchAudiencias();
+      fetchProceso(); // Recargar historial de bitácora
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.error || 'Error al reprogramar la audiencia');
+    }
+  };
+
+  const handleMarkAudienciaEstado = async (idAud, nuevoEstado) => {
+    try {
+      const res = await api.put(`/audiencias/${idAud}`, { estado: nuevoEstado });
+      toast.success(res.data.message || `Audiencia marcada como ${nuevoEstado}`);
+      fetchAudiencias();
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.error || 'Error al cambiar estado de la audiencia');
     }
   };
 
@@ -325,11 +402,22 @@ export default function ProcesoDetalle() {
   const handleAddTerminoSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Map custom term recordatorios list
+      const recordatoriosListFormatted = termRecordatoriosList.map(r => {
+        const vDate = new Date(termFechaVencimiento);
+        const sendDate = new Date(vDate.getTime() - r.minutos_antes * 60 * 1000);
+        return {
+          fecha_hora_envio: sendDate.toISOString(),
+          canal: r.canal
+        };
+      });
+
       const data = {
         id_proceso: id,
         nombre: termNombre,
         fecha_vencimiento: termFechaVencimiento,
-        es_critico: termEsCritico
+        es_critico: termEsCritico,
+        recordatorios: recordatoriosListFormatted
       };
 
       const res = await api.post('/terminos', data);
@@ -338,11 +426,28 @@ export default function ProcesoDetalle() {
       setTermNombre('');
       setTermFechaVencimiento('');
       setTermEsCritico(false);
+      setTermRecordatoriosList([]);
       fetchTerminos();
     } catch (error) {
       console.error(error);
       toast.error(error.response?.data?.error || 'Error al programar el término judicial');
     }
+  };
+
+  const handleAddTermRecordatorio = () => {
+    const val = parseInt(newTermRecValor);
+    if (isNaN(val) || val <= 0) {
+      toast.error('Ingrese un valor numérico válido y mayor a 0');
+      return;
+    }
+    let mins = val;
+    if (newTermRecUnidad === 'HORAS') mins = val * 60;
+    if (newTermRecUnidad === 'DIAS') mins = val * 1440;
+
+    setTermRecordatoriosList([...termRecordatoriosList, {
+      minutos_antes: mins,
+      canal: newTermRecCanal
+    }]);
   };
 
   const handleGestionarTerminoSubmit = async (e) => {
@@ -985,7 +1090,22 @@ export default function ProcesoDetalle() {
                         <td className="p-4 pl-6 font-bold text-white">
                           <div className="flex items-center gap-2.5">
                             <FileText size={18} className="text-neutral-500" />
-                            <span className="truncate max-w-[200px]">{doc.nombre}</span>
+                            <span className="truncate max-w-[200px]" title={doc.nombre}>{doc.nombre}</span>
+                            {doc.estado === 'INACTIVO' && (
+                              <span className="px-1.5 py-0.5 bg-neutral-850 text-neutral-500 border border-neutral-800 rounded text-[9px] font-bold">
+                                INACTIVO
+                              </span>
+                            )}
+                            {doc.estado === 'REEMPLAZADO' && (
+                              <span className="px-1.5 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded text-[9px] font-bold">
+                                REEMPLAZADO
+                              </span>
+                            )}
+                            {doc.estado === 'ACTIVO' && (
+                              <span className="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded text-[9px] font-bold">
+                                ACTIVO
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td className="p-4">
@@ -1017,6 +1137,15 @@ export default function ProcesoDetalle() {
                           >
                             <Upload size={14} />
                           </button>
+                          {doc.estado === 'ACTIVO' && (
+                            <button
+                              onClick={() => { setSelectedDoc(doc); setDocEstadoNuevo('INACTIVO'); setShowDocEstadoModal(true); }}
+                              className="p-2 hover:bg-neutral-900 rounded-lg text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                              title="Cambiar estado del documento"
+                            >
+                              <Edit3 size={14} />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleViewHistory(doc)}
                             className="p-2 hover:bg-neutral-900 rounded-lg text-neutral-400 hover:text-white transition-colors cursor-pointer"
@@ -1027,10 +1156,19 @@ export default function ProcesoDetalle() {
                           <button
                             onClick={() => handleDeleteDoc(doc.id_documento)}
                             className="p-2 hover:bg-neutral-900 rounded-lg text-neutral-400 hover:text-rose-400 transition-colors cursor-pointer"
-                            title="Eliminar documento"
+                            title="Eliminar documento (Lógico)"
                           >
                             <Trash2 size={14} />
                           </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => { setSelectedDoc(doc); setDeleteJustificacion(''); setShowDeleteDefinitivoModal(true); }}
+                              className="p-2 hover:bg-neutral-900 rounded-lg text-rose-500 hover:text-rose-450 transition-colors cursor-pointer border border-rose-500/10 bg-rose-500/5"
+                              title="Eliminar definitivamente (Admin)"
+                            >
+                              <Trash2 size={14} className="stroke-[2.5]" />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -1067,7 +1205,7 @@ export default function ProcesoDetalle() {
             <div className="text-center py-16 bg-neutral-950 border border-neutral-800 rounded-3xl">
               <Calendar className="mx-auto text-neutral-700 mb-3" size={40} />
               <h3 className="text-white font-bold text-sm">Sin Audiencias</h3>
-              <p className="text-neutral-400 text-xs mt-1">No hay audiencias programadas en este expediente.</p>
+              <p className="text-neutral-400 text-xs mt-1">No hay audiencias programadas en este proceso.</p>
             </div>
           ) : (
             <div className="relative border-l-2 border-neutral-800 pl-6 ml-4 space-y-8 py-2">
@@ -1106,6 +1244,36 @@ export default function ProcesoDetalle() {
                         <span className="truncate">Lugar: {aud.lugar}</span>
                       </div>
                     </div>
+
+                    {aud.estado === 'PROGRAMADA' && (
+                      <div className="flex gap-2 pt-2 border-t border-neutral-900 mt-2">
+                        <button
+                          onClick={() => {
+                            setSelectedAudiencia(aud);
+                            setReprogramNombre(aud.nombre);
+                            setReprogramTipo(aud.tipo);
+                            setReprogramFechaHora(aud.fecha_hora ? aud.fecha_hora.substring(0, 16) : '');
+                            setReprogramLugar(aud.lugar);
+                            setShowReprogramModal(true);
+                          }}
+                          className="p-1.5 px-3 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 text-white rounded-lg text-[10px] font-bold cursor-pointer transition-all"
+                        >
+                          Reprogramar
+                        </button>
+                        <button
+                          onClick={() => handleMarkAudienciaEstado(aud.id_audiencia, 'REALIZADA')}
+                          className="p-1.5 px-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 rounded-lg text-[10px] font-bold cursor-pointer transition-all"
+                        >
+                          Marcar Realizada
+                        </button>
+                        <button
+                          onClick={() => handleMarkAudienciaEstado(aud.id_audiencia, 'CANCELADA')}
+                          className="p-1.5 px-3 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 rounded-lg text-[10px] font-bold cursor-pointer transition-all"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -1489,7 +1657,7 @@ export default function ProcesoDetalle() {
       {/* MODAL - VERSION HISTORY */}
       {showVersionesModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
-          <div className="relative w-full max-w-2xl bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
+          <div className="relative w-full max-w-3xl bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
             <button
               onClick={() => setShowVersionesModal(false)}
               className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
@@ -1515,6 +1683,7 @@ export default function ProcesoDetalle() {
                     <tr className="border-b border-neutral-800 bg-neutral-900 text-neutral-400 uppercase tracking-wider font-bold">
                       <th className="p-3 pl-5">Versión</th>
                       <th className="p-3">Nombre de Archivo</th>
+                      <th className="p-3">Fecha y Hora</th>
                       <th className="p-3">Tamaño</th>
                       <th className="p-3">Subido por</th>
                       <th className="p-3 text-right pr-5">Descarga</th>
@@ -1525,6 +1694,7 @@ export default function ProcesoDetalle() {
                       <tr key={v.id_version} className="hover:bg-neutral-900/10 text-neutral-300">
                         <td className="p-3 pl-5 font-bold text-white">v{v.numero_version}</td>
                         <td className="p-3 truncate max-w-[150px]" title={v.nombre_archivo}>{v.nombre_archivo}</td>
+                        <td className="p-3 text-neutral-400">{new Date(v.created_at).toLocaleString()}</td>
                         <td className="p-3 text-neutral-400">{formatBytes(v.tamano_bytes)}</td>
                         <td className="p-3 text-neutral-400">{v.usuario?.nombre}</td>
                         <td className="p-3 text-right pr-5">
@@ -1630,30 +1800,108 @@ export default function ProcesoDetalle() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400 block mb-1">
-                    Recordatorios Automáticos
+                <div className="space-y-4 pt-2 border-t border-neutral-900">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    Recordatorios Personalizados (Máx 3)
                   </label>
-                  <div className="grid grid-cols-2 gap-3 text-xs text-neutral-400">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={audRecordatorios.includes('120')}
-                        onChange={() => handleToggleRecordatorio('120')}
-                        className="rounded border-neutral-800 text-white focus:ring-0"
-                      />
-                      <span>2 Horas antes</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={audRecordatorios.includes('1440')}
-                        onChange={() => handleToggleRecordatorio('1440')}
-                        className="rounded border-neutral-800 text-white focus:ring-0"
-                      />
-                      <span>24 Horas antes</span>
-                    </label>
-                  </div>
+
+                  {customRecordatorios.length === 0 ? (
+                    <p className="text-[10px] text-neutral-500 italic">No se han configurado recordatorios para esta audiencia.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {customRecordatorios.map((r, idx) => {
+                        let displayTime = `${r.minutos_antes} min`;
+                        if (r.minutos_antes % 1440 === 0) {
+                          displayTime = `${r.minutos_antes / 1440} día(s)`;
+                        } else if (r.minutos_antes % 60 === 0) {
+                          displayTime = `${r.minutos_antes / 60} hora(s)`;
+                        }
+                        return (
+                          <div key={idx} className="flex justify-between items-center bg-neutral-900/60 border border-neutral-800 rounded-xl px-4 py-2 text-xs text-white">
+                            <div className="flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              <span>{displayTime} antes vía <strong className="text-neutral-300">{r.canal}</strong></span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const list = [...customRecordatorios];
+                                list.splice(idx, 1);
+                                setCustomRecordatorios(list);
+                              }}
+                              className="text-[10px] text-rose-400 hover:text-rose-300 font-bold"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {customRecordatorios.length < 3 && (
+                    <div className="bg-neutral-900/20 border border-neutral-800 p-4 rounded-2xl space-y-3">
+                      <p className="text-[10px] uppercase font-bold text-neutral-500">Agregar Nueva Alerta</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <input
+                            type="number"
+                            id="new_aud_rec_val"
+                            placeholder="Valor"
+                            defaultValue={24}
+                            className="w-full bg-neutral-950 border border-neutral-800 focus:outline-none focus:border-white rounded-lg px-2 py-1.5 text-xs text-white"
+                          />
+                        </div>
+                        <div>
+                          <select
+                            id="new_aud_rec_unit"
+                            defaultValue="HORAS"
+                            className="w-full bg-neutral-950 border border-neutral-800 focus:outline-none focus:border-white rounded-lg px-2 py-1.5 text-xs text-neutral-300"
+                          >
+                            <option value="MINUTOS">Minutos</option>
+                            <option value="HORAS">Horas</option>
+                            <option value="DIAS">Días</option>
+                          </select>
+                        </div>
+                        <div>
+                          <select
+                            id="new_aud_rec_chan"
+                            defaultValue="EMAIL"
+                            className="w-full bg-neutral-950 border border-neutral-800 focus:outline-none focus:border-white rounded-lg px-2 py-1.5 text-xs text-neutral-300"
+                          >
+                            <option value="EMAIL">Email</option>
+                            <option value="PLATAFORMA">Plataforma</option>
+                            <option value="AMBOS">Ambos</option>
+                          </select>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const valEl = document.getElementById('new_aud_rec_val');
+                          const unitEl = document.getElementById('new_aud_rec_unit');
+                          const chanEl = document.getElementById('new_aud_rec_chan');
+                          
+                          const val = parseInt(valEl.value);
+                          if (isNaN(val) || val <= 0) {
+                            toast.error('Ingrese un valor numérico válido y mayor a 0');
+                            return;
+                          }
+                          let mins = val;
+                          if (unitEl.value === 'HORAS') mins = val * 60;
+                          if (unitEl.value === 'DIAS') mins = val * 1440;
+                          
+                          setCustomRecordatorios([...customRecordatorios, {
+                            minutos_antes: mins,
+                            canal: chanEl.value
+                          }]);
+                        }}
+                        className="w-full py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer text-center"
+                      >
+                        + Agregar Recordatorio
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1736,8 +1984,95 @@ export default function ProcesoDetalle() {
                       onChange={(e) => setTermEsCritico(e.target.checked)}
                       className="rounded border-neutral-800 text-white focus:ring-0"
                     />
-                    <span>Sí, enviar alertas preventivas adicionales de 24 horas.</span>
+                    <span>Sí, enviar alertas preventivas adicionales de alta prioridad.</span>
                   </label>
+                </div>
+
+                {/* Term Recordatorios list */}
+                <div className="space-y-4 pt-2 border-t border-neutral-900">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    Recordatorios de Vencimiento (Máx 3)
+                  </label>
+
+                  {termRecordatoriosList.length === 0 ? (
+                    <p className="text-[10px] text-neutral-500 italic">No se han configurado recordatorios personalizados. Se usarán los valores por defecto (5d, 1d, 0h).</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {termRecordatoriosList.map((r, idx) => {
+                        let displayTime = `${r.minutos_antes} min`;
+                        if (r.minutos_antes % 1440 === 0) {
+                          displayTime = `${r.minutos_antes / 1440} día(s)`;
+                        } else if (r.minutos_antes % 60 === 0) {
+                          displayTime = `${r.minutos_antes / 60} hora(s)`;
+                        }
+                        return (
+                          <div key={idx} className="flex justify-between items-center bg-neutral-900/60 border border-neutral-800 rounded-xl px-4 py-2 text-xs text-white">
+                            <div className="flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                              <span>{displayTime} antes vía <strong className="text-neutral-300">{r.canal}</strong></span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const list = [...termRecordatoriosList];
+                                list.splice(idx, 1);
+                                setTermRecordatoriosList(list);
+                              }}
+                              className="text-[10px] text-rose-400 hover:text-rose-300 font-bold"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {termRecordatoriosList.length < 3 && (
+                    <div className="bg-neutral-900/20 border border-neutral-800 p-4 rounded-2xl space-y-3">
+                      <p className="text-[10px] uppercase font-bold text-neutral-500">Configurar Alerta Preventiva</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <input
+                            type="number"
+                            value={newTermRecValor}
+                            onChange={(e) => setNewTermRecValor(e.target.value)}
+                            placeholder="Valor"
+                            className="w-full bg-neutral-950 border border-neutral-800 focus:outline-none focus:border-white rounded-lg px-2 py-1.5 text-xs text-white"
+                          />
+                        </div>
+                        <div>
+                          <select
+                            value={newTermRecUnidad}
+                            onChange={(e) => setNewTermRecUnidad(e.target.value)}
+                            className="w-full bg-neutral-950 border border-neutral-800 focus:outline-none focus:border-white rounded-lg px-2 py-1.5 text-xs text-neutral-300"
+                          >
+                            <option value="MINUTOS">Minutos</option>
+                            <option value="HORAS">Horas</option>
+                            <option value="DIAS">Días</option>
+                          </select>
+                        </div>
+                        <div>
+                          <select
+                            value={newTermRecCanal}
+                            onChange={(e) => setNewTermRecCanal(e.target.value)}
+                            className="w-full bg-neutral-950 border border-neutral-800 focus:outline-none focus:border-white rounded-lg px-2 py-1.5 text-xs text-neutral-300"
+                          >
+                            <option value="EMAIL">Email</option>
+                            <option value="PLATAFORMA">Plataforma</option>
+                            <option value="AMBOS">Ambos</option>
+                          </select>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddTermRecordatorio}
+                        className="w-full py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer text-center"
+                      >
+                        + Agregar Recordatorio
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1763,75 +2098,112 @@ export default function ProcesoDetalle() {
       )}
 
       {/* MODAL - GESTIONAR TERMINO */}
-      {showGestionarTerminoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
-          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
-            <button
-              onClick={() => setShowGestionarTerminoModal(false)}
-              className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
-            >
-              <X size={24} />
-            </button>
+      {showGestionarTerminoModal && (() => {
+        const isVencido = new Date(selectedTermino?.fecha_vencimiento) < new Date();
+        const isAlreadyResolved = selectedTermino?.estado !== 'PENDIENTE';
+        const cannotEdit = isAlreadyResolved && !isAdmin;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
+            <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
+              <button
+                onClick={() => setShowGestionarTerminoModal(false)}
+                className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X size={24} />
+              </button>
 
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-neutral-400 bg-clip-text text-transparent mb-2">
-              Resolver Plazo / Término
-            </h2>
-            <p className="text-sm text-neutral-400 mb-6">
-              Registre la resolución del término judicial: <strong className="text-white">{selectedTermino?.nombre}</strong>. Para su validez, debe proporcionar una justificación obligatoria.
-            </p>
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-neutral-400 bg-clip-text text-transparent mb-2">
+                Resolver Plazo / Término
+              </h2>
+              <p className="text-sm text-neutral-400 mb-6">
+                Registre la resolución del término judicial: <strong className="text-white">{selectedTermino?.nombre}</strong>. Para su validez, debe proporcionar una justificación obligatoria.
+              </p>
 
-            <form onSubmit={handleGestionarTerminoSubmit} className="space-y-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
-                    Estado de la Gestión
-                  </label>
-                  <select
-                    value={termEstadoGestion}
-                    onChange={(e) => setTermEstadoGestion(e.target.value)}
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300"
+              {/* Warning Banners */}
+              {isVencido && !isAlreadyResolved && (
+                <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 p-4 rounded-2xl text-xs flex items-start gap-2 mb-4">
+                  <AlertTriangle className="flex-shrink-0 mt-0.5" size={16} />
+                  <span>
+                    <strong>Atención:</strong> La fecha límite de este término ya ha expirado. Al guardarse, se auto-clasificará de forma inmutable como <strong>CUMPLIDO_TARDÍAMENTE</strong> en el sistema.
+                  </span>
+                </div>
+              )}
+
+              {isAlreadyResolved && !isAdmin && (
+                <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-2xl text-xs flex items-start gap-2 mb-4">
+                  <AlertCircle className="flex-shrink-0 mt-0.5" size={16} />
+                  <span>
+                    <strong>Acción Denegada:</strong> Este término ya ha sido resuelto como <strong>{selectedTermino?.estado}</strong>. Solo un Administrador puede modificar los términos ya resueltos.
+                  </span>
+                </div>
+              )}
+
+              {isAlreadyResolved && isAdmin && (
+                <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 p-4 rounded-2xl text-xs flex items-start gap-2 mb-4">
+                  <AlertTriangle className="flex-shrink-0 mt-0.5" size={16} />
+                  <span>
+                    <strong>Atención Administrador:</strong> Está modificando la resolución de un término ya resuelto. Esta acción registrará una bitácora especial en el historial de auditoría de consultorio.
+                  </span>
+                </div>
+              )}
+
+              <form onSubmit={handleGestionarTerminoSubmit} className="space-y-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                      Estado de la Gestión
+                    </label>
+                    <select
+                      disabled={cannotEdit}
+                      value={termEstadoGestion}
+                      onChange={(e) => setTermEstadoGestion(e.target.value)}
+                      className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="CUMPLIDO">Cumplido en Tiempo</option>
+                      <option value="CUMPLIDO_TARDIO">Cumplido Tardíamente</option>
+                      <option value="INCUMPLIDO">Incumplido</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                      Justificación procesal (Obligatoria)
+                    </label>
+                    <textarea
+                      required
+                      disabled={cannotEdit}
+                      rows={4}
+                      placeholder="Detalle el memorial radicado, radicado de contestación o justificación del incumplimiento..."
+                      value={termJustificacion}
+                      onChange={(e) => setTermJustificacion(e.target.value)}
+                      className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-white resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-4 pt-4 border-t border-neutral-900">
+                  <button
+                    type="button"
+                    onClick={() => setShowGestionarTerminoModal(false)}
+                    className="px-5 py-2.5 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white transition-colors cursor-pointer text-sm font-semibold"
                   >
-                    <option value="CUMPLIDO">Cumplido en Tiempo</option>
-                    <option value="CUMPLIDO_TARDIO">Cumplido Tardíamente</option>
-                    <option value="INCUMPLIDO">Incumplido</option>
-                  </select>
+                    {cannotEdit ? 'Cerrar' : 'Cancelar'}
+                  </button>
+                  {!cannotEdit && (
+                    <button
+                      type="submit"
+                      className="bg-white hover:bg-neutral-200 text-black font-semibold px-6 py-2.5 rounded-xl transition-all cursor-pointer text-sm flex items-center gap-1.5"
+                    >
+                      <Save size={16} />
+                      <span>{isAlreadyResolved ? 'Guardar Cambios (Admin)' : 'Resolver Plazo'}</span>
+                    </button>
+                  )}
                 </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
-                    Justificación procesal (Obligatoria)
-                  </label>
-                  <textarea
-                    required
-                    rows={4}
-                    placeholder="Detalle el memorial radicado, radicado de contestación o justificación del incumplimiento..."
-                    value={termJustificacion}
-                    onChange={(e) => setTermJustificacion(e.target.value)}
-                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-white resize-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-4 pt-4 border-t border-neutral-900">
-                <button
-                  type="button"
-                  onClick={() => setShowGestionarTerminoModal(false)}
-                  className="px-5 py-2.5 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white transition-colors cursor-pointer text-sm font-semibold"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="bg-white hover:bg-neutral-200 text-black font-semibold px-6 py-2.5 rounded-xl transition-all cursor-pointer text-sm flex items-center gap-1.5"
-                >
-                  <Save size={16} />
-                  <span>Resolver Plazo</span>
-                </button>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* MODAL - CAMBIAR ESTADO */}
       {showChangeEstadoModal && (
@@ -2130,6 +2502,292 @@ export default function ProcesoDetalle() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL - DOCUMENT STATE */}
+      {showDocEstadoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
+          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
+            <button
+              onClick={() => setShowDocEstadoModal(false)}
+              className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <X size={24} />
+            </button>
+
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-neutral-400 bg-clip-text text-transparent mb-2">
+              Cambiar Estado del Documento
+            </h2>
+            <p className="text-sm text-neutral-400 mb-6">
+              Transicione el estado del documento legal a Inactivo o Reemplazado. Tenga en cuenta que no podrá reactivarlo a Activo una vez realizado este cambio.
+            </p>
+
+            <form onSubmit={handleUpdateDocEstado} className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    Nuevo Estado
+                  </label>
+                  <select
+                    value={docEstadoNuevo}
+                    onChange={(e) => setDocEstadoNuevo(e.target.value)}
+                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300"
+                  >
+                    <option value="INACTIVO">Inactivo</option>
+                    <option value="REEMPLAZADO">Reemplazado</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-4 pt-4 border-t border-neutral-900">
+                <button
+                  type="button"
+                  onClick={() => setShowDocEstadoModal(false)}
+                  className="px-5 py-2.5 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white transition-colors cursor-pointer text-sm font-semibold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="bg-white hover:bg-neutral-200 text-black font-semibold px-6 py-2.5 rounded-xl transition-all cursor-pointer text-sm flex items-center gap-1.5"
+                >
+                  <Save size={16} />
+                  <span>Actualizar Estado</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL - DELETE DEFINITIVO (ADMIN ONLY) */}
+      {showDeleteDefinitivoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
+          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
+            <button
+              onClick={() => {
+                setShowDeleteDefinitivoModal(false);
+                setDeleteConfirmText('');
+                setDeleteConfirmCheckbox(false);
+              }}
+              className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <X size={24} />
+            </button>
+
+            <h2 className="text-2xl font-bold text-rose-500 mb-2">
+              Eliminar Documento Definitivamente
+            </h2>
+            <p className="text-sm text-neutral-400 mb-6">
+              Esta es una acción irreversible y crítica. Eliminará físicamente todas las versiones de <strong className="text-white">{selectedDoc?.nombre}</strong> de Supabase Storage y de la base de datos.
+            </p>
+
+            <form onSubmit={handleDeleteDefinitivoSubmit} className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    Justificación Escrita Obligatoria
+                  </label>
+                  <textarea
+                    required
+                    rows={3}
+                    placeholder="Escriba la razón de la eliminación para la auditoría..."
+                    value={deleteJustificacion}
+                    onChange={(e) => setDeleteJustificacion(e.target.value)}
+                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-white resize-none"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400 block">
+                    Confirmación de Seguridad (Paso 1)
+                  </label>
+                  <p className="text-xs text-neutral-500 mb-1">Escriba <strong className="text-neutral-400">ELIMINAR</strong> para confirmar:</p>
+                  <input
+                    type="text"
+                    required
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder="ELIMINAR"
+                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-rose-500 focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-neutral-400">
+                    <input
+                      type="checkbox"
+                      checked={deleteConfirmCheckbox}
+                      onChange={(e) => setDeleteConfirmCheckbox(e.target.checked)}
+                      className="rounded border-neutral-800 text-white focus:ring-0"
+                    />
+                    <span>Comprendo que esta acción borrará permanentemente todo el historial del archivo. (Paso 2)</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-4 pt-4 border-t border-neutral-900">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDeleteDefinitivoModal(false);
+                    setDeleteConfirmText('');
+                    setDeleteConfirmCheckbox(false);
+                  }}
+                  className="px-5 py-2.5 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white transition-colors cursor-pointer text-sm font-semibold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={deleteConfirmText !== 'ELIMINAR' || !deleteConfirmCheckbox}
+                  className="bg-rose-600 hover:bg-rose-500 disabled:bg-neutral-900 disabled:text-neutral-600 text-white font-semibold px-6 py-2.5 rounded-xl transition-all cursor-pointer text-sm flex items-center gap-1.5"
+                >
+                  <Trash2 size={16} />
+                  <span>Eliminar Definitivamente</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL - REPROGRAM AUDIENCIA */}
+      {showReprogramModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
+          <div className="relative w-full max-w-2xl bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-2xl animate-scale-in my-8">
+            <button
+              onClick={() => setShowReprogramModal(false)}
+              className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <X size={24} />
+            </button>
+
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-neutral-400 bg-clip-text text-transparent mb-2">
+              Reprogramar Audiencia Judicial
+            </h2>
+            <p className="text-sm text-neutral-400 mb-6">
+              Actualice los datos de la audiencia. Se recalcularán los recordatorios y se notificará a los colaboradores asignados.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Form Side */}
+              <form onSubmit={handleReprogramSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    Descripción / Nombre
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={reprogramNombre}
+                    onChange={(e) => setReprogramNombre(e.target.value)}
+                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    Tipo de Audiencia
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={reprogramTipo}
+                    onChange={(e) => setReprogramTipo(e.target.value)}
+                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    Nueva Fecha y Hora
+                  </label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={reprogramFechaHora}
+                    onChange={(e) => setReprogramFechaHora(e.target.value)}
+                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    Nuevo Lugar / Enlace
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={reprogramLugar}
+                    onChange={(e) => setReprogramLugar(e.target.value)}
+                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-neutral-900">
+                  <button
+                    type="button"
+                    onClick={() => setShowReprogramModal(false)}
+                    className="px-4 py-2 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white transition-colors cursor-pointer text-xs font-semibold"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-white hover:bg-neutral-200 text-black font-semibold px-5 py-2 rounded-xl transition-all cursor-pointer text-xs flex items-center gap-1.5"
+                  >
+                    <Save size={14} />
+                    <span>Guardar Cambios</span>
+                  </button>
+                </div>
+              </form>
+
+              {/* Reprogram History Side */}
+              <div className="bg-neutral-900/20 border border-neutral-800 rounded-2xl p-6 space-y-4 max-h-[400px] overflow-y-auto">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-400 flex items-center gap-2">
+                  <History size={14} />
+                  <span>Historial de Reprogramaciones</span>
+                </h3>
+
+                {(() => {
+                  const reprogEntries = proceso.historial?.filter(
+                    (hist) => hist.campo_modificado === 'AUDIENCIA_REPROGRAMADA'
+                  ) || [];
+
+                  if (reprogEntries.length === 0) {
+                    return (
+                      <p className="text-xs text-neutral-500 italic py-8 text-center">
+                        No hay reprogramaciones previas registradas para este expediente.
+                      </p>
+                    );
+                  }
+
+                  return (
+                    <div className="relative border-l border-neutral-800 pl-4 ml-2 space-y-6 text-xs">
+                      {reprogEntries.map((hist) => (
+                        <div key={hist.id_historial} className="relative group">
+                          <div className="absolute -left-[21px] top-1 w-2 h-2 rounded-full bg-neutral-700 group-hover:bg-white transition-colors" />
+                          <div className="space-y-1">
+                            <span className="text-[10px] text-neutral-500 font-bold block">
+                              {new Date(hist.created_at).toLocaleString()}
+                            </span>
+                            <p className="text-white font-semibold">
+                              Por: {hist.usuario?.nombre || 'Usuario'}
+                            </p>
+                            <p className="text-neutral-400 whitespace-pre-line leading-relaxed">
+                              {hist.descripcion || 'Se modificó la fecha/hora o lugar de una audiencia.'}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
           </div>
         </div>
       )}

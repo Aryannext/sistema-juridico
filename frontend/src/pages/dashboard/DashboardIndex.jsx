@@ -14,6 +14,32 @@ export default function DashboardIndex() {
   const [stats, setStats] = useState({ clientes: 0, procesos: 0, logsCount: 0 });
   const [recentLogs, setRecentLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [notificaciones, setNotificaciones] = useState([]);
+  const [loadingNotificaciones, setLoadingNotificaciones] = useState(false);
+
+  const fetchNotificaciones = async () => {
+    try {
+      setLoadingNotificaciones(true);
+      const res = await api.get('/notificaciones');
+      setNotificaciones(res.data);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoadingNotificaciones(false);
+    }
+  };
+
+  const handleGestionarNotificacion = async (id) => {
+    try {
+      const res = await api.put(`/notificaciones/${id}/gestionar`);
+      toast.success(res.data.message || 'Alerta gestionada con éxito');
+      fetchNotificaciones();
+    } catch (error) {
+      console.error('Error managing notification:', error);
+      const errMsg = error.response?.data?.error || 'Error al gestionar la notificación';
+      toast.error(errMsg);
+    }
+  };
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -48,6 +74,7 @@ export default function DashboardIndex() {
     };
 
     fetchDashboardData();
+    fetchNotificaciones();
   }, [user]);
 
   return (
@@ -69,6 +96,44 @@ export default function DashboardIndex() {
         {/* Abstract background graphics */}
         <div className="absolute right-0 top-0 w-80 h-80 bg-white/[0.02] rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
       </div>
+
+      {/* Alertas Críticas de Alta Prioridad */}
+      {notificaciones.filter(n => n.prioridad === 'ALTA').length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-sm uppercase font-extrabold tracking-wider text-rose-500 flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
+            <span>Alertas Críticas Activas</span>
+          </h2>
+          <div className="grid grid-cols-1 gap-4">
+            {notificaciones
+              .filter(n => n.prioridad === 'ALTA')
+              .map((notif) => (
+                <div
+                  key={notif.id_notificacion}
+                  className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-rose-950/20 via-neutral-950 to-rose-950/10 border border-rose-500/25 p-5 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:border-rose-500/40"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 shrink-0 mt-0.5 font-bold text-lg">
+                      !
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-bold text-white leading-relaxed">{notif.mensaje}</h4>
+                      <p className="text-xs text-neutral-400">
+                        Generado el {new Date(notif.created_at).toLocaleString()} • Canal: {notif.canal || 'Email'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleGestionarNotificacion(notif.id_notificacion)}
+                    className="px-4 py-2 bg-rose-950/30 border border-rose-500/30 hover:bg-rose-500 hover:text-black hover:border-transparent text-rose-400 font-bold rounded-xl text-xs transition-all cursor-pointer whitespace-nowrap self-end sm:self-center"
+                  >
+                    Marcar Gestionada / Leída
+                  </button>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
 
       {/* Grid Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -104,6 +104,10 @@ exports.uploadNuevaVersion = async (req, res) => {
       return res.status(404).json({ error: 'Documento no encontrado' });
     }
 
+    if (doc.estado === 'INACTIVO' || doc.estado === 'REEMPLAZADO') {
+      return res.status(400).json({ error: 'No se puede subir una nueva versión para un documento inactivo o reemplazado' });
+    }
+
     // Obtener la última versión
     const ultimaVersion = await prisma.versionDocumento.findFirst({
       where: { id_documento: id },
@@ -348,5 +352,129 @@ exports.deleteDocumento = async (req, res) => {
   } catch (error) {
     console.error('Error en deleteDocumento:', error);
     res.status(500).json({ error: 'Error al eliminar el documento' });
+  }
+};
+
+// 7. Modificar el estado del documento (INACTIVO o REEMPLAZADO, bloquea reactivación)
+exports.updateDocumentoEstado = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { estado } = req.body;
+
+    const doc = await prisma.documento.findFirst({
+      where: { id_documento: id, tenant_id: req.tenant_id }
+    });
+
+    if (!doc) {
+      return res.status(404).json({ error: 'Documento no encontrado o no pertenece a su consultorio' });
+    }
+
+    // Validar estados válidos
+    const estadosValidos = ['ACTIVO', 'INACTIVO', 'REEMPLAZADO'];
+    if (!estadosValidos.includes(estado)) {
+      return res.status(400).json({ error: 'Estado de documento inválido' });
+    }
+
+    // Bloquear reactivación
+    if ((doc.estado === 'INACTIVO' || doc.estado === 'REEMPLAZADO') && estado === 'ACTIVO') {
+      return res.status(400).json({ error: 'Un documento inactivo o reemplazado no puede ser reactivado' });
+    }
+
+    const updatedDoc = await prisma.documento.update({
+      where: { id_documento: id },
+      data: { estado },
+      include: { version_actual: true }
+    });
+
+    res.json({
+      message: `Estado del documento actualizado a ${estado} con éxito`,
+      documento: updatedDoc
+    });
+  } catch (error) {
+    console.error('Error en updateDocumentoEstado:', error);
+    res.status(500).json({ error: 'Error al actualizar el estado del documento' });
+  }
+};
+
+// 8. Eliminación definitiva de un documento (exclusivo Administrador con justificación)
+exports.deleteDocumentoDefinitivo = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { justificacion } = req.body;
+
+    if (req.user.rol !== 'ADMINISTRADOR') {
+      return res.status(403).json({ error: 'No autorizado. Se requiere rol de Administrador para eliminación definitiva.' });
+    }
+
+    if (!justificacion || justificacion.trim() === '') {
+      return res.status(400).json({ error: 'Debe proporcionar una justificación para la eliminación definitiva.' });
+    }
+
+    const doc = await prisma.documento.findFirst({
+      where: { id_documento: id, tenant_id: req.tenant_id },
+      include: { versiones: true }
+    });
+
+    if (!doc) {
+      return res.status(404).json({ error: 'Documento no encontrado o no pertenece a su consultorio' });
+    }
+
+    // Verificar si ha sido utilizado en actuaciones procesales
+    // Check 1: Parte procesal vinculada
+    const usedInPartes = await prisma.parteProcesal.findFirst({
+      where: { id_documento: id }
+    });
+
+    // Check 2: Más de 1 versión
+    if (usedInPartes || doc.versiones.length > 1) {
+      return res.status(400).json({
+        error: 'No se permite eliminar definitivamente documentos utilizados en actuaciones procesales o con historial de versiones.'
+      });
+    }
+
+    const filePaths = doc.versiones.map(v => v.url_archivo);
+
+    // Eliminar archivos físicos de Supabase Storage
+    if (filePaths.length > 0) {
+      const { error: storageError } = await supabase.storage
+        .from('documentos-expedientes')
+        .remove(filePaths);
+
+      if (storageError) {
+        console.error('Error eliminando archivos de Supabase Storage:', storageError);
+        return res.status(500).json({ error: 'Error al eliminar el archivo físico del almacenamiento' });
+      }
+    }
+
+    // Eliminar registros de la DB en transacción
+    await prisma.$transaction(async (tx) => {
+      await tx.documento.update({
+        where: { id_documento: id },
+        data: { id_version_actual: null }
+      });
+      await tx.versionDocumento.deleteMany({
+        where: { id_documento: id }
+      });
+      await tx.documento.delete({
+        where: { id_documento: id }
+      });
+    });
+
+    // Registrar acción en bitácora de auditoría
+    await prisma.bitacoraAuditoria.create({
+      data: {
+        tenant_id: req.tenant_id,
+        id_usuario: req.user.id_usuario,
+        accion: 'ELIMINACION_DEFINITIVA_DOCUMENTO',
+        modulo: 'DOCS',
+        detalle: `Documento "${doc.nombre}" eliminado definitivamente de forma física. Justificación: ${justificacion}`,
+        ip_adress: req.ip || '127.0.0.1'
+      }
+    });
+
+    res.json({ message: 'Documento y versiones eliminados de forma definitiva con éxito' });
+  } catch (error) {
+    console.error('Error en deleteDocumentoDefinitivo:', error);
+    res.status(500).json({ error: 'Error al eliminar el documento definitivamente' });
   }
 };
