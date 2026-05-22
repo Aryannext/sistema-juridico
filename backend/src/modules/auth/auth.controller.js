@@ -52,7 +52,8 @@ exports.registro = async (req, res) => {
     });
 
     const isAutoVerify = process.env.DEV_AUTO_VERIFY === 'true';
-    const verificationUrl = `http://localhost:5173/verificacion?token=${tokenVerificacion}`;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const verificationUrl = `${frontendUrl}/verificacion?token=${tokenVerificacion}`;
 
     console.log('\n=========================================');
     console.log('DEV LOCAL REGISTRATION LOG:');
