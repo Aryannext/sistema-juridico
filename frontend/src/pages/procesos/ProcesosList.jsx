@@ -184,7 +184,7 @@ export default function ProcesosList() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent">
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent">
             Expedientes Jurídicos
           </h1>
           <p className="text-neutral-400 mt-1">
@@ -200,9 +200,9 @@ export default function ProcesosList() {
             }
             setShowModal(true);
           }}
-          className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#C29B4F] to-[#E5C37A] hover:from-[#E5C37A] hover:to-[#C29B4F] text-black font-semibold px-5 py-2.5 rounded-xl transition-all duration-300 transform hover:scale-[1.02] shadow-[0_4px_20px_rgba(223,185,113,0.3)] cursor-pointer text-sm"
+          className="flex items-center justify-center gap-1.5 md:gap-2 bg-gradient-to-r from-[#C29B4F] to-[#E5C37A] hover:from-[#E5C37A] hover:to-[#C29B4F] text-black font-semibold px-4 py-2 md:px-5 md:py-2.5 rounded-xl transition-all duration-300 transform hover:scale-[1.02] shadow-[0_4px_20px_rgba(223,185,113,0.3)] cursor-pointer text-xs md:text-sm"
         >
-          <Plus size={18} />
+          <Plus size={18} className="md:w-[20px] md:h-[20px]"/>
           <span>Nuevo Expediente</span>
         </button>
       </div>
@@ -389,7 +389,7 @@ export default function ProcesosList() {
 
       {/* Right Column: Side Panel Form */}
       {showModal && (
-        <div className="w-full lg:w-1/3 bg-neutral-950/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] sticky top-0 h-[calc(100vh-8rem)] overflow-y-auto custom-scrollbar animate-fade-in">
+        <div className="w-full lg:w-1/3 bg-neutral-950/40 backdrop-blur-xl border border-white/10 rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] sticky top-0 h-[calc(100vh-8rem)] overflow-y-auto custom-scrollbar animate-fade-in">
           <div className="relative">
             <button
               onClick={() => setShowModal(false)}
@@ -398,21 +398,21 @@ export default function ProcesosList() {
               <X size={20} />
             </button>
 
-            <h2 className="text-xl font-bold bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent mb-6 pr-8">
+            <h2 className="text-lg md:text-xl font-bold bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent mb-4 md:mb-6 pr-8">
               Abrir Nuevo Expediente
             </h2>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 gap-5">
+            <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
+              <div className="grid grid-cols-1 gap-3 md:gap-5">
                 
-                <div className="space-y-2">
+                <div className="space-y-1.5 md:space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
                     Cliente del Proceso
                   </label>
                   <select
                     value={idCliente}
                     onChange={(e) => setIdCliente(e.target.value)}
-                    className="w-full bg-[#111] border border-white/10 text-white focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm cursor-pointer"
+                    className="w-full bg-[#111] border border-white/10 text-white focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-2 md:py-3 text-xs md:text-sm cursor-pointer"
                   >
                     {clientes.map(cli => (
                       <option key={cli.id_cliente} value={cli.id_cliente}>
@@ -429,10 +429,12 @@ export default function ProcesosList() {
                   <input
                     type="text"
                     required
+                    maxLength={23}
+                    minLength={23}
                     value={numeroRadicado}
-                    onChange={(e) => setNumeroRadicado(e.target.value)}
+                    onChange={(e) => setNumeroRadicado(e.target.value.replace(/[^0-9]/g, ''))}
                     placeholder="Ej. 110014003002202600123"
-                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-500"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-2 md:py-3 text-xs md:text-sm text-white placeholder-neutral-500"
                   />
                 </div>
 
@@ -446,7 +448,7 @@ export default function ProcesosList() {
                     value={juzgado}
                     onChange={(e) => setJuzgado(e.target.value)}
                     placeholder="Ej. Juzgado 5 Civil Municipal"
-                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-500"
+                    className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-2 md:py-3 text-xs md:text-sm text-white placeholder-neutral-500"
                   />
                 </div>
 

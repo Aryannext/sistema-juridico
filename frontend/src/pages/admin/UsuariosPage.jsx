@@ -254,7 +254,7 @@ export default function UsuariosPage() {
                     type="text"
                     required
                     value={newUser.nombre}
-                    onChange={(e) => setNewUser({...newUser, nombre: e.target.value})}
+                    onChange={(e) => setNewUser({...newUser, nombre: e.target.value.replace(/[0-9]/g, '')})}
                     className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-2 md:py-3 text-xs md:text-sm transition-all"
                     placeholder="Ej. Ana Martínez"
                   />

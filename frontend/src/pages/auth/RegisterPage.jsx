@@ -136,6 +136,7 @@ export default function RegisterPage() {
                 <input 
                   className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:bg-white/10 focus:border-[#DFB971] transition-all rounded-xl pl-10 pr-4 py-3 outline-none"
                   placeholder="Enter admin full name"
+                  onInput={(e) => e.target.value = e.target.value.replace(/[0-9]/g, '')}
                   {...register('nombre_admin', { required: 'El nombre es requerido' })}
                 />
               </div>
@@ -200,7 +201,10 @@ export default function RegisterPage() {
                     </div>
                     <input 
                       className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:bg-white/10 focus:border-[#DFB971] transition-all rounded-xl pl-10 pr-4 py-3 outline-none"
-                      placeholder="900.123.456-7"
+                      placeholder="Ej. 900123456"
+                      minLength={5}
+                      maxLength={10}
+                      onInput={(e) => e.target.value = e.target.value.replace(/[^0-9]/g, '')}
                       {...register('nit')} 
                     />
                   </div>
@@ -215,8 +219,14 @@ export default function RegisterPage() {
                     </div>
                     <input 
                       className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:bg-white/10 focus:border-[#DFB971] transition-all rounded-xl pl-10 pr-4 py-3 outline-none"
-                      placeholder="+1 234 567 890"
-                      {...register('telefono')} 
+                      placeholder="Ej. 3001234567"
+                      maxLength={10}
+                      minLength={10}
+                      onInput={(e) => e.target.value = e.target.value.replace(/[^0-9]/g, '')}
+                      {...register('telefono', {
+                        minLength: { value: 10, message: 'Debe tener 10 dígitos' },
+                        maxLength: { value: 10, message: 'Debe tener 10 dígitos' }
+                      })} 
                     />
                   </div>
                 </div>

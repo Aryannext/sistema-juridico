@@ -95,18 +95,18 @@ export default function ClientesList() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent">
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent">
               Gestión de Clientes
             </h1>
-            <p className="text-neutral-400 mt-1">
+            <p className="text-neutral-400 text-xs md:text-base mt-1">
               Administra los expedientes de personas naturales y jurídicas de tu consultorio.
             </p>
           </div>
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#C29B4F] to-[#E5C37A] hover:from-[#E5C37A] hover:to-[#C29B4F] text-black font-semibold px-5 py-2.5 rounded-xl transition-all duration-300 transform hover:scale-[1.02] shadow-[0_4px_20px_rgba(223,185,113,0.3)] cursor-pointer"
+          className="flex items-center justify-center gap-1.5 md:gap-2 bg-gradient-to-r from-[#C29B4F] to-[#E5C37A] hover:from-[#E5C37A] hover:to-[#C29B4F] text-black font-semibold px-4 py-2 md:px-5 md:py-2.5 text-xs md:text-sm rounded-xl transition-all duration-300 transform hover:scale-[1.02] shadow-[0_4px_20px_rgba(223,185,113,0.3)] cursor-pointer"
         >
-          <Plus size={20} />
+          <Plus size={18} className="md:w-[20px] md:h-[20px]" />
           <span>Nuevo Cliente</span>
         </button>
       </div>
@@ -125,7 +125,7 @@ export default function ClientesList() {
           placeholder="Buscar por nombre, documento o correo..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-neutral-950/40 backdrop-blur-xl border border-white/10 focus:border-[#DFB971] shadow-[0_4px_16px_rgba(0,0,0,0.4)] focus:outline-none rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-neutral-500 transition-colors"
+          className="w-full bg-neutral-950/40 backdrop-blur-xl border border-white/10 focus:border-[#DFB971] shadow-[0_4px_16px_rgba(0,0,0,0.4)] focus:outline-none rounded-xl pl-11 pr-4 py-2 md:py-3 text-xs md:text-sm text-white placeholder-neutral-500 transition-colors"
         />
       </div>
 
@@ -143,12 +143,12 @@ export default function ClientesList() {
           <p className="text-neutral-500 mt-1 text-sm">Prueba registrando un nuevo cliente en el botón superior.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {filteredClientes.map((cliente) => (
             <div
               key={cliente.id_cliente}
               onClick={() => navigate(`/clientes/${cliente.id_cliente}`)}
-              className="group relative rounded-2xl bg-neutral-950/40 backdrop-blur-xl border border-white/10 hover:border-[#DFB971]/50 p-6 transition-all duration-300 cursor-pointer shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] hover:shadow-[0_8px_32px_0_rgba(223,185,113,0.15)] overflow-hidden"
+              className="group relative rounded-2xl bg-neutral-950/40 backdrop-blur-xl border border-white/10 hover:border-[#DFB971]/50 p-4 md:p-6 transition-all duration-300 cursor-pointer shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] hover:shadow-[0_8px_32px_0_rgba(223,185,113,0.15)] overflow-hidden"
             >
               <div className="flex justify-between items-start mb-4">
                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
@@ -163,7 +163,7 @@ export default function ClientesList() {
                 </span>
               </div>
 
-              <h3 className="text-xl font-bold text-white mb-2 line-clamp-1 group-hover:text-neutral-200 transition-colors">
+              <h3 className="text-lg md:text-xl font-bold text-white mb-2 line-clamp-1 group-hover:text-neutral-200 transition-colors">
                 {cliente.nombre}
               </h3>
               
@@ -196,7 +196,7 @@ export default function ClientesList() {
 
       {/* Right Column: Side Panel Form */}
       {showModal && (
-        <div className="w-full lg:w-1/3 bg-neutral-950/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] sticky top-0 h-[calc(100vh-8rem)] overflow-y-auto custom-scrollbar animate-fade-in">
+        <div className="w-full lg:w-1/3 bg-neutral-950/40 backdrop-blur-xl border border-white/10 rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] sticky top-0 h-[calc(100vh-8rem)] overflow-y-auto custom-scrollbar animate-fade-in">
           <div className="relative">
             <button
               onClick={() => setShowModal(false)}
@@ -205,13 +205,13 @@ export default function ClientesList() {
               <X size={20} />
             </button>
 
-            <h2 className="text-xl font-bold bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent mb-6 pr-8">
+            <h2 className="text-lg md:text-xl font-bold bg-gradient-to-r from-white via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent mb-4 md:mb-6 pr-8">
               Registrar Nuevo Cliente
             </h2>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
               {/* Tipo de Cliente Select */}
-              <div className="grid grid-cols-2 gap-4 bg-black/50 p-1.5 rounded-xl border border-white/10">
+              <div className="grid grid-cols-2 gap-2 md:gap-4 bg-black/50 p-1.5 rounded-xl border border-white/10">
                 <button
                   type="button"
                   onClick={() => setTipo('NATURAL')}
@@ -221,25 +221,25 @@ export default function ClientesList() {
                       : 'text-neutral-400 hover:text-white border border-transparent'
                   }`}
                 >
-                  <User size={16} />
-                  <span>Persona Natural</span>
+                  <User size={16} className="w-[14px] md:w-[16px] h-[14px] md:h-[16px]"/>
+                  <span className="text-[10px] md:text-sm">Persona Natural</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setTipo('JURIDICA')}
-                  className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+                  className={`flex items-center justify-center gap-1.5 md:gap-2 py-2 md:py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all cursor-pointer ${
                     tipo === 'JURIDICA' 
                       ? 'bg-[#DFB971]/20 text-[#DFB971] border border-[#DFB971]/30 shadow-[0_0_10px_rgba(223,185,113,0.2)]' 
                       : 'text-neutral-400 hover:text-white border border-transparent'
                   }`}
                 >
-                  <Building2 size={16} />
-                  <span>Persona Jurídica</span>
+                  <Building2 size={16} className="w-[14px] md:w-[16px] h-[14px] md:h-[16px]"/>
+                  <span className="text-[10px] md:text-sm">Persona Jurídica</span>
                 </button>
               </div>
 
               {/* Dynamic Inputs depending on type */}
-              <div className="grid grid-cols-1 gap-5">
+              <div className="grid grid-cols-1 gap-3 md:gap-5">
                 {tipo === 'NATURAL' ? (
                   <>
                     <div className="space-y-2">
@@ -250,7 +250,7 @@ export default function ClientesList() {
                         type="text"
                         required
                         value={nombre}
-                        onChange={(e) => setNombre(e.target.value)}
+                        onChange={(e) => setNombre(e.target.value.replace(/[0-9]/g, ''))}
                         placeholder="Ej. Juan Pérez"
                         className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-3 text-sm transition-all"
                       />
@@ -276,8 +276,10 @@ export default function ClientesList() {
                       <input
                         type="text"
                         required
+                        minLength={5}
+                        maxLength={10}
                         value={numeroDocumento}
-                        onChange={(e) => setNumeroDocumento(e.target.value)}
+                        onChange={(e) => setNumeroDocumento(e.target.value.replace(/[^0-9]/g, ''))}
                         placeholder="Ej. 10293847"
                         className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-3 text-sm transition-all"
                       />
@@ -316,9 +318,11 @@ export default function ClientesList() {
                       <input
                         type="text"
                         required
+                        minLength={5}
+                        maxLength={10}
                         value={nit}
-                        onChange={(e) => setNit(e.target.value)}
-                        placeholder="Ej. 900.123.456-7"
+                        onChange={(e) => setNit(e.target.value.replace(/[^0-9]/g, ''))}
+                        placeholder="Ej. 900123456"
                         className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-3 text-sm transition-all"
                       />
                     </div>
@@ -330,7 +334,7 @@ export default function ClientesList() {
                         type="text"
                         required
                         value={representante}
-                        onChange={(e) => setRepresentante(e.target.value)}
+                        onChange={(e) => setRepresentante(e.target.value.replace(/[0-9]/g, ''))}
                         placeholder="Nombre completo"
                         className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-3 text-sm transition-all"
                       />
@@ -344,10 +348,12 @@ export default function ClientesList() {
                     Teléfono de Contacto
                   </label>
                   <input
-                    type="tel"
+                    type="text"
                     required
+                    minLength={10}
+                    maxLength={10}
                     value={telefono}
-                    onChange={(e) => setTelefono(e.target.value)}
+                    onChange={(e) => setTelefono(e.target.value.replace(/[^0-9]/g, ''))}
                     placeholder="Ej. 3001234567"
                     className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:border-[#DFB971] focus:bg-white/10 outline-none rounded-xl px-4 py-3 text-sm transition-all"
                   />
