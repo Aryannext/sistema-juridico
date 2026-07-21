@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../../api/axios';
@@ -10,8 +10,32 @@ export default function LoginPage() {
   const { register, handleSubmit, formState: { errors } } = useForm();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [lockUntilTime, setLockUntilTime] = useState(null);
+  const [timeLeft, setTimeLeft] = useState('');
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  useEffect(() => {
+    let interval;
+    if (lockUntilTime) {
+      interval = setInterval(() => {
+        const now = new Date();
+        const end = new Date(lockUntilTime);
+        const diff = end - now;
+        
+        if (diff <= 0) {
+          setLockUntilTime(null);
+          setTimeLeft('');
+          clearInterval(interval);
+        } else {
+          const minutes = Math.floor(diff / 60000);
+          const seconds = Math.floor((diff % 60000) / 1000);
+          setTimeLeft(`${minutes}:${seconds < 10 ? '0' : ''}${seconds}`);
+        }
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [lockUntilTime]);
 
   const onSubmit = async (data) => {
     setLoading(true);
@@ -27,6 +51,10 @@ export default function LoginPage() {
         navigate('/dashboard');
       }
     } catch (error) {
+      const lockUntil = error.response?.data?.lockUntil;
+      if (lockUntil) {
+        setLockUntilTime(lockUntil);
+      }
       toast.error(error.response?.data?.error || 'Error al iniciar sesión');
     } finally {
       setLoading(false);
@@ -78,6 +106,14 @@ export default function LoginPage() {
               <h2 className="text-2xl font-semibold text-white mb-2">Welcome to SGPA</h2>
               <p className="text-sm text-neutral-400">Secure Portal for Legal Professionals</p>
             </div>
+
+            {lockUntilTime && (
+              <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-center animate-shake">
+                <p className="text-red-400 text-sm font-medium mb-1">Cuenta bloqueada por seguridad</p>
+                <p className="text-2xl font-mono text-red-300 font-bold tracking-widest">{timeLeft}</p>
+                <p className="text-xs text-red-500/70 mt-1">Podrás intentarlo de nuevo cuando termine el tiempo</p>
+              </div>
+            )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="space-y-2">
@@ -135,15 +171,15 @@ export default function LoginPage() {
 
             <button 
               type="submit" 
-              className="w-full bg-gradient-to-r from-[#C29B4F] to-[#E5C37A] hover:from-[#E5C37A] hover:to-[#C29B4F] text-black font-semibold shadow-[0_0_15px_rgba(223,185,113,0.3)] hover:shadow-[0_0_25px_rgba(223,185,113,0.5)] transition-all duration-300 rounded-xl py-3.5 uppercase tracking-wider text-sm mt-4 flex justify-center items-center cursor-pointer" 
-              disabled={loading}
+              className="w-full bg-gradient-to-r from-[#C29B4F] to-[#E5C37A] hover:from-[#E5C37A] hover:to-[#C29B4F] disabled:opacity-50 disabled:cursor-not-allowed text-black font-semibold shadow-[0_0_15px_rgba(223,185,113,0.3)] hover:shadow-[0_0_25px_rgba(223,185,113,0.5)] transition-all duration-300 rounded-xl py-3.5 uppercase tracking-wider text-sm mt-4 flex justify-center items-center cursor-pointer" 
+              disabled={loading || lockUntilTime !== null}
             >
               {loading ? (
                 <svg className="animate-spin h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-              ) : 'Sign In'}
+              ) : lockUntilTime ? 'Locked' : 'Sign In'}
             </button>
           </form>
 
