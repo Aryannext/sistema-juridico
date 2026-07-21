@@ -8,13 +8,14 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const sendEmail = async ({ to, subject, html }) => {
+const sendEmail = async ({ to, subject, html, text }) => {
   try {
     const mailOptions = {
       from: `"SGPA Notificaciones" <${process.env.GMAIL_USER}>`,
       to,
       subject,
       html,
+      text, // Gmail usa la versión de texto plano como métrica anti-spam
     };
     await transporter.sendMail(mailOptions);
   } catch (error) {

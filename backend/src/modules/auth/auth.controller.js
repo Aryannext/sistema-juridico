@@ -70,6 +70,7 @@ exports.registro = async (req, res) => {
       await sendEmail({
         to: email,
         subject: 'Verifica tu cuenta en SGPA',
+        text: `Hola ${nombre_admin},\n\nGracias por registrarte. Para activar tu cuenta, por favor verifica tu dirección de correo electrónico copiando y pegando el siguiente enlace en tu navegador:\n\n${verificationUrl}\n\nSi no solicitaste este registro, puedes ignorar este mensaje.\n\nEl equipo de SGPA.`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
             <h1 style="color: #DFB971; text-align: center;">Bienvenido a SGPA</h1>
@@ -186,6 +187,7 @@ exports.login = async (req, res) => {
         await sendEmail({
           to: user.email,
           subject: 'Código de verificación SGPA',
+          text: `Tu código de verificación de 2 factores es: ${otp}\n\nEl código expira en 5 minutos.`,
           html: `<h1>Tu código de verificación</h1>
                  <p>Ingresa el siguiente código de 6 dígitos: <strong>${otp}</strong></p>
                  <p>El código expira en 5 minutos.</p>`
