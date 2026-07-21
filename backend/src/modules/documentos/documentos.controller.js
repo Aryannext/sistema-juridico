@@ -1,5 +1,7 @@
 const prisma = require('../../config/prisma');
-const supabase = require('../../config/supabase');
+const r2Client = require('../../config/cloudflare');
+const { PutObjectCommand, DeleteObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 // Helper to get file extension
 const getFileExtension = (filename) => {
@@ -15,23 +17,34 @@ exports.uploadDocumento = async (req, res) => {
       return res.status(400).json({ error: 'No se ha subido ningún archivo' });
     }
 
+    // Verificar límite global de almacenamiento (9.5 GB)
+    const MAX_STORAGE_BYTES = 9.5 * 1024 * 1024 * 1024;
+    const currentStorage = await prisma.versionDocumento.aggregate({
+      _sum: { tamano_bytes: true }
+    });
+    const totalStorageUsed = currentStorage._sum.tamano_bytes || 0;
+    
+    if (totalStorageUsed + req.file.size > MAX_STORAGE_BYTES) {
+      return res.status(400).json({ error: 'Límite gratuito de almacenamiento alcanzado (9.5 GB). No se pueden subir más archivos.' });
+    }
+
     const fileExt = getFileExtension(req.file.originalname);
     const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
     // Path: tenant_id/id_proceso/filename
     const folderPath = id_proceso ? id_proceso : 'general';
-    const filePath = `${req.tenant_id}/${folderPath}/${fileName}`;
+    const filePath = `documentos-expedientes/${req.tenant_id}/${folderPath}/${fileName}`;
 
-    // Subir archivo a Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('documentos-expedientes')
-      .upload(filePath, req.file.buffer, {
-        contentType: req.file.mimetype,
-        cacheControl: '3600',
-        upsert: false
+    // Subir archivo a Cloudflare R2
+    try {
+      const command = new PutObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME,
+        Key: filePath,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype,
       });
-
-    if (uploadError) {
-      console.error('Error subiendo archivo a Supabase Storage:', uploadError);
+      await r2Client.send(command);
+    } catch (uploadError) {
+      console.error('Error subiendo archivo a Cloudflare R2:', uploadError);
       return res.status(500).json({ error: 'Error al subir archivo al almacenamiento en la nube' });
     }
 
@@ -108,6 +121,17 @@ exports.uploadNuevaVersion = async (req, res) => {
       return res.status(400).json({ error: 'No se puede subir una nueva versión para un documento inactivo o reemplazado' });
     }
 
+    // Verificar límite global de almacenamiento (9.5 GB)
+    const MAX_STORAGE_BYTES = 9.5 * 1024 * 1024 * 1024;
+    const currentStorage = await prisma.versionDocumento.aggregate({
+      _sum: { tamano_bytes: true }
+    });
+    const totalStorageUsed = currentStorage._sum.tamano_bytes || 0;
+    
+    if (totalStorageUsed + req.file.size > MAX_STORAGE_BYTES) {
+      return res.status(400).json({ error: 'Límite gratuito de almacenamiento alcanzado (9.5 GB). No se pueden subir más archivos.' });
+    }
+
     // Obtener la última versión
     const ultimaVersion = await prisma.versionDocumento.findFirst({
       where: { id_documento: id },
@@ -118,19 +142,19 @@ exports.uploadNuevaVersion = async (req, res) => {
     const fileExt = getFileExtension(req.file.originalname);
     const fileName = `${Date.now()}_v${nextVersionNum}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
     const folderPath = doc.id_proceso ? doc.id_proceso : 'general';
-    const filePath = `${req.tenant_id}/${folderPath}/${fileName}`;
+    const filePath = `documentos-expedientes/${req.tenant_id}/${folderPath}/${fileName}`;
 
-    // Subir el nuevo archivo
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('documentos-expedientes')
-      .upload(filePath, req.file.buffer, {
-        contentType: req.file.mimetype,
-        cacheControl: '3600',
-        upsert: false
+    // Subir el nuevo archivo a Cloudflare R2
+    try {
+      const command = new PutObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME,
+        Key: filePath,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype,
       });
-
-    if (uploadError) {
-      console.error('Error subiendo nueva versión:', uploadError);
+      await r2Client.send(command);
+    } catch (uploadError) {
+      console.error('Error subiendo nueva versión a Cloudflare R2:', uploadError);
       return res.status(500).json({ error: 'Error al subir la nueva versión del archivo' });
     }
 
@@ -332,17 +356,19 @@ exports.getVersionDownloadUrl = async (req, res) => {
       });
     }
 
-    // Generar URL firmada de 15 minutos en Supabase Storage
-    const { data, error } = await supabase.storage
-      .from('documentos-expedientes')
-      .createSignedUrl(version.url_archivo, 60 * 15); // 15 minutos de validez
-
-    if (error) {
-      console.error('Error generando URL firmada:', error);
+    // Generar URL firmada de 15 minutos en Cloudflare R2
+    try {
+      const command = new GetObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME,
+        Key: version.url_archivo,
+      });
+      // 15 minutos de validez (900 segundos)
+      const signedUrl = await getSignedUrl(r2Client, command, { expiresIn: 900 });
+      res.json({ url: signedUrl, nombre_archivo: version.nombre_archivo });
+    } catch (error) {
+      console.error('Error generando URL firmada R2:', error);
       return res.status(500).json({ error: 'Error al generar la URL de descarga segura' });
     }
-
-    res.json({ url: data.signedUrl, nombre_archivo: version.nombre_archivo });
   } catch (error) {
     console.error('Error en getVersionDownloadUrl:', error);
     res.status(500).json({ error: 'Error al procesar la descarga' });
@@ -453,15 +479,19 @@ exports.deleteDocumentoDefinitivo = async (req, res) => {
 
     const filePaths = doc.versiones.map(v => v.url_archivo);
 
-    // Eliminar archivos físicos de Supabase Storage
+    // Eliminar archivos físicos de Cloudflare R2
     if (filePaths.length > 0) {
-      const { error: storageError } = await supabase.storage
-        .from('documentos-expedientes')
-        .remove(filePaths);
-
-      if (storageError) {
-        console.error('Error eliminando archivos de Supabase Storage:', storageError);
-        return res.status(500).json({ error: 'Error al eliminar el archivo físico del almacenamiento' });
+      for (const filePath of filePaths) {
+        try {
+          const command = new DeleteObjectCommand({
+            Bucket: process.env.R2_BUCKET_NAME,
+            Key: filePath,
+          });
+          await r2Client.send(command);
+        } catch (storageError) {
+          console.error(`Error eliminando archivo ${filePath} de Cloudflare R2:`, storageError);
+          // Opcional: no retornar error aquí si queremos que la DB se borre de todos modos
+        }
       }
     }
 

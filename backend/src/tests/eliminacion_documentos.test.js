@@ -19,11 +19,8 @@ jest.mock('../config/prisma', () => ({
   }
 }));
 
-jest.mock('../config/supabase', () => ({
-  storage: {
-    from: jest.fn().mockReturnThis(),
-    remove: jest.fn()
-  }
+jest.mock('../config/cloudflare', () => ({
+  send: jest.fn()
 }));
 
 describe('HU-16: Restricción de eliminación de documentos', () => {

@@ -1,5 +1,6 @@
 const prisma = require('../../config/prisma');
-const supabase = require('../../config/supabase');
+const r2Client = require('../../config/cloudflare');
+const { PutObjectCommand } = require('@aws-sdk/client-s3');
 const { extname } = require('path');
 
 exports.updatePerfil = async (req, res) => {
@@ -16,28 +17,29 @@ exports.updatePerfil = async (req, res) => {
       }
     }
 
-    // Handle Logo upload to Supabase Storage
+    // Handle Logo upload to Cloudflare R2
     if (req.file) {
       const fileExt = extname(req.file.originalname);
       const fileName = `${tenant_id}-${Date.now()}${fileExt}`;
-      const filePath = `logos/${fileName}`;
+      const filePath = `logos-tenant/${fileName}`;
 
-      const { data, error } = await supabase.storage
-        .from('logos-tenant')
-        .upload(filePath, req.file.buffer, {
-          contentType: req.file.mimetype,
-          upsert: true
-        });
+      const command = new PutObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME,
+        Key: filePath,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype,
+      });
 
-      if (error) {
-        throw error;
+      await r2Client.send(command);
+
+      // Si R2_PUBLIC_DOMAIN está definido, se usa. Si no, se arma la URL base típica de R2
+      const publicDomain = process.env.R2_PUBLIC_DOMAIN;
+      if (publicDomain) {
+        logo_url = `https://${publicDomain}/${filePath}`;
+      } else {
+        // Fallback genérico si no se configura un dominio público en .env
+        logo_url = `https://${process.env.R2_BUCKET_NAME}.${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${filePath}`;
       }
-
-      const { data: publicUrlData } = supabase.storage
-        .from('logos-tenant')
-        .getPublicUrl(filePath);
-
-      logo_url = publicUrlData.publicUrl;
     }
 
     const updatedTenant = await prisma.tenant.update({
