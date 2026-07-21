@@ -8,6 +8,52 @@ const getFileExtension = (filename) => {
   return filename.split('.').pop() || '';
 };
 
+// ─── Límites de operaciones gratuitas de Cloudflare R2 ───────────────────────
+// Class A (escrituras: PUT, DELETE): 1M gratis/mes. Bloqueamos al 90% = 900,000
+// Class B (lecturas: GET firmadas):  10M gratis/mes. Bloqueamos al 90% = 9,000,000
+const CLASS_A_LIMIT = 900_000;
+const CLASS_B_LIMIT = 9_000_000;
+
+// Retorna el primer día del mes actual en UTC
+const getStartOfMonth = () => {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+};
+
+// Verifica el límite de operaciones Class A (subidas + borrados)
+const checkClassALimit = async () => {
+  const startOfMonth = getStartOfMonth();
+  const uploadCount = await prisma.versionDocumento.count({
+    where: { created_at: { gte: startOfMonth } }
+  });
+  // Cada borrado definitivo en la bitácora también cuenta como Class A
+  const deleteCount = await prisma.bitacoraAuditoria.count({
+    where: {
+      accion: 'ELIMINACION_DEFINITIVA_DOCUMENTO',
+      created_at: { gte: startOfMonth }
+    }
+  });
+  const total = uploadCount + deleteCount;
+  if (total >= CLASS_A_LIMIT) {
+    throw new Error(`LIMIT_CLASS_A: Límite mensual de operaciones de escritura en R2 alcanzado (${CLASS_A_LIMIT.toLocaleString()} operaciones). Inténtalo el próximo mes.`);
+  }
+};
+
+// Verifica el límite de operaciones Class B (descargas/lecturas)
+const checkClassBLimit = async () => {
+  const startOfMonth = getStartOfMonth();
+  const downloadCount = await prisma.bitacoraAuditoria.count({
+    where: {
+      accion: { in: ['DESCARGAR_DOCUMENTO_CLIENTE', 'DESCARGAR_DOCUMENTO'] },
+      created_at: { gte: startOfMonth }
+    }
+  });
+  if (downloadCount >= CLASS_B_LIMIT) {
+    throw new Error(`LIMIT_CLASS_B: Límite mensual de operaciones de lectura en R2 alcanzado (${CLASS_B_LIMIT.toLocaleString()} operaciones). Inténtalo el próximo mes.`);
+  }
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
 // 1. Cargar un nuevo documento (v1)
 exports.uploadDocumento = async (req, res) => {
   try {
@@ -33,6 +79,13 @@ exports.uploadDocumento = async (req, res) => {
     // Path: tenant_id/id_proceso/filename
     const folderPath = id_proceso ? id_proceso : 'general';
     const filePath = `documentos-expedientes/${req.tenant_id}/${folderPath}/${fileName}`;
+
+    // Verificar límite Class A (escrituras) antes de subir
+    try {
+      await checkClassALimit();
+    } catch (limitError) {
+      return res.status(429).json({ error: limitError.message });
+    }
 
     // Subir archivo a Cloudflare R2
     try {
@@ -143,6 +196,13 @@ exports.uploadNuevaVersion = async (req, res) => {
     const fileName = `${Date.now()}_v${nextVersionNum}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
     const folderPath = doc.id_proceso ? doc.id_proceso : 'general';
     const filePath = `documentos-expedientes/${req.tenant_id}/${folderPath}/${fileName}`;
+
+    // Verificar límite Class A (escrituras) antes de subir nueva versión
+    try {
+      await checkClassALimit();
+    } catch (limitError) {
+      return res.status(429).json({ error: limitError.message });
+    }
 
     // Subir el nuevo archivo a Cloudflare R2
     try {
@@ -355,6 +415,25 @@ exports.getVersionDownloadUrl = async (req, res) => {
         }
       });
     }
+
+    // Verificar límite Class B (lecturas) antes de generar URL firmada
+    try {
+      await checkClassBLimit();
+    } catch (limitError) {
+      return res.status(429).json({ error: limitError.message });
+    }
+
+    // Registrar descarga en bitácora (para el contador Class B)
+    await prisma.bitacoraAuditoria.create({
+      data: {
+        tenant_id: req.tenant_id,
+        id_usuario: req.user.id_usuario,
+        accion: 'DESCARGAR_DOCUMENTO',
+        modulo: 'DOCS',
+        detalle: `Descarga de versión v${version.numero_version} del documento "${version.documento?.nombre || 'desconocido'}"`,
+        ip_adress: req.ip || '127.0.0.1'
+      }
+    }).catch(() => {}); // No bloqueamos si falla el registro
 
     // Generar URL firmada de 15 minutos en Cloudflare R2
     try {
