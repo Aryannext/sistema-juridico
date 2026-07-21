@@ -134,7 +134,10 @@ exports.login = async (req, res) => {
     if (user.bloqueado_hasta && user.bloqueado_hasta > new Date()) {
       const remainingMs = user.bloqueado_hasta - new Date();
       const remainingMins = Math.ceil(remainingMs / 60000);
-      return res.status(403).json({ error: `Cuenta bloqueada por seguridad. Intenta nuevamente en ${remainingMins} minuto(s).` });
+      return res.status(403).json({ 
+        error: `Cuenta bloqueada por seguridad. Intenta nuevamente en ${remainingMins} minuto(s).`,
+        lockUntil: user.bloqueado_hasta.toISOString()
+      });
     }
 
     const isValid = await comparePassword(password, user.password_hash);
@@ -160,7 +163,10 @@ exports.login = async (req, res) => {
       });
 
       if (lockMinutes > 0) {
-        return res.status(401).json({ error: `Demasiados intentos fallidos. Cuenta bloqueada por ${lockMinutes} minuto(s).` });
+        return res.status(401).json({ 
+          error: `Demasiados intentos fallidos. Cuenta bloqueada por ${lockMinutes} minuto(s).`,
+          lockUntil: updateData.bloqueado_hasta.toISOString()
+        });
       }
 
       return res.status(401).json({ error: 'Credenciales inválidas' });
