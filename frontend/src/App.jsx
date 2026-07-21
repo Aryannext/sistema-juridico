@@ -57,7 +57,7 @@ const RootRedirect = () => {
 function App() {
   return (
     <AuthProvider>
-      <Router>
+      <Router basename="/sistema-juridico">
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/registro" element={<RegisterPage />} />
