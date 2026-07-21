@@ -4,6 +4,7 @@ import path from "path"
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: '/sistema-juridico/', // <--- Agregado para que funcione en subdominio/subcarpeta
   plugins: [react()],
   resolve: {
     alias: {
