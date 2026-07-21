@@ -35,7 +35,11 @@ exports.registro = async (req, res) => {
       });
 
       // 2. Create Admin User
-      const isAutoVerify = process.env.DEV_AUTO_VERIFY === 'true';
+      // 2. Create Admin User
+      // Solo permite auto-verificación si explícitamente se pide Y estamos en desarrollo.
+      // En producción SIEMPRE requerimos verificación de email.
+      const isAutoVerify = process.env.NODE_ENV !== 'production' && process.env.DEV_AUTO_VERIFY === 'true';
+      
       const usuario = await tx.usuario.create({
         data: {
           tenant_id: tenant.id_tenant,
@@ -51,12 +55,12 @@ exports.registro = async (req, res) => {
       return { tenant, usuario };
     });
 
-    const isAutoVerify = process.env.DEV_AUTO_VERIFY === 'true';
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const isAutoVerify = process.env.NODE_ENV !== 'production' && process.env.DEV_AUTO_VERIFY === 'true';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://proyectosena.online/sistema-juridico';
     const verificationUrl = `${frontendUrl}/verificacion?token=${tokenVerificacion}`;
 
     console.log('\n=========================================');
-    console.log('DEV LOCAL REGISTRATION LOG:');
+    console.log('REGISTRATION LOG:');
     console.log('Auto-Verify active:', isAutoVerify);
     console.log('Verification URL:', verificationUrl);
     console.log('=========================================\n');
@@ -66,16 +70,24 @@ exports.registro = async (req, res) => {
       await sendEmail({
         to: email,
         subject: 'Verifica tu cuenta en SGPA',
-        html: `<h1>Bienvenido a SGPA</h1>
-               <p>Por favor verifica tu cuenta haciendo clic en el enlace:</p>
-               <a href="${verificationUrl}">Verificar Cuenta</a>`
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h1 style="color: #DFB971; text-align: center;">Bienvenido a SGPA</h1>
+            <p>Hola ${nombre_admin},</p>
+            <p>Gracias por registrarte. Para activar tu cuenta y poder iniciar sesión, por favor verifica tu dirección de correo electrónico haciendo clic en el siguiente botón:</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${verificationUrl}" style="background-color: #DFB971; color: #000; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 5px;">Verificar mi Cuenta</a>
+            </div>
+            <p style="color: #666; font-size: 12px; text-align: center;">Si el botón no funciona, copia y pega este enlace en tu navegador:<br>${verificationUrl}</p>
+          </div>
+        `
       });
     }
 
     res.status(201).json({
       message: isAutoVerify 
         ? 'Registro exitoso. Tu cuenta ha sido auto-verificada para desarrollo local.'
-        : 'Registro exitoso. Revisa tu correo para verificar la cuenta.'
+        : 'Registro exitoso. Revisa tu correo electrónico para verificar y activar tu cuenta.'
     });
   } catch (error) {
     console.error(error);
