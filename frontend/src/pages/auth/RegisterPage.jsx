@@ -40,7 +40,7 @@ export default function RegisterPage() {
       {/* Left side: Background Image */}
       <div className="hidden lg:flex w-1/2 relative items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <img src="/sgpa-bg.png" alt="Legal background" className="object-cover w-full h-full opacity-50" />
+          <img src={`${import.meta.env.BASE_URL}sgpa-bg.png`} alt="Legal background" className="object-cover w-full h-full opacity-50" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0c] via-black/40 to-transparent"></div>
           <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0c] via-transparent to-transparent"></div>
         </div>
