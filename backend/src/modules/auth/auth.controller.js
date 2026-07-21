@@ -3,9 +3,6 @@ const { hashPassword, comparePassword } = require('../../utils/bcrypt');
 const { signToken, generateOTP, generateVerificationToken } = require('../../utils/jwt');
 const { sendEmail } = require('../../config/mailer');
 
-const LOCK_TIME = 30 * 60 * 1000; // 30 minutes in ms
-const MAX_ATTEMPTS = 5;
-
 exports.registro = async (req, res) => {
   try {
     const { tipo, nombre_tenant, razon_social, nit, telefono, ciudad, email, password, nombre_admin } = req.body;
@@ -135,7 +132,9 @@ exports.login = async (req, res) => {
 
     // Check if locked
     if (user.bloqueado_hasta && user.bloqueado_hasta > new Date()) {
-      return res.status(403).json({ error: `Cuenta bloqueada temporalmente. Intenta nuevamente más tarde.` });
+      const remainingMs = user.bloqueado_hasta - new Date();
+      const remainingMins = Math.ceil(remainingMs / 60000);
+      return res.status(403).json({ error: `Cuenta bloqueada por seguridad. Intenta nuevamente en ${remainingMins} minuto(s).` });
     }
 
     const isValid = await comparePassword(password, user.password_hash);
@@ -144,15 +143,25 @@ exports.login = async (req, res) => {
       const attempts = user.intentos_fallidos + 1;
       let updateData = { intentos_fallidos: attempts };
       
-      if (attempts >= MAX_ATTEMPTS) {
-        updateData.bloqueado_hasta = new Date(Date.now() + LOCK_TIME);
-        // Could also send email to notify lock
+      let lockMinutes = 0;
+      if (attempts % 5 === 0) {
+        if (attempts === 5) lockMinutes = 1;
+        else if (attempts === 10) lockMinutes = 5;
+        else if (attempts === 15) lockMinutes = 15;
+        else if (attempts === 20) lockMinutes = 30;
+        else lockMinutes = 60; // Para 25, 30, etc.
+        
+        updateData.bloqueado_hasta = new Date(Date.now() + lockMinutes * 60 * 1000);
       }
 
       await prisma.usuario.update({
         where: { id_usuario: user.id_usuario },
         data: updateData
       });
+
+      if (lockMinutes > 0) {
+        return res.status(401).json({ error: `Demasiados intentos fallidos. Cuenta bloqueada por ${lockMinutes} minuto(s).` });
+      }
 
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }

@@ -15,7 +15,8 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
+    // Si es 401 y no es una petición al endpoint de login (para no recargar la página de login infinitamente)
+    if (error.response && error.response.status === 401 && !error.config.url.includes('/auth/login')) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = `${import.meta.env.BASE_URL}login`;
