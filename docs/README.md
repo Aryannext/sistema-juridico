@@ -23,6 +23,7 @@ Lo que se consulta a diario, con enlace directo:
 | **Deuda técnica y calidad del código** | [13 — Calidad de código](13-CALIDAD-DE-CODIGO.md) |
 | **Defectos encontrados y corregidos** | [14 — Auditoría de defectos](14-AUDITORIA-DE-DEFECTOS.md) |
 | **Suspender o dar de baja un consultorio** | [15 — Administración de la plataforma](15-ADMINISTRACION-DE-PLATAFORMA.md) |
+| **Que los correos no vayan a spam** | [16 — Correo y entregabilidad](16-CORREO-Y-ENTREGABILIDAD.md) |
 
 ---
 
@@ -75,6 +76,7 @@ docs/
 | 13 | [Calidad de código](13-CALIDAD-DE-CODIGO.md) | Revisión SOLID y de código limpio, con métricas reales y un plan de refactor por pasos |
 | 14 | [Auditoría de defectos](14-AUDITORIA-DE-DEFECTOS.md) | 16 defectos reproducidos contra la base de datos y corregidos; reparto de `ProcesoDetalle.jsx` |
 | 15 | [Administración de la plataforma](15-ADMINISTRACION-DE-PLATAFORMA.md) | Alta, suspensión y baja de consultorios sin entrar al servidor |
+| 16 | [Correo y entregabilidad](16-CORREO-Y-ENTREGABILIDAD.md) | Por qué los correos van a spam y cómo enviarlos desde el propio dominio |
 | — | [Manual de usuario](MANUAL_USUARIO.md) | Guía para el usuario final, sin lenguaje técnico |
 
 ---
