@@ -125,6 +125,26 @@ docker compose exec backend node -r dotenv/config scripts/probar-correo.js tucor
 El guion enseña qué configuración está usando y envía un mensaje real. **Lo que hay que mirar no
 es si llega, sino en qué carpeta llega.**
 
+**7. Autorizar la IP del servidor.** Brevo bloquea los envíos desde direcciones que no conoce,
+aunque las credenciales sean correctas:
+
+```
+525 5.7.1 Unauthorized IP address
+```
+
+Este error **llega disfrazado de fallo de autenticación** (`EAUTH`, *Invalid login*), así que es
+fácil perder el tiempo revisando usuario y contraseña. No es eso.
+
+```bash
+curl -s https://api.ipify.org     # IP pública del VPS
+```
+
+Esa IP se añade en Brevo, en los ajustes de la cuenta → *Seguridad* → **Authorized IPs**. Brevo
+suele mandar además un correo con un enlace para autorizarla directamente.
+
+> Conviene recordarlo si algún día se cambia de servidor o el proveedor cambia la IP: el correo
+> dejará de salir de golpe, con un error que parece de credenciales y no lo es.
+
 ---
 
 ### Pasos si se contrata correo en Hostinger

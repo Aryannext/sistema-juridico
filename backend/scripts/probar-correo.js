@@ -64,13 +64,29 @@ sendEmail({
     process.exit(0);
   })
   .catch((error) => {
+    const respuesta = error.response || '';
+    const codigo = error.responseCode;
+
     console.error('\n  No se pudo enviar:', error.message);
-    if (/auth/i.test(error.message)) {
-      console.error('  Parece un problema de credenciales: revisa SMTP_USER y SMTP_PASS.');
+
+    // El orden de estas comprobaciones importa. La IP no autorizada llega como
+    // un fallo de autenticación (EAUTH, "Invalid login"), así que si se mirase
+    // primero el texto genérico de credenciales se daría un diagnóstico
+    // equivocado y se perdería el tiempo revisando usuario y contraseña.
+    if (codigo === 525 || /unauthorized ip/i.test(respuesta)) {
+      console.error('\n  CAUSA: el proveedor no autoriza envíos desde la IP de este servidor.');
+      console.error('  Las credenciales son correctas; lo que falta es dar de alta la IP.');
+      console.error('\n  1. Averigua la IP pública:   curl -s https://api.ipify.org');
+      console.error('  2. En Brevo, ajustes de la cuenta → Seguridad → Authorized IPs.');
+      console.error('  3. Añádela y repite esta prueba.');
+      console.error('\n  Brevo suele enviar además un correo con un enlace para autorizarla.\n');
+    } else if (/sender|from address|domain|not verified/i.test(respuesta + error.message)) {
+      console.error('\n  CAUSA: el remitente no está autorizado.');
+      console.error('  Verifica el dominio en el panel del proveedor antes de enviar desde él.');
+      console.error('  En Brevo: Senders, Domains & Dedicated IPs → Domains.\n');
+    } else if (/auth|login|credential/i.test(error.message)) {
+      console.error('\n  CAUSA probable: credenciales. Revisa SMTP_USER y SMTP_PASS.');
       console.error('  En Brevo, la contraseña es la CLAVE SMTP, no la del panel.\n');
-    } else if (/sender|from|domain/i.test(error.message)) {
-      console.error('  Parece que el remitente no está autorizado: verifica el dominio');
-      console.error('  en el panel de tu proveedor antes de enviar desde él.\n');
     } else {
       console.error('');
     }
