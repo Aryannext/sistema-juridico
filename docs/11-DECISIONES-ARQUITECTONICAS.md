@@ -389,14 +389,16 @@ Empaquetar el SGPA en contenedores Docker:
 - **Frontend:** contenedor **de compilación**, no de ejecución. Produce `dist/` y termina.
   El Nginx existente sirve esos archivos estáticos.
 
-**No se contenedoriza el Nginx del host ni la base de datos.**
+- **Base de datos:** PostgreSQL propio en contenedor, con su volumen.
+
+**No se contenedoriza el Nginx del host.**
 
 ### Justificación de los límites
 
 | Qué se deja fuera | Por qué |
 |---|---|
 | **El Nginx del host** | Sirve también a la otra aplicación. Tomar control de él convertiría una mejora de aislamiento en un riesgo para el vecino — exactamente lo que se quiere evitar |
-| **PostgreSQL** | Contiene datos reales. Moverla a un contenedor exige planificar volúmenes, copias y una ventana de migración. Es una decisión aparte, no un efecto colateral de esta |
+| **PostgreSQL del host** | Lo comparte el otro usuario. Para que un contenedor lo alcanzara habría que modificar `listen_addresses` y `pg_hba.conf` y **reiniciar el servicio**, cortándole las conexiones. Se descarta: el SGPA usa su propio PostgreSQL en contenedor. Al no haber datos que conservar, el coste de esa decisión fue cero |
 
 **Por qué el frontend también se compila en contenedor:** si se compilara en el VPS haría falta
 Node instalado allí, y volveríamos al problema original. Compilar dentro del contenedor es lo

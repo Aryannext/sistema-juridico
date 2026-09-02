@@ -1,6 +1,6 @@
 # 10 — Plan de remediación
 
-Este documento convierte los 27 hallazgos del doc 00 en **trabajo ordenado y ejecutable**.
+Este documento convierte los 28 hallazgos del doc 00 en **trabajo ordenado y ejecutable**.
 
 > ✅ **Estado a 1 de septiembre de 2026: las Olas 0 y 1 están ejecutadas por completo.**
 > Verificación posterior a los cambios: `npm test` 21/21 en verde, `npm run build` correcto,

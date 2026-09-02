@@ -62,7 +62,15 @@ exports.registro = async (req, res) => {
     console.log('Verification URL:', verificationUrl);
     console.log('=========================================\n');
 
+    // El tenant y el usuario ya están creados y confirmados en la base.
+    // Si el envío del correo falla, NO se puede devolver un error: la cuenta
+    // quedaría creada e inactiva, y el usuario no podría reintentar el registro
+    // porque el correo ya figuraría como usado. Se informa del fallo sin
+    // destruir el registro. Ver hallazgo H-28 en docs/00-AUDITORIA-DE-COHERENCIA.md
+    let correoEnviado = true;
+
     if (!isAutoVerify) {
+      try {
       // Send verification email only if not auto-verified
       await sendEmail({
         to: email,
@@ -80,12 +88,24 @@ exports.registro = async (req, res) => {
           </div>
         `
       });
+      } catch (errorCorreo) {
+        correoEnviado = false;
+        console.error(
+          `[Registro] La cuenta de ${email} se creó correctamente, pero falló el envío ` +
+          `del correo de verificación:`, errorCorreo.message
+        );
+        console.error(`[Registro] Enlace de verificación para activarla a mano: ${verificationUrl}`);
+      }
     }
 
     res.status(201).json({
-      message: isAutoVerify 
+      message: isAutoVerify
         ? 'Registro exitoso. Tu cuenta ha sido auto-verificada para desarrollo local.'
-        : 'Registro exitoso. Revisa tu correo electrónico para verificar y activar tu cuenta.'
+        : correoEnviado
+          ? 'Registro exitoso. Revisa tu correo electrónico para verificar y activar tu cuenta.'
+          : 'Tu cuenta fue creada, pero no pudimos enviarte el correo de verificación. ' +
+            'Contacta al administrador para que active tu acceso.',
+      correoEnviado
     });
   } catch (error) {
     console.error(error);

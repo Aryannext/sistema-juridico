@@ -56,7 +56,7 @@ docs/
 
 | # | Documento | Qué responde |
 |---|---|---|
-| 00 | [Auditoría de coherencia](00-AUDITORIA-DE-COHERENCIA.md) | ¿Qué no concuerda entre documentos y plataforma? 27 hallazgos con evidencia |
+| 00 | [Auditoría de coherencia](00-AUDITORIA-DE-COHERENCIA.md) | ¿Qué no concuerda entre documentos y plataforma? 28 hallazgos con evidencia |
 | 01 | [Arquitectura](01-ARQUITECTURA.md) | ¿Es MVC o monolito modular? Diagramas de capas, despliegue y flujos |
 | 02 | [Modelo de datos](02-MODELO-DE-DATOS.md) | ERD real derivado de `schema.prisma` + diccionario de datos |
 | 03 | [Catálogo de requisitos](03-CATALOGO-REQUISITOS.md) | RF01–RF59, RNF01–RNF11, RN01–RN09 con su estado de implementación |

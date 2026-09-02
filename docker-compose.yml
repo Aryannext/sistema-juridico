@@ -1,17 +1,48 @@
 # ─────────────────────────────────────────────────────────────────
 # SGPA — despliegue aislado en VPS compartido
 #
-# Objetivo: poder actualizar Node.js y las dependencias del SGPA sin
-# afectar a las demás aplicaciones que conviven en el mismo servidor.
+# Objetivo: poder actualizar Node.js, PostgreSQL y las dependencias del
+# SGPA sin afectar a las demás aplicaciones que conviven en el servidor.
 #
-# NO se toca el Nginx del host: este compose solo publica el backend
-# en 127.0.0.1 y deja el frontend compilado en frontend/dist para que
-# el Nginx existente lo sirva.
+# NO se toca nada del host: ni su Nginx, ni su PostgreSQL, ni su Node.
+# Este compose publica el backend en 127.0.0.1 y deja el frontend
+# compilado en frontend/dist para que el Nginx existente lo sirva.
 #
 # Guía completa: docs/12-DESPLIEGUE-VPS-COMPARTIDO.md
 # ─────────────────────────────────────────────────────────────────
 
 services:
+
+  # ── Base de datos propia y aislada ─────────────────────────────
+  # El PostgreSQL del VPS lo comparte otro usuario. Este contenedor
+  # tiene el suyo, con su propio volumen, para no tocar aquel ni
+  # tener que reiniciarlo.
+  postgres:
+    image: postgres:16-alpine
+    container_name: sgpa-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sgpa}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en el .env de la raíz}
+      POSTGRES_DB: ${POSTGRES_DB:-sgpa}
+
+    # SIN sección "ports" a propósito: la base solo es accesible desde
+    # la red interna de este compose. No se expone ni al host ni a
+    # internet. Para entrar manualmente: docker compose exec postgres psql
+    volumes:
+      - sgpa_datos:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sgpa} -d ${POSTGRES_DB:-sgpa}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+    logging:
+      driver: "json-file"
+      options: { max-size: "10m", max-file: "3" }
 
   # ── API REST + cron de recordatorios ───────────────────────────
   backend:
@@ -21,14 +52,21 @@ services:
     container_name: sgpa-backend
     restart: unless-stopped
 
-    # Las credenciales viven en backend/.env, fuera de la imagen
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    # Las credenciales viven en backend/.env, fuera de la imagen.
+    # Dentro de este compose, DATABASE_URL debe apuntar al servicio
+    # "postgres", no a localhost:
+    #   postgresql://sgpa:CLAVE@postgres:5432/sgpa?schema=public
     env_file:
       - ./backend/.env
 
     ports:
-      # IMPORTANTE: el 127.0.0.1 no es decorativo. Sin él, Docker abre
-      # el puerto a todo internet saltándose el cortafuegos del VPS.
-      # Así solo el Nginx del host puede alcanzar la API.
+      # El 127.0.0.1 no es decorativo: sin él, Docker abre el puerto a
+      # todo internet saltándose el cortafuegos del VPS. Así solo el
+      # Nginx del host puede alcanzar la API.
       - "127.0.0.1:${SGPA_PUERTO:-3001}:3000"
 
     healthcheck:
@@ -39,12 +77,10 @@ services:
       start_period: 15s
 
     logging:
-      # Sin esto, los logs crecen sin límite y llenan el disco
-      # compartido del VPS — que es de todos, no solo tuyo
+      # Sin esto los logs crecen sin límite y llenan el disco
+      # compartido del VPS, que es de todos y no solo tuyo
       driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+      options: { max-size: "10m", max-file: "3" }
 
   # ── Compilación del frontend (no queda corriendo) ──────────────
   # Se ejecuta bajo demanda:
@@ -58,3 +94,8 @@ services:
     profiles: ["build"]
     volumes:
       - ./frontend/dist:/salida
+
+volumes:
+  # Los datos sobreviven a "docker compose down". Para borrarlos hace
+  # falta "docker compose down -v", que pide el volumen explícitamente.
+  sgpa_datos:

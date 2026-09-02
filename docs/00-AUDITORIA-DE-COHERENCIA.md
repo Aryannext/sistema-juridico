@@ -14,17 +14,18 @@ tardíos, bloqueo de archivado con pendientes, cierre restringido de alertas cr�
 agrupación de alertas en ventanas de 10 minutos, versionado documental). El problema **no es
 que el sistema esté mal hecho, es que nadie actualizó los papeles**.
 
-Se identificaron **27 hallazgos**, clasificados así:
+Se identificaron **28 hallazgos**, clasificados así:
 
 | Tipo | Cantidad | Qué significa |
 |---|---|---|
 | 🟦 **Documento desactualizado** | 15 | El código está bien; el documento miente. Se corrige el documento. |
-| 🟥 **Defecto de implementación** | 9 | El requisito es correcto y el código no lo cumple. Se corrige el código. |
+| 🟥 **Defecto de implementación** | 10 | El requisito es correcto y el código no lo cumple. Se corrige el código. |
 | 🟨 **Ambigüedad de especificación** | 3 | Dos documentos se contradicen entre sí. Hace falta una decisión humana. |
 
-Seis son de severidad alta: H-10, H-19, H-20, H-21, H-24 y **H-27**.
-H-27 se detectó probando el sistema con datos reales, no leyendo código — es el argumento
-a favor de verificar ejecutando, no solo revisando.
+Siete son de severidad alta: H-10, H-19, H-20, H-21, H-24, **H-27** y **H-28**.
+Los dos últimos no se encontraron leyendo código, sino **ejecutando el sistema**: H-27 al
+probar la plataforma con datos reales y H-28 al montar el despliegue de producción. Es el
+argumento a favor de verificar ejecutando, no solo revisando.
 
 ---
 
@@ -350,6 +351,36 @@ Detectado el 1/09/2026 al probar la plataforma con datos reales. **Ya está corr
 
 > **Pendiente relacionado:** revisar si el mismo patrón afecta a la exportación CSV de reportes
 > y a las plantillas de correo del cron, que también formatean fechas.
+
+---
+
+## J. Registro de nuevos consultorios
+
+### H-28 🟥 **[SEVERIDAD ALTA]** Si falla el envío de correo, el registro queda irrecuperable
+
+Detectado el 1/09/2026 al probar el montaje de producción con Docker. **Ya está corregido.**
+
+- **Cómo se reproduce:** poner credenciales de correo vacías o inválidas y registrar un
+  consultorio nuevo.
+- **Qué ocurría:** `registro` crea el tenant y el usuario dentro de una `$transaction`
+  **que confirma**. Después ejecuta `await sendEmail(...)`. Si el SMTP falla, la excepción
+  cae al `catch` general y la respuesta es `500 "Error en el registro"`.
+- **Por qué es grave:** el usuario ve un error, pero **la cuenta sí quedó creada**, con
+  `activo = false`. Nunca recibe el correo, y al reintentar el registro obtiene
+  *"El correo ya está registrado"*. **La cuenta queda muerta y sin salida**: no hay endpoint
+  de reenvío de verificación (RF54, brecha conocida) ni de recuperación.
+- **Cuándo pasaría en producción:** en cuanto caduque la contraseña de aplicación de Gmail,
+  Gmail limite el ritmo de envío, o el VPS pierda la salida SMTP. Es decir, tarde o temprano.
+- **Corrección aplicada:** el envío del correo se envuelve en su propio `try/catch`. Si falla,
+  el registro **no se deshace ni devuelve error**: responde `201` con un mensaje honesto
+  —*"Tu cuenta fue creada, pero no pudimos enviarte el correo de verificación. Contacta al
+  administrador"*— más un campo `correoEnviado: false`. El enlace de verificación queda escrito
+  en los logs del servidor para que el Administrador pueda activar la cuenta a mano.
+- **Verificado:** con SMTP caído, la respuesta pasó de `500 {"error":"Error en el registro"}`
+  a `201 {"message":"Tu cuenta fue creada, pero…","correoEnviado":false}`.
+
+> **Sigue pendiente** el endpoint de reenvío de verificación (RF54, Ola 4.2). Con él, este
+> caso se resolvería solo, sin intervención del Administrador.
 
 ---
 
