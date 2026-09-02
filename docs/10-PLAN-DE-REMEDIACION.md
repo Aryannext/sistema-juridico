@@ -31,6 +31,7 @@ Este documento convierte los 28 hallazgos del doc 00 en **trabajo ordenado y eje
 | **4** | Funcionalidad faltante | 3–5 días | 🟡 |
 | **5** | Cobertura de pruebas | 2 días | 🟢 |
 | **6** | Actualización de dependencias mayores | 2–3 días | 🔴 |
+| **7** | Calidad de código y deuda técnica | 6–8 días | 🟡 |
 
 **Total estimado:** 9–13 días de trabajo efectivo.
 **Las olas 0 y 1 juntas son 2 horas y resuelven los problemas más visibles.**
@@ -416,6 +417,24 @@ antes de empezar la Ola 3.
 | 3 | **RNF11: 403 o 404** | A: enmendar el requisito y conservar 404 · B: cambiar a 403 | **A** — el 404 es más seguro; añadir solo el registro en bitácora |
 | 4 | **`Tenant.plan` (BASICO/PRO)** | A: retirarlo · B: implementar límites por plan | **A** por ahora — es un campo sin uso ni RF que lo respalde |
 | 5 | **Alcance de `investigacion.docx`** | A: reclasificarlo como investigación de dominio · B: reconciliar las dos numeraciones RF | **A** — ya aplicado en esta documentación ([ADR-002](11-DECISIONES-ARQUITECTONICAS.md)) |
+
+---
+
+## Ola 7 — Calidad de código · 6–8 días · 🟡
+
+Revisión SOLID y de código limpio con métricas reales, en
+[13-CALIDAD-DE-CODIGO.md](13-CALIDAD-DE-CODIGO.md). Resumen de los pasos, en orden obligatorio:
+
+| Paso | Qué | Esfuerzo | Riesgo |
+|:--:|---|---|:--:|
+| 0 | **Pruebas primero.** Sin cobertura, los pasos siguientes son a ciegas | 1 día | 🟢 |
+| 1 | Extraer los ayudantes de pertenencia y auditoría (elimina 27 repeticiones) | ½ día | 🟢 |
+| 2 | Partir `ProcesoDetalle.jsx`, que concentra el 36 % del frontend en 3 094 líneas | 2 días | 🟡 |
+| 3 | Capa de servicios en el backend (revisa [ADR-005](11-DECISIONES-ARQUITECTONICAS.md)) | 3–4 días | 🔴 |
+| 4 | ESLint en el backend, que hoy no tiene ninguno | 2 h | 🟢 |
+
+**Nada de esto bloquea el despliegue.** El código funciona; el problema es de mantenibilidad
+futura, no de corrección.
 
 ---
 

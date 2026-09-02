@@ -157,6 +157,9 @@ de ese alcance con seguridad.
   distintas.
 - 📌 **Condición previa a cualquier refactorización futura:** subir primero la cobertura de
   pruebas (Ola 5).
+- 📎 Esta decisión se revisa con datos en [13-CALIDAD-DE-CODIGO.md](13-CALIDAD-DE-CODIGO.md),
+  que mide el coste real de no tener capa de servicios y define en qué momento dejaría de ser
+  la decisión correcta.
 
 ---
 

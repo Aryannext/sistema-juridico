@@ -20,6 +20,7 @@ Lo que se consulta a diario, con enlace directo:
 | **Un endpoint de la API** | [06 — API REST](06-API-REST.md) |
 | **Qué significa un término jurídico** | [07 — Glosario jurídico](07-GLOSARIO-JURIDICO.md) |
 | **Cómo desplegar sin romper el VPS** | [12 — Despliegue en VPS compartido](12-DESPLIEGUE-VPS-COMPARTIDO.md) |
+| **Deuda técnica y calidad del código** | [13 — Calidad de código](13-CALIDAD-DE-CODIGO.md) |
 
 ---
 
@@ -44,7 +45,7 @@ por escrito qué corregir y en qué orden.
 ```
 docs/
 ├── README.md                      ← estás aquí
-├── 00 … 12                        documentación vigente
+├── 00 … 13                        documentación vigente
 ├── MANUAL_USUARIO.md              manual para el usuario final
 ├── fuentes/                       material de origen (no es especificación)
 └── historico/                     documentos superados, se conservan como registro
@@ -69,13 +70,14 @@ docs/
 | 10 | [Plan de remediación](10-PLAN-DE-REMEDIACION.md) | Qué hacer, en qué orden, con qué esfuerzo y riesgo |
 | 11 | [Decisiones de arquitectura (ADR)](11-DECISIONES-ARQUITECTONICAS.md) | Las 11 decisiones estructurales, con contexto y consecuencias |
 | 12 | [Despliegue en VPS compartido](12-DESPLIEGUE-VPS-COMPARTIDO.md) | Cómo actualizar Node y desplegar sin romper la aplicación del otro usuario |
+| 13 | [Calidad de código](13-CALIDAD-DE-CODIGO.md) | Revisión SOLID y de código limpio, con métricas reales y un plan de refactor por pasos |
 | — | [Manual de usuario](MANUAL_USUARIO.md) | Guía para el usuario final, sin lenguaje técnico |
 
 ---
 
 ## `fuentes/` — material de origen
 
-No son especificación vigente. Se conservan porque de ahí salió el contenido de los documentos 00–12.
+No son especificación vigente. Se conservan porque de ahí salió el contenido de los documentos 00–13.
 
 | Archivo | Naturaleza |
 |---|---|
