@@ -59,7 +59,75 @@ Después:
 docker compose up -d --build backend
 ```
 
-### Pasos en Hostinger
+### No hace falta comprar un buzón
+
+Conviene separar dos cosas que se confunden:
+
+| | Para qué | Cuesta |
+|---|---|---|
+| **Buzón** | *Recibir* correo en `algo@proyectosena.online` | Sí |
+| **Remitente autenticado** | *Enviar* desde ese dominio | **No** |
+
+Para lo que necesita el sistema —verificaciones, códigos 2FA y recordatorios— **solo hace falta
+lo segundo**. Un servicio de correo transaccional firma en nombre del dominio sin que exista
+ninguna cuenta que reciba allí. Y **los registros DNS son gratis**: añadir un TXT en Hostinger
+no cuesta nada.
+
+Opciones con nivel gratuito permanente: **Brevo** (~300 al día), **Resend** (3.000 al mes / 100
+al día), **Mailjet** (6.000 al mes / 200 al día), **SMTP2GO** (1.000 al mes). Para este volumen
+cualquiera sobra.
+
+---
+
+## 2 bis. Configuración con Brevo, paso a paso
+
+**1. Obtener la clave SMTP.** En el panel, *SMTP & API*, botón **Open SMTP key settings**. Ojo:
+la contraseña SMTP **no es** la del panel de Brevo, es una clave aparte que se genera ahí.
+
+**2. Verificar el dominio. Este paso no es opcional.** En *Senders, Domains & Dedicated IPs* →
+*Domains* → añadir `proyectosena.online`. Brevo entrega dos o tres registros TXT (uno de
+verificación y el DKIM).
+
+> Sin este paso, Brevo **rechaza** los envíos con remitente `@proyectosena.online`. Es lo que
+> hace que el correo esté autenticado y, por tanto, lo que evita el spam. Saltárselo deja el
+> problema exactamente igual que con Gmail.
+
+**3. Pegar los registros en Hostinger.** Panel de Hostinger → *DNS / Nameservers* → añadir cada
+TXT tal cual lo da Brevo. La propagación suele tardar minutos, a veces horas.
+
+**4. Añadir DMARC** si Brevo no lo incluye. Registro TXT con nombre `_dmarc`:
+
+```
+v=DMARC1; p=none; rua=mailto:tucorreo@gmail.com
+```
+
+**5. Rellenar `backend/.env` en el VPS:**
+
+```bash
+SMTP_HOST="smtp-relay.brevo.com"
+SMTP_PORT=587
+SMTP_USER="XXXXXXXX@smtp-brevo.com"        # el "Iniciar sesión" del panel
+SMTP_PASS="la-clave-SMTP-del-paso-1"
+MAIL_FROM="SGPA · Sistema Jurídico <no-responder@proyectosena.online>"
+MAIL_REPLY_TO="tucorreo@gmail.com"
+```
+
+`MAIL_REPLY_TO` importa: como no hay buzón en el dominio, sin esa cabecera quien conteste a un
+aviso escribiría a una dirección que no recibe nada.
+
+**6. Reconstruir y probar:**
+
+```bash
+docker compose up -d --build backend
+docker compose exec backend node -r dotenv/config scripts/probar-correo.js tucorreo@gmail.com
+```
+
+El guion enseña qué configuración está usando y envía un mensaje real. **Lo que hay que mirar no
+es si llega, sino en qué carpeta llega.**
+
+---
+
+### Pasos si se contrata correo en Hostinger
 
 1. **Comprobar si el plan incluye correo.** En el panel, *Correos electrónicos*. La mayoría de
    los planes de hosting lo traen (propio o Titan).

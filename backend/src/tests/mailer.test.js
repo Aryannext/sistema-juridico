@@ -45,3 +45,17 @@ describe('Remitente del correo', () => {
     expect(construirRemitente(env)).toBe('"SGPA Notificaciones" <alguien@gmail.com>');
   });
 });
+
+describe('Dirección de respuesta', () => {
+  const { construirRespuesta } = require('../config/mailer');
+
+  it('Devuelve MAIL_REPLY_TO cuando está definida', () => {
+    expect(construirRespuesta({ MAIL_REPLY_TO: 'contacto@ejemplo.com' }))
+      .toBe('contacto@ejemplo.com');
+  });
+
+  it('Sin configurar, no añade la cabecera', () => {
+    // undefined hace que nodemailer omita replyTo: el comportamiento de siempre.
+    expect(construirRespuesta({})).toBeUndefined();
+  });
+});

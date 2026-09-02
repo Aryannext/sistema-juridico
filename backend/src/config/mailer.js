@@ -60,6 +60,21 @@ function construirRemitente(env = process.env) {
   return `"SGPA Notificaciones" <${env.GMAIL_USER}>`;
 }
 
+/**
+ * Dirección a la que van las respuestas.
+ *
+ * Hace falta porque enviar desde el propio dominio NO exige tener un buzón allí:
+ * un servicio de correo transaccional firma en nombre del dominio sin que exista
+ * ninguna cuenta que reciba. Si alguien contesta al aviso, esa respuesta caería
+ * en el vacío. MAIL_REPLY_TO la redirige a una dirección real.
+ *
+ * Devuelve undefined si no está configurada, y entonces nodemailer no añade la
+ * cabecera: el comportamiento es el de siempre.
+ */
+function construirRespuesta(env = process.env) {
+  return env.MAIL_REPLY_TO || undefined;
+}
+
 // Aviso único al arrancar. No es un error: el envío funciona. Es para que quede
 // claro en los registros por qué los correos pueden ir a spam.
 if (process.env.NODE_ENV === 'production' && !usaSmtpPropio()) {
@@ -77,6 +92,7 @@ const sendEmail = async ({ to, subject, html, text }) => {
   try {
     await transporter.sendMail({
       from: construirRemitente(),
+      replyTo: construirRespuesta(),
       to,
       subject,
       html,
@@ -88,4 +104,4 @@ const sendEmail = async ({ to, subject, html, text }) => {
   }
 };
 
-module.exports = { sendEmail, construirRemitente, usaSmtpPropio };
+module.exports = { sendEmail, construirRemitente, construirRespuesta, usaSmtpPropio };
