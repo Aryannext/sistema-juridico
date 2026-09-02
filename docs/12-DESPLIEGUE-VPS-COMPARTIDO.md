@@ -50,7 +50,7 @@ graph TB
 
 | Componente del host | Por qué se deja como está |
 |---|---|
-| **Nginx** | Sirve también a la otra aplicación. Solo se le **añaden** dos bloques `location` |
+| **Nginx** | Sirve también a la otra aplicación. Sus bloques `location` del SGPA ya existen: solo se **ajusta el puerto** del `proxy_pass` |
 | **PostgreSQL del sistema** | Lo comparte el otro usuario. Cambiar `pg_hba.conf` o `listen_addresses` y reiniciarlo le cortaría las conexiones. El SGPA usa su **propio** PostgreSQL en contenedor |
 | **Node.js del sistema** | Ni se usa. El backend lleva el suyo dentro y el frontend se compila también en contenedor |
 
@@ -215,8 +215,22 @@ sudo nano /etc/nginx/sites-available/proyectosena.online   # o el archivo que us
 que es donde publica el contenedor. Antes apuntaba al puerto del proceso Node que corría
 directamente en el servidor.
 
+**Cómo está hoy el bloque de la API:**
+
 ```nginx
-# API del SGPA → contenedor
+location /sistema-juridico/api/ {
+    proxy_pass http://localhost:3000/api/;      # ← proceso Node en el host
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection 'upgrade';
+    proxy_set_header Host $host;
+    proxy_cache_bypass $http_upgrade;
+}
+```
+
+**Cómo debe quedar:**
+
+```nginx
 location /sistema-juridico/api/ {
     proxy_pass         http://127.0.0.1:3005/api/;
     proxy_http_version 1.1;
@@ -225,13 +239,31 @@ location /sistema-juridico/api/ {
     proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
     proxy_set_header   X-Forwarded-Proto $scheme;
 
-    # Subida de documentos: el backend acepta hasta 10 MB
+    # Sin esto Nginx rechaza con 413 cualquier archivo de más de 1 MB,
+    # y el sistema acepta documentos de hasta 10 MB (RF18)
     client_max_body_size 12M;
 }
+```
 
-# Frontend del SGPA → archivos estáticos
-location /sistema-juridico/ {
-    alias /home/cristian/proyectos/proyectosena.online/sistema-juridico/frontend/dist/;
+**Los cuatro cambios y por qué:**
+
+| Cambio | Motivo |
+|---|---|
+| `localhost:3000` → `127.0.0.1:3005` | El 3005 es donde publica el contenedor. Y se escribe `127.0.0.1`, no `localhost`: en sistemas con IPv6, `localhost` puede resolver primero a `::1`, y Docker publica solo en IPv4 → `502 Bad Gateway` |
+| Añadir `X-Real-IP` y `X-Forwarded-For` | Sin ellas, la bitácora de auditoría registra la IP de Nginx en lugar de la del cliente, incumpliendo RF05 y RNF03 |
+| Añadir `client_max_body_size 12M` | El valor por defecto de Nginx es 1 MB. Sin esta línea, **subir un documento de más de 1 MB falla con 413**, aunque el backend acepte hasta 10 MB |
+| Quitar `Upgrade` / `Connection 'upgrade'` | Son cabeceras de WebSocket y el SGPA no usa WebSockets. Dejarlas no rompe nada, pero sobran |
+
+> **La otra mitad de la IP real está en el código.** Que Nginx envíe `X-Forwarded-For` no basta:
+> Express lo ignora salvo que se le indique que confíe en el proxy. `app.js` incluye
+> `app.set('trust proxy', 1)` precisamente para eso. Sin esa línea **y** sin estas cabeceras,
+> los 9 puntos del backend que escriben `req.ip` guardarían siempre `127.0.0.1`.
+
+**El bloque del frontend ya está correcto** y no hay que tocarlo:
+
+```nginx
+location /sistema-juridico {
+    alias /home/cristian/proyectos/proyectosena.online/sistema-juridico/frontend/dist;
     try_files $uri $uri/ /sistema-juridico/index.html;
 }
 ```

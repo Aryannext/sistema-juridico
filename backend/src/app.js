@@ -5,6 +5,19 @@ const rateLimit = require('express-rate-limit');
 
 const app = express();
 
+// En producción la aplicación corre detrás del Nginx del VPS. Sin esta línea,
+// `req.ip` devuelve la dirección del proxy (127.0.0.1) en lugar de la del
+// cliente, con dos consecuencias:
+//   1. La bitácora de auditoría registraría siempre la misma IP, incumpliendo
+//      RF05 y RNF03, que exigen la dirección real de quien realizó la acción.
+//   2. El limitador de peticiones agruparía todo el tráfico bajo una sola IP,
+//      de modo que un único usuario intensivo podría agotar el cupo de todos.
+//
+// El valor 1 significa "confía en un único salto de proxy", que es el Nginx
+// del host. No se debe poner `true`: aceptaría cualquier X-Forwarded-For y
+// permitiría falsear la IP registrada en la auditoría.
+app.set('trust proxy', Number(process.env.TRUST_PROXY ?? 1));
+
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
