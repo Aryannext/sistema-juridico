@@ -112,48 +112,77 @@ git checkout docs/reconstruccion-y-actuaciones
 > y aloja varios proyectos (`sistema-juridico/`, `costura/`…). El repositorio va en la
 > subcarpeta `sistema-juridico/`, que es donde el Nginx ya apunta.
 
-### 3.3 Variables del compose (raíz)
+### 3.3 y 3.4 — Generar los dos archivos `.env`
+
+La clave de PostgreSQL tiene que ser **idéntica** en los dos archivos: en el de la raíz la lee
+el contenedor de la base, y en el del backend forma parte de la cadena de conexión. Escribirla
+a mano dos veces es la primera fuente de errores, así que conviene generarla una sola vez:
 
 ```bash
+cd /home/cristian/proyectos/proyectosena.online/sistema-juridico
+
+# Una sola clave, sin / + = para que no rompa la URL de conexión
+CLAVE_BD=$(openssl rand -base64 48 | tr -d '/+=' | head -c 32)
+
+# ── .env de la raíz (lo lee docker compose) ──
 cp .env.example .env
-nano .env
-```
+sed -i "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$CLAVE_BD|" .env
 
-Genera una contraseña larga para la base:
-
-```bash
-openssl rand -base64 32
-```
-
-Y ponla en `POSTGRES_PASSWORD`. `SGPA_PUERTO` va en **3005**: en este VPS el 3001 ya lo ocupa otro servicio
-(`ss -tlnp` te dice qué puertos hay en uso).
-
-### 3.4 Variables de la aplicación (backend)
-
-```bash
+# ── .env del backend (lo lee la aplicación) ──
 cp backend/.env.example backend/.env
+sed -i "s|^DATABASE_URL=.*|DATABASE_URL=\"postgresql://sgpa:$CLAVE_BD@postgres:5432/sgpa?schema=public\"|" backend/.env
+sed -i "s|^DIRECT_URL=.*|DIRECT_URL=\"postgresql://sgpa:$CLAVE_BD@postgres:5432/sgpa?schema=public\"|" backend/.env
+sed -i "s|^JWT_SECRET=.*|JWT_SECRET=\"$(openssl rand -hex 32)\"|" backend/.env
+sed -i "s|^NODE_ENV=.*|NODE_ENV=\"production\"|" backend/.env
+sed -i "s|^DEV_AUTO_VERIFY=.*|DEV_AUTO_VERIFY=\"false\"|" backend/.env
+sed -i "s|^FRONTEND_URL=.*|FRONTEND_URL=\"https://proyectosena.online/sistema-juridico\"|" backend/.env
+```
+
+Eso deja resueltas la base de datos, el JWT y las rutas. **Faltan las credenciales de servicios
+externos**, que hay que copiar del entorno anterior:
+
+```bash
 nano backend/.env
 ```
 
-**Lo más importante y donde más se falla:** `DATABASE_URL` y `DIRECT_URL` deben apuntar al
-servicio `postgres`, **no a `localhost`**. Dentro de un contenedor, `localhost` es el propio
-contenedor.
+| Variable | De dónde sale |
+|---|---|
+| `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | Panel de Cloudflare R2 |
+| `R2_BUCKET_NAME` | **Sin esta no se sube ni un documento** |
+| `R2_PUBLIC_DOMAIN`, `R2_ACCOUNT_ID` | Opcionales, para la URL del logo |
+| `GMAIL_USER`, `GMAIL_PASS` | Contraseña de aplicación de Gmail, 16 caracteres |
 
-```env
-DATABASE_URL="postgresql://sgpa:LA_MISMA_CLAVE@postgres:5432/sgpa?schema=public"
-DIRECT_URL="postgresql://sgpa:LA_MISMA_CLAVE@postgres:5432/sgpa?schema=public"
+`SGPA_PUERTO` ya viene en **3005** en el `.env.example`: en este VPS el 3001 lo ocupa otro
+servicio (`ss -tlnp` muestra los puertos en uso).
+
+Comprobar que la clave quedó igual en los dos archivos:
+
+```bash
+grep POSTGRES_PASSWORD .env
+grep DATABASE_URL backend/.env
 ```
 
-Rellena también `JWT_SECRET`, las cinco `R2_*` —sin `R2_BUCKET_NAME` no se sube ni un
-documento—, `GMAIL_*` y `FRONTEND_URL` apuntando al dominio real:
-
-```env
-FRONTEND_URL="https://proyectosena.online/sistema-juridico"
-```
+> **El error más común:** dejar `DATABASE_URL` apuntando a `localhost`. Dentro de un
+> contenedor, `localhost` es el propio contenedor, no el servidor. El host correcto es
+> `postgres`, que es el nombre del servicio en el compose.
 
 ---
 
 ## 4. Desplegar
+
+> ⚠️ **Los pasos 3.3 y 3.4 son obligatorios antes de esto.** Sin los dos `.env` el compose se
+> niega a arrancar, a propósito, con este mensaje:
+>
+> ```
+> required variable POSTGRES_PASSWORD is missing a value
+> ```
+>
+> Es un guardarraíl, no un fallo: evita levantar una base de datos con contraseña vacía.
+> Comprueba antes de seguir:
+>
+> ```bash
+> ls -la .env backend/.env
+> ```
 
 ```bash
 cd /home/cristian/proyectos/proyectosena.online/sistema-juridico
