@@ -93,7 +93,7 @@ docker --version && docker compose version
 Si el repositorio ya está clonado en esa ruta:
 
 ```bash
-cd /home/cristian/proyectos/proyectosena.online
+cd /home/cristian/proyectos/proyectosena.online/sistema-juridico
 git fetch origin
 git checkout docs/reconstruccion-y-actuaciones     # o main, tras fusionar
 git pull
@@ -102,11 +102,15 @@ git pull
 Si todavía no lo está:
 
 ```bash
-mkdir -p /home/cristian/proyectos
-git clone https://github.com/Aryannext/sistema-juridico.git           /home/cristian/proyectos/proyectosena.online
-cd /home/cristian/proyectos/proyectosena.online
+git clone https://github.com/Aryannext/sistema-juridico.git \
+          /home/cristian/proyectos/proyectosena.online/sistema-juridico
+cd /home/cristian/proyectos/proyectosena.online/sistema-juridico
 git checkout docs/reconstruccion-y-actuaciones
 ```
+
+> **Ojo con la ruta.** `/home/cristian/proyectos/proyectosena.online` es la **raíz del dominio**,
+> y aloja varios proyectos (`sistema-juridico/`, `costura/`…). El repositorio va en la
+> subcarpeta `sistema-juridico/`, que es donde el Nginx ya apunta.
 
 ### 3.3 Variables del compose (raíz)
 
@@ -152,7 +156,7 @@ FRONTEND_URL="https://proyectosena.online/sistema-juridico"
 ## 4. Desplegar
 
 ```bash
-cd /home/cristian/proyectos/proyectosena.online
+cd /home/cristian/proyectos/proyectosena.online/sistema-juridico
 
 # 1. Levantar la base de datos
 docker compose up -d postgres
@@ -182,8 +186,34 @@ curl http://127.0.0.1:3005/                # {"message":"SGPA API is running"}
 
 ## 5. Configuración de Nginx en el host
 
-Añade estos dos bloques dentro del `server { ... }` que ya tienes. **No sustituyas tu
-configuración**: solo agrega lo que falta, para no romper a la otra aplicación.
+### Cómo está el servidor
+
+`nginx -T` muestra tres `server` block relevantes, y conviene tener claro qué es de quién:
+
+| `server_name` | Raíz | De quién |
+|---|---|---|
+| `proyectosena.online` | `/home/cristian/proyectos/proyectosena.online` | **Tuyo.** Aloja varios proyectos: `sistema-juridico/`, `costura/`… |
+| `iuris.proyectosena.online` | — | Tuyo, subdominio aparte |
+| `sgdp.yessica.online` | `/home/yessica/proyectos/SGDP/public` | **De tu vecina.** PHP con FastCGI |
+
+**Buena noticia:** la aplicación de Yessica vive en un `server` block distinto. Modificar el de
+`proyectosena.online` **no la afecta**. El único riesgo compartido es que un error de sintaxis
+impida recargar Nginx y deje caídos todos los sitios — por eso se valida siempre con
+`nginx -t` antes de recargar.
+
+### Los bloques ya existen: hay que ajustarlos, no añadirlos
+
+El `server` block de `proyectosena.online` ya contiene `location /sistema-juridico` y
+`location /sistema-juridico/api/`, de un despliegue anterior. **No los dupliques.** Ábrelos y
+compáralos con esto:
+
+```bash
+sudo nano /etc/nginx/sites-available/proyectosena.online   # o el archivo que uses
+```
+
+**Lo que hay que cambiar:** el `proxy_pass` del bloque de la API, para que apunte al **3005**,
+que es donde publica el contenedor. Antes apuntaba al puerto del proceso Node que corría
+directamente en el servidor.
 
 ```nginx
 # API del SGPA → contenedor
@@ -201,7 +231,7 @@ location /sistema-juridico/api/ {
 
 # Frontend del SGPA → archivos estáticos
 location /sistema-juridico/ {
-    alias /home/cristian/proyectos/proyectosena.online/frontend/dist/;
+    alias /home/cristian/proyectos/proyectosena.online/sistema-juridico/frontend/dist/;
     try_files $uri $uri/ /sistema-juridico/index.html;
 }
 ```
@@ -212,13 +242,25 @@ Validar **antes** de recargar, para no dejar el servidor caído:
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-> **Tres detalles que suelen fallar:**
+> **Cuatro detalles que suelen fallar:**
 > 1. La barra final en `proxy_pass http://127.0.0.1:3005/api/;` es obligatoria. Sin ella la
 >    ruta se concatena mal y todo devuelve 404.
-> 2. `try_files ... /sistema-juridico/index.html` es lo que hace funcionar el enrutado de React
+> 2. `location /sistema-juridico/` con barra final, no `location /sistema-juridico`. Con `alias`,
+>    la barra del `location` y la del `alias` deben coincidir o Nginx concatena mal la ruta.
+> 3. `try_files ... /sistema-juridico/index.html` es lo que hace funcionar el enrutado de React
 >    al recargar una página interna. Es el equivalente al `vercel.json` que se retiró.
-> 3. Nginx necesita permiso de lectura sobre `frontend/dist`. Si da 403:
+> 4. Nginx necesita permiso de lectura sobre `frontend/dist`. Si da 403:
 >    `chmod o+x /home/cristian /home/cristian/proyectos`.
+
+### Si algo sale mal, vuelve atrás
+
+Haz copia del archivo **antes** de editarlo. Restaurar es entonces inmediato:
+
+```bash
+sudo cp /etc/nginx/sites-available/proyectosena.online{,.bak}
+# ...si algo falla:
+sudo cp /etc/nginx/sites-available/proyectosena.online{.bak,} && sudo nginx -t && sudo systemctl reload nginx
+```
 
 ---
 
@@ -248,7 +290,7 @@ docker compose exec postgres psql -U sgpa -d sgpa \
 
 ```bash
 # Actualizar tras un cambio de código
-cd /home/cristian/proyectos/proyectosena.online
+cd /home/cristian/proyectos/proyectosena.online/sistema-juridico
 git pull
 docker compose up -d --build backend
 docker compose --profile build run --rm frontend-build
