@@ -1,130 +1,63 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
-import { 
-  ArrowLeft, Briefcase, Calendar, User, Building2, 
-  Clock, Edit3, X, Save, AlertCircle, FileText, CheckCircle, ListTodo,
-  Upload, Download, History, Trash2, Plus, AlertTriangle, Check, Loader2,
+import {
+  ArrowLeft, Briefcase, Calendar, User, Building2,
+  Clock, Edit3, X, Save, AlertCircle, FileText, ListTodo,
+  Upload, Download, History, Trash2, Plus, AlertTriangle, Loader2,
   Users, UserPlus, Gavel
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatFechaSinHora } from '../../lib/utils';
 
+import { useActuaciones } from './detalle/useActuaciones';
+import { useDocumentos } from './detalle/useDocumentos';
+import { useAudiencias } from './detalle/useAudiencias';
+import { useTerminos } from './detalle/useTerminos';
+import { useEquipoYPartes } from './detalle/useEquipoYPartes';
+import {
+  getSemaforoStats,
+  getTerminoAlertColor,
+  getRemainingTimeText,
+  formatBytes,
+} from './detalle/terminos.utils';
+
 const TIPOS_ACTUACION = ['AUTO', 'SENTENCIA', 'NOTIFICACION', 'AUDIENCIA', 'MEMORIAL', 'DEMANDA', 'CONTESTACION', 'RECURSO', 'TRASLADO', 'OTRO'];
 
+/**
+ * Detalle del expediente judicial.
+ *
+ * Este componente ORQUESTA: mantiene el expediente en sí, la pestaña activa y
+ * el formulario de edición general, y compone los cinco hooks de dominio que
+ * viven en ./detalle. El estado de documentos, audiencias, términos,
+ * actuaciones y equipo ya no está aquí; cada hook se lleva el suyo.
+ *
+ * Los hooks devuelven a propósito los mismos nombres que tenían las variables
+ * cuando todo estaba en un solo archivo: así el JSX de las pestañas y los
+ * modales no tuvo que tocarse, y el diseño es idéntico al anterior.
+ */
 export default function ProcesoDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
-  
-  // General states
+
   const [proceso, setProceso] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [activeTab, setActiveTab] = useState('general'); // 'general', 'actuaciones', 'documentos', 'agenda', 'terminos'
+  const [activeTab, setActiveTab] = useState('general'); // general | actuaciones | documentos | agenda | terminos
 
-  // Edit process states
+  // Formulario de edición general del expediente
   const [juzgado, setJuzgado] = useState('');
   const [claseProceso, setClaseProceso] = useState('');
   const [areaDerecho, setAreaDerecho] = useState('');
   const [fechaRadicado, setFechaRadicado] = useState('');
 
-  // Actuaciones procesales (HU-37)
-  const [actuaciones, setActuaciones] = useState([]);
-  const [loadingActuaciones, setLoadingActuaciones] = useState(false);
-  const [showAddActuacionModal, setShowAddActuacionModal] = useState(false);
-  const [newActFecha, setNewActFecha] = useState('');
-  const [newActTipo, setNewActTipo] = useState('AUTO');
-  const [newActAnotacion, setNewActAnotacion] = useState('');
-  const [savingActuacion, setSavingActuacion] = useState(false);
-  const [editingActuacion, setEditingActuacion] = useState(null); // null = crear, objeto = editar
-
-  // Component 1: Documents States
-  const [documentos, setDocumentos] = useState([]);
-  const [loadingDocs, setLoadingDocs] = useState(false);
-  const [showUploadDocModal, setShowUploadDocModal] = useState(false);
-  const [showNewVersionModal, setShowNewVersionModal] = useState(false);
-  const [selectedDoc, setSelectedDoc] = useState(null);
-  const [showVersionesModal, setShowVersionesModal] = useState(false);
-  const [docVersiones, setDocVersiones] = useState([]);
-  const [loadingVersiones, setLoadingVersiones] = useState(false);
-  const [showDocEstadoModal, setShowDocEstadoModal] = useState(false);
-  const [docEstadoNuevo, setDocEstadoNuevo] = useState('INACTIVO');
-  const [showDeleteDefinitivoModal, setShowDeleteDefinitivoModal] = useState(false);
-  const [deleteJustificacion, setDeleteJustificacion] = useState('');
-  const [deleteConfirmText, setDeleteConfirmText] = useState('');
-  const [deleteConfirmCheckbox, setDeleteConfirmCheckbox] = useState(false);
-
-  // Document upload form states
-  const [docNombre, setDocNombre] = useState('');
-  const [docCategoria, setDocCategoria] = useState('DEMANDA');
-  const [docVisibilidad, setDocVisibilidad] = useState('PRIVADO');
-  const [docFile, setDocFile] = useState(null);
-
-  // Component 2: Audiencias States
-  const [audiencias, setAudiencias] = useState([]);
-  const [loadingAudiencias, setLoadingAudiencias] = useState(false);
-  const [showAddAudienciaModal, setShowAddAudienciaModal] = useState(false);
-  const [audNombre, setAudNombre] = useState('');
-  const [audTipo, setAudTipo] = useState('');
-  const [audFechaHora, setAudFechaHora] = useState('');
-  const [audLugar, setAudLugar] = useState('');
-  const [customRecordatorios, setCustomRecordatorios] = useState([{ minutos_antes: 1440, canal: 'EMAIL' }]);
-  const [showReprogramModal, setShowReprogramModal] = useState(false);
-  const [selectedAudiencia, setSelectedAudiencia] = useState(null);
-  const [reprogramFechaHora, setReprogramFechaHora] = useState('');
-  const [reprogramLugar, setReprogramLugar] = useState('');
-  const [reprogramNombre, setReprogramNombre] = useState('');
-  const [reprogramTipo, setReprogramTipo] = useState('');
-
-  // Component 3: Terminos States
-  const [terminos, setTerminos] = useState([]);
-  const [loadingTerminos, setLoadingTerminos] = useState(false);
-  const [showAddTerminoModal, setShowAddTerminoModal] = useState(false);
-  const [termIdActuacion, setTermIdActuacion] = useState(''); // HU-37: actuación que origina el término
-  const [showGestionarTerminoModal, setShowGestionarTerminoModal] = useState(false);
-  const [selectedTermino, setSelectedTermino] = useState(null);
-  const [termNombre, setTermNombre] = useState('');
-  const [termFechaVencimiento, setTermFechaVencimiento] = useState('');
-  const [termEsCritico, setTermEsCritico] = useState(false);
-  const [termEstadoGestion, setTermEstadoGestion] = useState('CUMPLIDO');
-  const [termJustificacion, setTermJustificacion] = useState('');
-  const [termRecordatoriosList, setTermRecordatoriosList] = useState([]);
-  const [newTermRecValor, setNewTermRecValor] = useState(24);
-  const [newTermRecUnidad, setNewTermRecUnidad] = useState('HORAS');
-  const [newTermRecCanal, setNewTermRecCanal] = useState('EMAIL');
-
-  // Sprint 2 - Cambiar Estado, Equipo, and Partes States
-  const [showChangeEstadoModal, setShowChangeEstadoModal] = useState(false);
-  const [newEstado, setNewEstado] = useState('ACTIVO');
-  const [estadoJustificacion, setEstadoJustificacion] = useState('');
-  const [forceArchivado, setForceArchivado] = useState(false);
-  const [pendingWarnings, setPendingWarnings] = useState(null);
-
-  const [showAddColaboradorModal, setShowAddColaboradorModal] = useState(false);
-  const [colaboradorId, setColaboradorId] = useState('');
-  const [colaboradorRol, setColaboradorRol] = useState('ABOGADO');
-  const [availableUsuarios, setAvailableUsuarios] = useState([]);
-  const [loadingUsuarios, setLoadingUsuarios] = useState(false);
-
-  const [showAddParteModal, setShowAddParteModal] = useState(false);
-  const [parteNombre, setParteNombre] = useState('');
-  const [parteTipo, setParteTipo] = useState('DEMANDANTE');
-
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-  const isAdmin = currentUser.rol === 'ADMINISTRADOR';
-  const isResponsable = proceso ? currentUser.id_usuario === proceso.id_abogado_resp : false;
-  const canModify = isAdmin || isResponsable;
-
-  // -------------------------------------------------------------
-  // Data Fetching Methods
-  // -------------------------------------------------------------
   const fetchProceso = async () => {
     try {
       setLoading(true);
       const res = await api.get(`/procesos/${id}`);
       setProceso(res.data);
-      
-      // Seed edit form
+
+      // Precargar el formulario de edición
       setJuzgado(res.data.juzgado || '');
       setClaseProceso(res.data.clase_proceso || '');
       setAreaDerecho(res.data.area_derecho || '');
@@ -138,147 +71,109 @@ export default function ProcesoDetalle() {
     }
   };
 
-  const fetchActuaciones = async () => {
-    try {
-      setLoadingActuaciones(true);
-      const res = await api.get(`/actuaciones/proceso/${id}`);
-      setActuaciones(res.data);
-    } catch (error) {
-      console.error(error);
-      toast.error('Error al obtener las actuaciones del expediente');
-    } finally {
-      setLoadingActuaciones(false);
-    }
-  };
+  // ── Hooks de dominio ─────────────────────────────────────────────
+  // Los que reciben `fetchProceso` lo hacen porque sus cambios quedan en el
+  // historial del expediente, y hay que recargarlo para verlo.
+  const {
+    actuaciones, loadingActuaciones, showAddActuacionModal, setShowAddActuacionModal,
+    newActFecha, setNewActFecha, newActTipo, setNewActTipo,
+    newActAnotacion, setNewActAnotacion, savingActuacion, editingActuacion,
+    fetchActuaciones, cerrarModalActuacion, abrirEdicionActuacion,
+    handleAddActuacion, handleEliminarActuacion,
+  } = useActuaciones(id, fetchProceso);
 
-  const cerrarModalActuacion = () => {
-    setShowAddActuacionModal(false);
-    setEditingActuacion(null);
-    setNewActFecha('');
-    setNewActTipo('AUTO');
-    setNewActAnotacion('');
-  };
+  const {
+    documentos, loadingDocs, showUploadDocModal, setShowUploadDocModal,
+    showNewVersionModal, setShowNewVersionModal, selectedDoc, setSelectedDoc,
+    showVersionesModal, setShowVersionesModal, docVersiones, loadingVersiones,
+    showDocEstadoModal, setShowDocEstadoModal, docEstadoNuevo, setDocEstadoNuevo,
+    showDeleteDefinitivoModal, setShowDeleteDefinitivoModal,
+    deleteJustificacion, setDeleteJustificacion,
+    deleteConfirmText, setDeleteConfirmText,
+    deleteConfirmCheckbox, setDeleteConfirmCheckbox,
+    docNombre, setDocNombre, docCategoria, setDocCategoria,
+    docVisibilidad, setDocVisibilidad, setDocFile,
+    fetchDocuments, handleDocUploadSubmit, handleNewVersionSubmit,
+    handleDownloadDoc, handleViewHistory, handleDeleteDoc,
+    handleUpdateDocEstado, handleDeleteDefinitivoSubmit,
+  } = useDocumentos(id);
 
-  // Abre el modal precargado con los datos de la actuación a corregir
-  const abrirEdicionActuacion = (a) => {
-    setEditingActuacion(a);
-    // fecha_actuacion es una columna @db.Date: se corta el ISO para no
-    // desplazar el día al pasarlo al input type="date" (ver hallazgo H-27)
-    setNewActFecha(new Date(a.fecha_actuacion).toISOString().slice(0, 10));
-    setNewActTipo(a.tipo);
-    setNewActAnotacion(a.anotacion);
-    setShowAddActuacionModal(true);
-  };
+  const {
+    audiencias, loadingAudiencias, showAddAudienciaModal, setShowAddAudienciaModal,
+    audNombre, setAudNombre, audTipo, setAudTipo,
+    audFechaHora, setAudFechaHora, audLugar, setAudLugar,
+    customRecordatorios, setCustomRecordatorios,
+    showReprogramModal, setShowReprogramModal, setSelectedAudiencia,
+    reprogramFechaHora, setReprogramFechaHora, reprogramLugar, setReprogramLugar,
+    reprogramNombre, setReprogramNombre, reprogramTipo, setReprogramTipo,
+    fetchAudiencias, handleAddAudienciaSubmit, handleReprogramSubmit,
+    handleMarkAudienciaEstado,
+  } = useAudiencias(id, fetchProceso);
 
-  const handleAddActuacion = async (e) => {
-    e.preventDefault();
-    try {
-      setSavingActuacion(true);
-      const payload = {
-        fecha_actuacion: newActFecha,
-        tipo: newActTipo,
-        anotacion: newActAnotacion
-      };
+  const {
+    terminos, loadingTerminos, showAddTerminoModal, setShowAddTerminoModal,
+    termIdActuacion, setTermIdActuacion,
+    showGestionarTerminoModal, setShowGestionarTerminoModal,
+    selectedTermino, setSelectedTermino,
+    termNombre, setTermNombre, termFechaVencimiento, setTermFechaVencimiento,
+    termEsCritico, setTermEsCritico, termEstadoGestion, setTermEstadoGestion,
+    termJustificacion, setTermJustificacion,
+    termRecordatoriosList, setTermRecordatoriosList,
+    newTermRecValor, setNewTermRecValor, newTermRecUnidad, setNewTermRecUnidad,
+    newTermRecCanal, setNewTermRecCanal,
+    fetchTerminos, handleAddTerminoSubmit, handleAddTermRecordatorio,
+    handleGestionarTerminoSubmit,
+  } = useTerminos(id);
 
-      const res = editingActuacion
-        ? await api.put(`/actuaciones/${editingActuacion.id_actuacion}`, payload)
-        : await api.post('/actuaciones', { id_proceso: id, ...payload });
+  const {
+    showChangeEstadoModal, setShowChangeEstadoModal, newEstado, setNewEstado,
+    estadoJustificacion, setEstadoJustificacion,
+    forceArchivado, setForceArchivado, pendingWarnings, setPendingWarnings,
+    showAddColaboradorModal, setShowAddColaboradorModal,
+    colaboradorId, setColaboradorId, colaboradorRol, setColaboradorRol,
+    availableUsuarios, loadingUsuarios,
+    showAddParteModal, setShowAddParteModal,
+    parteNombre, setParteNombre, parteTipo, setParteTipo,
+    handleCambiarEstado, fetchUsuariosDisponibles, handleAsignarColaborador,
+    handleRemoverColaborador, handleRegistrarParte, handleEliminarParte,
+  } = useEquipoYPartes(id, proceso, fetchProceso);
 
-      toast.success(res.data.message || 'Actuación registrada');
-      cerrarModalActuacion();
-      fetchActuaciones();
-      fetchProceso();
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.error || 'Error al guardar la actuación');
-    } finally {
-      setSavingActuacion(false);
-    }
-  };
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const isAdmin = currentUser.rol === 'ADMINISTRADOR';
+  const isResponsable = proceso ? currentUser.id_usuario === proceso.id_abogado_resp : false;
+  const canModify = isAdmin || isResponsable;
 
-  const handleEliminarActuacion = async (a) => {
-    if (!window.confirm(
-      `¿Eliminar la actuación "${a.tipo}: ${a.anotacion.slice(0, 60)}"?\n\n` +
-      'Esta acción quedará registrada en el historial del expediente.'
-    )) {
-      return;
-    }
-    try {
-      const res = await api.delete(`/actuaciones/${a.id_actuacion}`);
-      toast.success(res.data.message || 'Actuación eliminada');
-      fetchActuaciones();
-      fetchProceso();
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.error || 'Error al eliminar la actuación');
-    }
-  };
-
-  const fetchDocuments = async () => {
-    try {
-      setLoadingDocs(true);
-      const res = await api.get(`/documentos/proceso/${id}`);
-      setDocumentos(res.data);
-    } catch (error) {
-      console.error(error);
-      toast.error('Error al obtener documentos del expediente');
-    } finally {
-      setLoadingDocs(false);
-    }
-  };
-
-  const fetchAudiencias = async () => {
-    try {
-      setLoadingAudiencias(true);
-      const res = await api.get(`/audiencias/proceso/${id}`);
-      setAudiencias(res.data);
-    } catch (error) {
-      console.error(error);
-      toast.error('Error al obtener la agenda de audiencias');
-    } finally {
-      setLoadingAudiencias(false);
-    }
-  };
-
-  const fetchTerminos = async () => {
-    try {
-      setLoadingTerminos(true);
-      const res = await api.get(`/terminos/proceso/${id}`);
-      setTerminos(res.data);
-    } catch (error) {
-      console.error(error);
-      toast.error('Error al obtener términos procesales');
-    } finally {
-      setLoadingTerminos(false);
-    }
-  };
-
-  // Run initial fetch
   useEffect(() => {
+    // set-state-in-effect: `fetchProceso` pone `loading` en true antes de la
+    // petición. Es la carga inicial de la pantalla, no una sincronización con
+    // un sistema externo, así que la regla no encaja. Quitar ese `setLoading`
+    // cambiaría el comportamiento visible al recargar tras cada cambio, y el
+    // encargo era no tocar el diseño.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProceso();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // Handle lazy loading for tab views
+  // Cada pestaña carga sus datos al abrirse, no antes.
+  // `id` está en las dependencias a propósito: sin él, al pasar de un
+  // expediente a otro sin cambiar de pestaña se seguían mostrando los
+  // documentos, audiencias y términos del expediente anterior.
   useEffect(() => {
     if (activeTab === 'actuaciones') {
       fetchActuaciones();
-    } else if (activeTab === 'terminos') {
-      // El modal de término ofrece elegir la actuación de origen (HU-37)
-      fetchActuaciones();
-    }
-
-    if (activeTab === 'documentos') {
+    } else if (activeTab === 'documentos') {
       fetchDocuments();
     } else if (activeTab === 'agenda') {
       fetchAudiencias();
     } else if (activeTab === 'terminos') {
       fetchTerminos();
+      // El modal de término deja elegir la actuación de origen (HU-37),
+      // así que su lista hace falta también en esta pestaña.
+      fetchActuaciones();
     }
-  }, [activeTab]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, id]);
 
-  // -------------------------------------------------------------
-  // Submit Handlers
-  // -------------------------------------------------------------
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -292,478 +187,11 @@ export default function ProcesoDetalle() {
       const res = await api.put(`/procesos/${id}`, data);
       toast.success(res.data.message || 'Expediente actualizado exitosamente');
       setShowEditModal(false);
-      fetchProceso(); // Reload with new history entry!
+      fetchProceso(); // Recargar para ver la nueva entrada del historial
     } catch (error) {
       console.error(error);
       toast.error(error.response?.data?.error || 'Error al actualizar el expediente');
     }
-  };
-
-  // Document management handlers
-  const handleDocUploadSubmit = async (e) => {
-    e.preventDefault();
-    if (!docFile) {
-      toast.error('Por favor seleccione un archivo para cargar');
-      return;
-    }
-
-    try {
-      const formData = new FormData();
-      formData.append('archivo', docFile);
-      formData.append('id_proceso', id);
-      formData.append('nombre', docNombre || docFile.name);
-      formData.append('categoria', docCategoria);
-      formData.append('visibilidad', docVisibilidad);
-
-      const res = await api.post('/documentos', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-
-      toast.success(res.data.message || 'Archivo legal cargado y registrado');
-      setShowUploadDocModal(false);
-      setDocNombre('');
-      setDocFile(null);
-      fetchDocuments();
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.error || 'Error al cargar el documento');
-    }
-  };
-
-  const handleNewVersionSubmit = async (e) => {
-    e.preventDefault();
-    if (!docFile) {
-      toast.error('Seleccione el archivo de la nueva versión');
-      return;
-    }
-
-    try {
-      const formData = new FormData();
-      formData.append('archivo', docFile);
-
-      const res = await api.post(`/documentos/${selectedDoc.id_documento}/version`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-
-      toast.success(res.data.message || 'Nueva versión cargada con éxito');
-      setShowNewVersionModal(false);
-      setDocFile(null);
-      fetchDocuments();
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.error || 'Error al subir la nueva versión');
-    }
-  };
-
-  const handleDownloadDoc = async (idVersion) => {
-    try {
-      toast.loading('Generando URL de descarga segura...');
-      const res = await api.get(`/documentos/download/${idVersion}`);
-      toast.dismiss();
-      if (res.data.url) {
-        window.open(res.data.url, '_blank');
-      }
-    } catch (error) {
-      toast.dismiss();
-      console.error(error);
-      toast.error('Error al descargar el archivo');
-    }
-  };
-
-  const handleViewHistory = async (doc) => {
-    try {
-      setSelectedDoc(doc);
-      setShowVersionesModal(true);
-      setLoadingVersiones(true);
-      const res = await api.get(`/documentos/${doc.id_documento}/versiones`);
-      setDocVersiones(res.data);
-    } catch (error) {
-      console.error(error);
-      toast.error('Error al obtener el historial de versiones');
-    } finally {
-      setLoadingVersiones(false);
-    }
-  };
-
-  const handleDeleteDoc = async (idDoc) => {
-    if (!window.confirm('¿Está seguro de que desea eliminar este documento? Esta acción se registrará en la auditoría.')) {
-      return;
-    }
-    try {
-      await api.delete(`/documentos/${idDoc}`);
-      toast.success('Documento eliminado (eliminación lógica)');
-      fetchDocuments();
-    } catch (error) {
-      console.error(error);
-      toast.error('Error al eliminar el documento');
-    }
-  };
-
-  const handleUpdateDocEstado = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await api.patch(`/documentos/${selectedDoc.id_documento}/estado`, { estado: docEstadoNuevo });
-      toast.success(res.data.message || 'Estado del documento actualizado');
-      setShowDocEstadoModal(false);
-      fetchDocuments();
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.error || 'Error al actualizar el estado del documento');
-    }
-  };
-
-  const handleDeleteDefinitivoSubmit = async (e) => {
-    e.preventDefault();
-    if (!deleteJustificacion.trim()) {
-      toast.error('La justificación es obligatoria');
-      return;
-    }
-    try {
-      const res = await api.delete(`/documentos/${selectedDoc.id_documento}/definitivo`, {
-        data: { justificacion: deleteJustificacion }
-      });
-      toast.success(res.data.message || 'Documento eliminado de forma física y definitiva');
-      setShowDeleteDefinitivoModal(false);
-      setDeleteJustificacion('');
-      fetchDocuments();
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.error || 'Error al eliminar definitivamente el documento');
-    }
-  };
-
-  // Audiencias scheduling handlers
-  const handleAddAudienciaSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const data = {
-        id_proceso: id,
-        nombre: audNombre,
-        tipo: audTipo,
-        fecha_hora: audFechaHora,
-        lugar: audLugar,
-        recordatorios: customRecordatorios.map(r => ({
-          minutos_antes: parseInt(r.minutos_antes),
-          canal: r.canal
-        }))
-      };
-
-      const res = await api.post('/audiencias', data);
-      toast.success(res.data.message || 'Audiencia judicial programada');
-      setShowAddAudienciaModal(false);
-      setAudNombre('');
-      setAudTipo('');
-      setAudFechaHora('');
-      setAudLugar('');
-      setCustomRecordatorios([{ minutos_antes: 1440, canal: 'EMAIL' }]);
-      fetchAudiencias();
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.error || 'Error al programar la audiencia');
-    }
-  };
-
-  const handleReprogramSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const data = {
-        nombre: reprogramNombre,
-        tipo: reprogramTipo,
-        fecha_hora: reprogramFechaHora,
-        lugar: reprogramLugar
-      };
-
-      const res = await api.put(`/audiencias/${selectedAudiencia.id_audiencia}`, data);
-      toast.success(res.data.message || 'Audiencia reprogramada con éxito');
-      setShowReprogramModal(false);
-      fetchAudiencias();
-      fetchProceso(); // Recargar historial de bitácora
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.error || 'Error al reprogramar la audiencia');
-    }
-  };
-
-  const handleMarkAudienciaEstado = async (idAud, nuevoEstado) => {
-    try {
-      const res = await api.put(`/audiencias/${idAud}`, { estado: nuevoEstado });
-      toast.success(res.data.message || `Audiencia marcada como ${nuevoEstado}`);
-      fetchAudiencias();
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.error || 'Error al cambiar estado de la audiencia');
-    }
-  };
-
-  // Court terms/deadlines handlers
-  const handleAddTerminoSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      // Map custom term recordatorios list
-      const recordatoriosListFormatted = termRecordatoriosList.map(r => {
-        const vDate = new Date(termFechaVencimiento);
-        const sendDate = new Date(vDate.getTime() - r.minutos_antes * 60 * 1000);
-        return {
-          fecha_hora_envio: sendDate.toISOString(),
-          canal: r.canal
-        };
-      });
-
-      const data = {
-        id_proceso: id,
-        nombre: termNombre,
-        fecha_vencimiento: termFechaVencimiento,
-        es_critico: termEsCritico,
-        recordatorios: recordatoriosListFormatted,
-        ...(termIdActuacion && { id_actuacion: termIdActuacion })
-      };
-
-      const res = await api.post('/terminos', data);
-      toast.success(res.data.message || 'Término judicial registrado');
-      setShowAddTerminoModal(false);
-      setTermNombre('');
-      setTermFechaVencimiento('');
-      setTermEsCritico(false);
-      setTermIdActuacion('');
-      setTermRecordatoriosList([]);
-      fetchTerminos();
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.error || 'Error al programar el término judicial');
-    }
-  };
-
-  const handleAddTermRecordatorio = () => {
-    const val = parseInt(newTermRecValor);
-    if (isNaN(val) || val <= 0) {
-      toast.error('Ingrese un valor numérico válido y mayor a 0');
-      return;
-    }
-    let mins = val;
-    if (newTermRecUnidad === 'HORAS') mins = val * 60;
-    if (newTermRecUnidad === 'DIAS') mins = val * 1440;
-
-    setTermRecordatoriosList([...termRecordatoriosList, {
-      minutos_antes: mins,
-      canal: newTermRecCanal
-    }]);
-  };
-
-  const handleGestionarTerminoSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const data = {
-        estado: termEstadoGestion,
-        justificacion: termJustificacion
-      };
-
-      const res = await api.put(`/terminos/${selectedTermino.id_termino}/gestion`, data);
-      toast.success(res.data.message || 'Término judicial gestionado');
-      setShowGestionarTerminoModal(false);
-      setTermJustificacion('');
-      fetchTerminos();
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.error || 'Error al gestionar el término');
-    }
-  };
-
-  // -------------------------------------------------------------
-  // State changes, Co-defenders, and Partes handlers (Sprint 2)
-  // -------------------------------------------------------------
-  const handleCambiarEstado = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await api.put(`/procesos/${id}/estado`, {
-        estado: newEstado,
-        justificacion: estadoJustificacion,
-        force: forceArchivado
-      });
-      toast.success(res.data.message || 'Estado actualizado exitosamente');
-      setShowChangeEstadoModal(false);
-      setEstadoJustificacion('');
-      setPendingWarnings(null);
-      setForceArchivado(false);
-      fetchProceso();
-    } catch (error) {
-      console.error(error);
-      if (error.response?.status === 400 && error.response?.data?.hasPending) {
-        setPendingWarnings(error.response.data);
-        toast.error('No se puede archivar: Existen audiencias o términos pendientes');
-      } else {
-        toast.error(error.response?.data?.error || 'Error al cambiar el estado del proceso');
-      }
-    }
-  };
-
-  const fetchUsuariosDisponibles = async () => {
-    try {
-      setLoadingUsuarios(true);
-      const res = await api.get('/admin/usuarios').catch(() => null);
-      if (res && res.data) {
-        // Filter out already assigned users
-        const assignedIds = new Set([
-          proceso.id_abogado_resp,
-          ...(proceso.abogados?.map(a => a.id_usuario) || [])
-        ]);
-        const filtered = res.data.filter(u => !assignedIds.has(u.id_usuario));
-        setAvailableUsuarios(filtered);
-        if (filtered.length > 0) {
-          setColaboradorId(filtered[0].id_usuario);
-        }
-      } else {
-        // Fallback to current user if authorized but can't fetch others
-        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-        if (currentUser && currentUser.id_usuario) {
-          const assignedIds = new Set([
-            proceso.id_abogado_resp,
-            ...(proceso.abogados?.map(a => a.id_usuario) || [])
-          ]);
-          if (!assignedIds.has(currentUser.id_usuario)) {
-            setAvailableUsuarios([currentUser]);
-            setColaboradorId(currentUser.id_usuario);
-          } else {
-            setAvailableUsuarios([]);
-          }
-        }
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingUsuarios(false);
-    }
-  };
-
-  const handleAsignarColaborador = async (e) => {
-    e.preventDefault();
-    if (!colaboradorId) {
-      toast.error('Seleccione un colaborador para asignar');
-      return;
-    }
-    try {
-      const res = await api.post(`/procesos/${id}/abogados`, {
-        id_usuario: colaboradorId,
-        rol_en_proceso: colaboradorRol
-      });
-      toast.success(res.data.message || 'Colaborador asignado al expediente');
-      setShowAddColaboradorModal(false);
-      fetchProceso();
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.error || 'Error al asignar el colaborador');
-    }
-  };
-
-  const handleRemoverColaborador = async (idUsuario) => {
-    if (!window.confirm('¿Está seguro de que desea remover este colaborador del expediente? Esta acción quedará registrada.')) {
-      return;
-    }
-    try {
-      const res = await api.delete(`/procesos/${id}/abogados/${idUsuario}`);
-      toast.success(res.data.message || 'Colaborador desvinculado con éxito');
-      fetchProceso();
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.error || 'Error al remover el colaborador');
-    }
-  };
-
-  const handleRegistrarParte = async (e) => {
-    e.preventDefault();
-    if (!parteNombre.trim()) {
-      toast.error('Ingrese el nombre de la parte procesal');
-      return;
-    }
-    try {
-      const res = await api.post(`/procesos/${id}/partes`, {
-        nombre: parteNombre,
-        tipo: parteTipo
-      });
-      toast.success(res.data.message || 'Parte procesal registrada con éxito');
-      setShowAddParteModal(false);
-      setParteNombre('');
-      fetchProceso();
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.error || 'Error al registrar la parte procesal');
-    }
-  };
-
-  const handleEliminarParte = async (idParte) => {
-    if (!window.confirm('¿Está seguro de que desea eliminar esta parte procesal? Esta acción quedará registrada.')) {
-      return;
-    }
-    try {
-      const res = await api.delete(`/procesos/${id}/partes/${idParte}`);
-      toast.success(res.data.message || 'Parte procesal eliminada con éxito');
-      fetchProceso();
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.error || 'Error al eliminar la parte procesal');
-    }
-  };
-
-  // -------------------------------------------------------------
-  // Helper Calculations
-  // -------------------------------------------------------------
-  const getSemaforoStats = () => {
-    let rojos = 0;
-    let amarillos = 0;
-    let verdes = 0;
-    const now = new Date();
-
-    terminos.forEach(t => {
-      if (t.estado !== 'PENDIENTE') {
-        verdes++;
-      } else {
-        const diffHours = (new Date(t.fecha_vencimiento) - now) / (1000 * 60 * 60);
-        if (diffHours <= 0) {
-          rojos++;
-        } else if (diffHours <= 48) {
-          amarillos++;
-        } else {
-          verdes++;
-        }
-      }
-    });
-
-    return { rojos, amarillos, verdes };
-  };
-
-  const getTerminoAlertColor = (t) => {
-    if (t.estado !== 'PENDIENTE') return 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400';
-    const diffHours = (new Date(t.fecha_vencimiento) - new Date()) / (1000 * 60 * 60);
-    if (diffHours <= 0) return 'border-rose-500/20 bg-rose-500/5 text-rose-400';
-    if (diffHours <= 48) return 'border-amber-500/20 bg-amber-500/5 text-amber-400';
-    return 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400';
-  };
-
-  const getRemainingTimeText = (vencimiento, estado) => {
-    if (estado !== 'PENDIENTE') return 'Completado';
-    const diffMs = new Date(vencimiento) - new Date();
-    if (diffMs <= 0) return 'Vencido 🚨';
-    
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    const hours = Math.floor(diffMins / 60);
-    const mins = diffMins % 60;
-    const days = Math.floor(hours / 24);
-    const remainingHours = hours % 24;
-
-    if (days > 0) {
-      return `Vence en ${days}d ${remainingHours}h`;
-    }
-    if (hours > 0) {
-      return `Vence en ${hours}h ${mins}m`;
-    }
-    return `Vence en ${mins}m`;
-  };
-
-  const formatBytes = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   // -------------------------------------------------------------
@@ -1413,7 +841,7 @@ export default function ProcesoDetalle() {
             <div className="space-y-4 md:space-y-6">
               {/* Traffic light counts */}
               {(() => {
-                const stats = getSemaforoStats();
+                const stats = getSemaforoStats(terminos);
                 return (
                   <div className="grid grid-cols-3 gap-4">
                     <div className="border border-rose-500/20 bg-rose-500/5 rounded-2xl p-4 flex flex-col items-center justify-center">
