@@ -31,7 +31,7 @@ graph TB
 
         subgraph SGPA["SGPA — aislado en Docker"]
             EST["frontend/dist<br/>archivos estáticos"]
-            CT["sgpa-backend<br/>Node 24 · 127.0.0.1:3001"]
+            CT["sgpa-backend<br/>Node 24 · 127.0.0.1:3005"]
             PG["sgpa-postgres<br/>volumen propio"]
         end
     end
@@ -90,12 +90,22 @@ docker --version && docker compose version
 
 ### 3.2 Traer el código
 
+Si el repositorio ya está clonado en esa ruta:
+
 ```bash
-cd ~
-git clone https://github.com/Aryannext/sistema-juridico.git   # si no está ya
-cd sistema-juridico
+cd /home/cristian/proyectos/proyectosena.online
 git fetch origin
-git checkout docs/reconstruccion-y-actuaciones                # o main, tras fusionar
+git checkout docs/reconstruccion-y-actuaciones     # o main, tras fusionar
+git pull
+```
+
+Si todavía no lo está:
+
+```bash
+mkdir -p /home/cristian/proyectos
+git clone https://github.com/Aryannext/sistema-juridico.git           /home/cristian/proyectos/proyectosena.online
+cd /home/cristian/proyectos/proyectosena.online
+git checkout docs/reconstruccion-y-actuaciones
 ```
 
 ### 3.3 Variables del compose (raíz)
@@ -111,7 +121,7 @@ Genera una contraseña larga para la base:
 openssl rand -base64 32
 ```
 
-Y ponla en `POSTGRES_PASSWORD`. Ajusta `SGPA_PUERTO` si el 3001 está ocupado
+Y ponla en `POSTGRES_PASSWORD`. `SGPA_PUERTO` va en **3005**: en este VPS el 3001 ya lo ocupa otro servicio
 (`ss -tlnp` te dice qué puertos hay en uso).
 
 ### 3.4 Variables de la aplicación (backend)
@@ -142,7 +152,7 @@ FRONTEND_URL="https://proyectosena.online/sistema-juridico"
 ## 4. Desplegar
 
 ```bash
-cd ~/sistema-juridico
+cd /home/cristian/proyectos/proyectosena.online
 
 # 1. Levantar la base de datos
 docker compose up -d postgres
@@ -161,7 +171,7 @@ Comprobar:
 
 ```bash
 docker compose ps                          # los dos deben decir "healthy"
-curl http://127.0.0.1:3001/                # {"message":"SGPA API is running"}
+curl http://127.0.0.1:3005/                # {"message":"SGPA API is running"}
 ```
 
 > **Sobre `migrate deploy`:** funciona porque la base del contenedor nace vacía y la migración
@@ -178,7 +188,7 @@ configuración**: solo agrega lo que falta, para no romper a la otra aplicación
 ```nginx
 # API del SGPA → contenedor
 location /sistema-juridico/api/ {
-    proxy_pass         http://127.0.0.1:3001/api/;
+    proxy_pass         http://127.0.0.1:3005/api/;
     proxy_http_version 1.1;
     proxy_set_header   Host              $host;
     proxy_set_header   X-Real-IP         $remote_addr;
@@ -191,7 +201,7 @@ location /sistema-juridico/api/ {
 
 # Frontend del SGPA → archivos estáticos
 location /sistema-juridico/ {
-    alias /home/TU_USUARIO/sistema-juridico/frontend/dist/;
+    alias /home/cristian/proyectos/proyectosena.online/frontend/dist/;
     try_files $uri $uri/ /sistema-juridico/index.html;
 }
 ```
@@ -203,12 +213,12 @@ sudo nginx -t && sudo systemctl reload nginx
 ```
 
 > **Tres detalles que suelen fallar:**
-> 1. La barra final en `proxy_pass http://127.0.0.1:3001/api/;` es obligatoria. Sin ella la
+> 1. La barra final en `proxy_pass http://127.0.0.1:3005/api/;` es obligatoria. Sin ella la
 >    ruta se concatena mal y todo devuelve 404.
 > 2. `try_files ... /sistema-juridico/index.html` es lo que hace funcionar el enrutado de React
 >    al recargar una página interna. Es el equivalente al `vercel.json` que se retiró.
 > 3. Nginx necesita permiso de lectura sobre `frontend/dist`. Si da 403:
->    `chmod o+x /home/TU_USUARIO`.
+>    `chmod o+x /home/cristian /home/cristian/proyectos`.
 
 ---
 
@@ -238,6 +248,7 @@ docker compose exec postgres psql -U sgpa -d sgpa \
 
 ```bash
 # Actualizar tras un cambio de código
+cd /home/cristian/proyectos/proyectosena.online
 git pull
 docker compose up -d --build backend
 docker compose --profile build run --rm frontend-build
@@ -300,7 +311,7 @@ revierte la etiqueta y reconstruye: vuelves al estado anterior en un minuto.
 
 | Síntoma | Qué revisar |
 |---|---|
-| `502 Bad Gateway` | El contenedor no está arriba: `docker compose ps`. Verifica que el puerto de Nginx coincide con `SGPA_PUERTO` |
+| `502 Bad Gateway` | El contenedor no está arriba: `docker compose ps`. Verifica que el puerto de Nginx (3005) coincide con `SGPA_PUERTO` |
 | `404` en las rutas de la API | Falta la barra final en `proxy_pass .../api/` |
 | Página en blanco al recargar una ruta interna | Falta el `try_files` del bloque de Nginx |
 | `403 Forbidden` en los estáticos | Nginx no puede leer `frontend/dist`: permisos de la carpeta personal |
