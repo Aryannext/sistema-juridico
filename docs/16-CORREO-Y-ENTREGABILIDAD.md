@@ -145,6 +145,33 @@ suele mandar además un correo con un enlace para autorizarla directamente.
 > Conviene recordarlo si algún día se cambia de servidor o el proveedor cambia la IP: el correo
 > dejará de salir de golpe, con un error que parece de credenciales y no lo es.
 
+**8. Esperar la activación de la cuenta.** Brevo revisa a mano las cuentas nuevas antes de
+permitir el envío transaccional:
+
+```
+502 5.7.0 Your SMTP account is not yet activated.
+```
+
+Tampoco es un fallo de configuración: credenciales, dominio e IP están bien, y el mensaje llegó
+hasta el comando `DATA`, que es el último paso del envío. Para desbloquearlo hay que completar el
+perfil de la cuenta —empresa, sitio web, teléfono— y escribir a su soporte explicando el uso:
+correo transaccional, sin campañas de marketing. Suele resolverse en horas.
+
+> ### ⚠️ No dejes la plataforma sin correo mientras esperas
+>
+> Con `SMTP_HOST` relleno y la cuenta sin activar, **no sale ningún correo**: ni verificaciones
+> de cuenta ni códigos de doble factor. Es peor que el problema del spam, porque nadie puede
+> registrarse ni entrar con 2FA.
+>
+> Para eso existe el respaldo. Vacía `SMTP_HOST` y reconstruye:
+>
+> ```bash
+> docker compose up -d --build backend
+> ```
+>
+> El resto de líneas de Brevo pueden quedarse: con `SMTP_HOST` vacío se ignoran. Cuando llegue la
+> activación, se rellena de nuevo y listo.
+
 ---
 
 ### Pasos si se contrata correo en Hostinger

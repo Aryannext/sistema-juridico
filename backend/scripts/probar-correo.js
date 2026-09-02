@@ -73,7 +73,17 @@ sendEmail({
     // un fallo de autenticación (EAUTH, "Invalid login"), así que si se mirase
     // primero el texto genérico de credenciales se daría un diagnóstico
     // equivocado y se perdería el tiempo revisando usuario y contraseña.
-    if (codigo === 525 || /unauthorized ip/i.test(respuesta)) {
+    if (/not yet activated|account is not activated/i.test(respuesta)) {
+      console.error('\n  CAUSA: el proveedor todavía no ha activado la cuenta.');
+      console.error('  NO es un fallo de configuración: credenciales, dominio e IP son correctos');
+      console.error('  y el mensaje llegó hasta el último paso del envío.');
+      console.error('\n  Brevo revisa a mano las cuentas nuevas antes de permitir enviar.');
+      console.error('  1. Completa el perfil de la cuenta: empresa, sitio web y teléfono.');
+      console.error('  2. Escribe a su soporte explicando que es correo transaccional:');
+      console.error('     verificación de cuenta, códigos de acceso y avisos de vencimiento.');
+      console.error('\n  MIENTRAS TANTO no dejes la plataforma sin correo: vacía SMTP_HOST en');
+      console.error('  backend/.env y reconstruye. Volverá a enviar por Gmail.\n');
+    } else if (codigo === 525 || /unauthorized ip/i.test(respuesta)) {
       console.error('\n  CAUSA: el proveedor no autoriza envíos desde la IP de este servidor.');
       console.error('  Las credenciales son correctas; lo que falta es dar de alta la IP.');
       console.error('\n  1. Averigua la IP pública:   curl -s https://api.ipify.org');
