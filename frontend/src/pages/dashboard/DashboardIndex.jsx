@@ -54,23 +54,32 @@ export default function DashboardIndex() {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      const esAdmin = user?.rol === 'ADMINISTRADOR';
+
       try {
         setLoading(true);
-        // Fetch standard collections
-        const [clientesRes, procesosRes, agendaRes, vencimientosRes] = await Promise.all([
-          api.get('/clientes'),
-          api.get('/procesos'),
-          api.get('/audiencias').catch(() => ({ data: [] })),
-          api.get('/terminos/vencimientos').catch(() => ({ data: [] }))
-        ]);
+        if (esAdmin) setLoadingAdmin(true);
 
-        let logs = [];
-        if (user?.rol === 'ADMINISTRADOR') {
-          const logsRes = await api.get('/admin/auditoria').catch(() => null);
-          if (logsRes) {
-            logs = logsRes.data.slice(0, 5);
-          }
-        }
+        // TODAS las peticiones salen a la vez. Antes iban en tres tandas: el
+        // Promise.all de las cuatro colecciones, después un `await` para la
+        // auditoría y después otro para las estadísticas. Ninguna de las dos
+        // últimas necesita el resultado de las anteriores, así que encadenarlas
+        // solo servía para pagar tres viajes de ida y vuelta en lugar de uno.
+        //
+        // En local no se notaba (el servidor responde en 10 ms), pero contra el
+        // VPS cada viaje cuesta unos 350 ms: tres tandas eran ~1 segundo de
+        // espera en blanco cada vez que se abría el panel.
+        const [clientesRes, procesosRes, agendaRes, vencimientosRes, logsRes, adminRes] =
+          await Promise.all([
+            api.get('/clientes'),
+            api.get('/procesos'),
+            api.get('/audiencias').catch(() => ({ data: [] })),
+            api.get('/terminos/vencimientos').catch(() => ({ data: [] })),
+            esAdmin ? api.get('/admin/auditoria').catch(() => null) : null,
+            esAdmin ? api.get('/reportes/stats').catch(() => null) : null
+          ]);
+
+        const logs = logsRes ? logsRes.data.slice(0, 5) : [];
 
         setStats({
           clientes: clientesRes.data.length,
@@ -80,24 +89,13 @@ export default function DashboardIndex() {
         setRecentLogs(logs);
         setAgenda(agendaRes.data);
         setVencimientos(vencimientosRes.data);
-
-        // Fetch administrative statistics if user is admin
-        if (user?.rol === 'ADMINISTRADOR') {
-          setLoadingAdmin(true);
-          try {
-            const adminRes = await api.get('/reportes/stats');
-            setStatsAdmin(adminRes.data);
-          } catch (err) {
-            console.error('Error fetching admin report stats:', err);
-          } finally {
-            setLoadingAdmin(false);
-          }
-        }
+        if (adminRes) setStatsAdmin(adminRes.data);
 
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
       } finally {
         setLoading(false);
+        setLoadingAdmin(false);
       }
     };
 

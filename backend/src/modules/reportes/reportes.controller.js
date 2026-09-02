@@ -1,4 +1,5 @@
 const prisma = require('../../config/prisma');
+const { construirCSV } = require('./exportacion');
 
 // Helper to calculate date range based on filter
 const getDateRange = (filter, startDate, endDate) => {
@@ -198,6 +199,7 @@ exports.getStats = async (req, res) => {
   }
 };
 
+
 exports.exportCSV = async (req, res) => {
   try {
     // Restricted to Admin check
@@ -207,62 +209,65 @@ exports.exportCSV = async (req, res) => {
 
     const { filter, start_date, end_date } = req.query;
     const { start, end } = getDateRange(filter, start_date, end_date);
+    const enRango = { gte: start, lte: end };
 
-    const procesos = await prisma.proceso.findMany({
+    // La consulta parte del CLIENTE, no del expediente. Antes partía del
+    // expediente, y por eso un consultorio con clientes dados de alta pero sin
+    // procesos abiertos se descargaba un archivo con solo la cabecera.
+    const clientes = await prisma.cliente.findMany({
       where: {
         tenant_id: req.tenant_id,
-        create_at: {
-          gte: start,
-          lte: end
+        // El informe cubre el periodo elegido: entra el cliente que abrió algún
+        // expediente dentro del rango, y también el que se dio de alta en el
+        // rango aunque todavía no tenga ninguno. Sin esta segunda condición, un
+        // consultorio con años de historia que exporta "este mes" recibiría
+        // cientos de filas antiguas sin ninguna relación con el periodo.
+        OR: [
+          { create_at: enRango },
+          { procesos: { some: { create_at: enRango } } }
+        ]
+      },
+      select: {
+        nombre: true,
+        tipo_documento: true,
+        numero_documento: true,
+        create_at: true,
+        procesos: {
+          where: { create_at: enRango },
+          select: {
+            numero_radicado: true,
+            tipo_proceso: true,
+            estado: true,
+            create_at: true,
+            abogado_resp: { select: { nombre: true } },
+            _count: {
+              select: {
+                terminos: { where: { estado: 'PENDIENTE' } },
+                audiencias: true
+              }
+            }
+          },
+          orderBy: { create_at: 'desc' }
         }
       },
-      include: {
-        cliente: {
-          select: {
-            nombre: true
-          }
-        },
-        abogado_resp: {
-          select: {
-            nombre: true
-          }
-        },
-        _count: {
-          select: {
-            terminos: {
-              where: { estado: 'PENDIENTE' }
-            },
-            audiencias: true
-          }
-        }
-      },
-      orderBy: { create_at: 'desc' }
+      orderBy: { nombre: 'asc' }
     });
 
-    // Generate CSV contents
-    // UTF-8 BOM to support excel accented characters
-    let csv = '\uFEFF';
-    csv += 'Radicado;Cliente;Abogado Responsable;Tipo;Estado;Plazos Pendientes;Audiencias;Fecha Creacion\n';
+    const { csv, totalFilas } = construirCSV(clientes);
 
-    procesos.forEach(p => {
-      const fechaCreacion = new Date(p.create_at).toLocaleDateString('es-CO');
-      csv += `"${p.numero_radicado}";"${p.cliente.nombre}";"${p.abogado_resp.nombre}";"${p.tipo_proceso}";"${p.estado}";${p._count.terminos};${p._count.audiencias};"${fechaCreacion}"\n`;
-    });
-
-    // Auditoria
     await prisma.bitacoraAuditoria.create({
       data: {
         tenant_id: req.tenant_id,
         id_usuario: req.user.id_usuario,
         accion: 'EXPORTAR_REPORTES_CSV',
         modulo: 'REPORTES',
-        detalle: `Exportación general de expedientes a CSV realizada. Registros exportados: ${procesos.length}`,
+        detalle: `Exportó el reporte de clientes y expedientes a CSV (${totalFilas} filas)`,
         ip_adress: req.ip || '127.0.0.1'
       }
     });
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename=reporte-expedientes.csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=reporte-clientes-expedientes.csv');
     res.status(200).send(csv);
 
   } catch (error) {

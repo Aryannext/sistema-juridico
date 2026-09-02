@@ -36,11 +36,103 @@ listo después y se despliega aparte.
 | D-12 | El logo del consultorio se subía pero no se mostraba en ninguna parte | Media | Corregido |
 | D-13 | El icono del navegador era el logotipo de otra herramienta | Baja | Corregido |
 | D-14 | El desplegable de abogado responsable ofrecía a colaboradores y clientes | Media | Corregido |
+| D-15 | La exportación a CSV omitía los clientes sin expedientes y no escapaba comillas | Media | Corregido |
+| D-16 | El panel principal encadenaba tres tandas de peticiones | Media (rendimiento) | Corregido |
 
-> Los cinco de aquí abajo (D-10 a D-14) los encontró el usuario **usando la plataforma en
+### D-15 · La exportación a CSV no mostraba los clientes
+
+El síntoma: *«en esta cuenta hay creado un cliente, le di a exportar y no me mostró nada»*.
+
+La causa es que la consulta **partía del expediente**, no del cliente:
+
+```js
+const procesos = await prisma.proceso.findMany({ where: { tenant_id, create_at: { gte, lte } } });
+```
+
+Un consultorio con clientes dados de alta pero sin procesos abiertos se descargaba un archivo
+con solo la cabecera. Y era correcto según el código: no había expedientes que listar.
+
+**Segundo defecto, latente, encontrado al reescribirlo.** El archivo se componía interpolando
+sin escapar:
+
+```js
+csv += `"${p.numero_radicado}";"${p.cliente.nombre}";…`
+```
+
+Un cliente llamado `Gómez; Herrera y "Asociados"` **rompía la estructura del archivo** y
+descuadraba todas las columnas siguientes. La convención (RFC 4180) es duplicar las comillas
+internas. Comprobado: con el nombre anterior las tres filas mantienen sus 10 columnas.
+
+**Forma acordada antes de escribirlo:**
+
+1. **Una fila por expediente**, no por cliente. Un cliente con dos procesos ocupa dos filas
+   repitiendo su nombre. Es lo que permite ordenar, filtrar y hacer tablas dinámicas en Excel;
+   meter los dos procesos en una celda convertiría el CSV en algo que ya no se puede procesar.
+2. **Los clientes sin expedientes aparecen**, marcados `SIN EXPEDIENTES` y con las columnas de
+   proceso vacías.
+3. **El informe cubre el periodo elegido**: entra el cliente que abrió algún expediente en el
+   rango, y también el que se dio de alta en el rango aunque aún no tenga ninguno. Sin la
+   segunda condición, un consultorio con años de historia que exporta «este mes» recibiría
+   cientos de filas antiguas sin relación con el periodo.
+
+Columnas: `# · Cliente · Documento · Radicado · Abogado responsable · Tipo de proceso · Estado ·
+Plazos pendientes · Audiencias · Fecha de creación`.
+
+La construcción del archivo vive en `src/modules/reportes/exportacion.js`, fuera del controlador:
+armar el CSV es una regla de negocio, no manejo de HTTP, y así se prueba sin simular `req` y
+`res`. **12 casos** en `src/tests/exportacion_csv.test.js`.
+
+### D-16 · El panel tardaba porque encadenaba tres tandas de peticiones
+
+Se reportó que cambiar de módulo tardaba de 1 a 3 segundos con la plataforma **vacía**. La
+hipótesis previa —que faltaban índices en la base de datos— **resultó ser falsa**, y por eso se
+midió antes de tocar nada.
+
+**Medición 1 — el servidor.** Cinco pasadas por endpoint, sin red de por medio:
+
+| Endpoint | Media |
+|---|---:|
+| `/api/clientes` | 10 ms |
+| `/api/procesos` | 10 ms |
+| `/api/notificaciones` | 5 ms |
+| `/api/reportes/stats` | 17 ms |
+| `/api/admin/auditoria` | 10 ms |
+
+La base de datos no tenía nada que ver.
+
+**Medición 2 — la red.** Contra el VPS, un endpoint que devuelve **401 sin tocar la base**:
+
+```
+dns=0,20s  conexion=0,49s  tls=1,01s  primer_byte=1,36s
+```
+
+Es decir, ~350 ms por viaje de ida y vuelta, y ~1 s para establecer la conexión la primera vez.
+
+**Medición 3 — el navegador.** El panel lanzaba **8 peticiones en tres tandas**:
+
+| Tanda | Empieza | Endpoints |
+|---|---:|---|
+| 1ª | 0–16 ms | clientes, procesos, audiencias, términos, notificaciones, tenant |
+| 2ª | **81 ms** | `admin/auditoria` |
+| 3ª | **234 ms** | `reportes/stats` |
+
+Las dos últimas iban con `await` sueltos después del `Promise.all`, **sin necesitar el resultado
+de las anteriores**. En local no se notaba (10 ms por viaje); contra el VPS, tres tandas ≈ 1 s de
+pantalla en blanco cada vez que se abría el panel.
+
+**Arreglo.** Las 8 salen en un único `Promise.all`. Medido después: **todas arrancan entre 0 y
+1 ms**, y la ventana total bajó de 262 ms a 78 ms en local. Contra el VPS, de tres viajes a uno.
+
+> **Dos avisos sobre medir en desarrollo**, que estuvieron a punto de desviar el diagnóstico:
+> `StrictMode` duplica cada efecto y en la compilación de producción no lo hace; y en desarrollo
+> la API es de otro origen, así que cada petición lleva un `OPTIONS` de CORS que en producción no
+> existe (allí es `/sistema-juridico/api`, mismo origen). Ambos inflan las cifras locales.
+
+> **De D-10 a D-16, siete defectos, los encontró el usuario usando la plataforma en
 > producción**, no una revisión de código. Vale la pena anotarlo: ninguna de las auditorías
 > anteriores los detectó, porque todas miraban el código o la documentación y ninguna se sentó
-> a trabajar con la aplicación.
+> a trabajar con la aplicación. Es el argumento más fuerte de todo este documento a favor de
+> probar el producto terminado, y no solo sus piezas.
 
 ### D-10 · Las opciones de los desplegables eran invisibles
 
@@ -348,8 +440,8 @@ npm --prefix backend run lint
 
 | | Antes | Ahora |
 |---|---:|---:|
-| Suites | 8 | **11** |
-| Casos | 21 | **49** |
+| Suites | 8 | **12** |
+| Casos | 21 | **61** |
 
 La suite nueva, `src/tests/aislamiento_consultorio.test.js`, fija como prueba unitaria lo que
 antes solo se comprobaba de extremo a extremo con la base levantada: que el radicado y el
