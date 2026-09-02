@@ -1,0 +1,30 @@
+# Dependencias y compilados (por si alguien instala desde la raíz)
+node_modules/
+dist/
+
+# Variables de entorno de la raíz.
+# docker-compose.yml lee de aquí SGPA_PUERTO y VITE_API_URL, que dependen
+# de cada máquina. El archivo de ejemplo sí se versiona.
+.env
+.env.*
+!.env.example
+
+# Herramientas de desarrollo: configuración local, no del proyecto
+.claude/
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Basura del sistema operativo.
+# desktop.ini importa: este repositorio vive dentro de OneDrive y Windows
+# lo genera solo en cada carpeta sincronizada.
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Registros
+*.log
+npm-debug.log*

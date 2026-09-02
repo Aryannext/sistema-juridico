@@ -1,0 +1,60 @@
+# ─────────────────────────────────────────────────────────────────
+# SGPA — despliegue aislado en VPS compartido
+#
+# Objetivo: poder actualizar Node.js y las dependencias del SGPA sin
+# afectar a las demás aplicaciones que conviven en el mismo servidor.
+#
+# NO se toca el Nginx del host: este compose solo publica el backend
+# en 127.0.0.1 y deja el frontend compilado en frontend/dist para que
+# el Nginx existente lo sirva.
+#
+# Guía completa: docs/12-DESPLIEGUE-VPS-COMPARTIDO.md
+# ─────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── API REST + cron de recordatorios ───────────────────────────
+  backend:
+    build:
+      context: ./backend
+    image: sgpa-backend:latest
+    container_name: sgpa-backend
+    restart: unless-stopped
+
+    # Las credenciales viven en backend/.env, fuera de la imagen
+    env_file:
+      - ./backend/.env
+
+    ports:
+      # IMPORTANTE: el 127.0.0.1 no es decorativo. Sin él, Docker abre
+      # el puerto a todo internet saltándose el cortafuegos del VPS.
+      # Así solo el Nginx del host puede alcanzar la API.
+      - "127.0.0.1:${SGPA_PUERTO:-3001}:3000"
+
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+    logging:
+      # Sin esto, los logs crecen sin límite y llenan el disco
+      # compartido del VPS — que es de todos, no solo tuyo
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ── Compilación del frontend (no queda corriendo) ──────────────
+  # Se ejecuta bajo demanda:
+  #   docker compose --profile build run --rm frontend-build
+  frontend-build:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/sistema-juridico/api}
+    image: sgpa-frontend-build:latest
+    profiles: ["build"]
+    volumes:
+      - ./frontend/dist:/salida

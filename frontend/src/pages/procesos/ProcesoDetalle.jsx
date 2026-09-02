@@ -5,9 +5,12 @@ import {
   ArrowLeft, Briefcase, Calendar, User, Building2, 
   Clock, Edit3, X, Save, AlertCircle, FileText, CheckCircle, ListTodo,
   Upload, Download, History, Trash2, Plus, AlertTriangle, Check, Loader2,
-  Users, UserPlus
+  Users, UserPlus, Gavel
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatFechaSinHora } from '../../lib/utils';
+
+const TIPOS_ACTUACION = ['AUTO', 'SENTENCIA', 'NOTIFICACION', 'AUDIENCIA', 'MEMORIAL', 'DEMANDA', 'CONTESTACION', 'RECURSO', 'TRASLADO', 'OTRO'];
 
 export default function ProcesoDetalle() {
   const { id } = useParams();
@@ -17,13 +20,23 @@ export default function ProcesoDetalle() {
   const [proceso, setProceso] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [activeTab, setActiveTab] = useState('general'); // 'general', 'documentos', 'agenda', 'terminos'
+  const [activeTab, setActiveTab] = useState('general'); // 'general', 'actuaciones', 'documentos', 'agenda', 'terminos'
 
   // Edit process states
   const [juzgado, setJuzgado] = useState('');
   const [claseProceso, setClaseProceso] = useState('');
   const [areaDerecho, setAreaDerecho] = useState('');
   const [fechaRadicado, setFechaRadicado] = useState('');
+
+  // Actuaciones procesales (HU-37)
+  const [actuaciones, setActuaciones] = useState([]);
+  const [loadingActuaciones, setLoadingActuaciones] = useState(false);
+  const [showAddActuacionModal, setShowAddActuacionModal] = useState(false);
+  const [newActFecha, setNewActFecha] = useState('');
+  const [newActTipo, setNewActTipo] = useState('AUTO');
+  const [newActAnotacion, setNewActAnotacion] = useState('');
+  const [savingActuacion, setSavingActuacion] = useState(false);
+  const [editingActuacion, setEditingActuacion] = useState(null); // null = crear, objeto = editar
 
   // Component 1: Documents States
   const [documentos, setDocumentos] = useState([]);
@@ -67,6 +80,7 @@ export default function ProcesoDetalle() {
   const [terminos, setTerminos] = useState([]);
   const [loadingTerminos, setLoadingTerminos] = useState(false);
   const [showAddTerminoModal, setShowAddTerminoModal] = useState(false);
+  const [termIdActuacion, setTermIdActuacion] = useState(''); // HU-37: actuación que origina el término
   const [showGestionarTerminoModal, setShowGestionarTerminoModal] = useState(false);
   const [selectedTermino, setSelectedTermino] = useState(null);
   const [termNombre, setTermNombre] = useState('');
@@ -124,6 +138,82 @@ export default function ProcesoDetalle() {
     }
   };
 
+  const fetchActuaciones = async () => {
+    try {
+      setLoadingActuaciones(true);
+      const res = await api.get(`/actuaciones/proceso/${id}`);
+      setActuaciones(res.data);
+    } catch (error) {
+      console.error(error);
+      toast.error('Error al obtener las actuaciones del expediente');
+    } finally {
+      setLoadingActuaciones(false);
+    }
+  };
+
+  const cerrarModalActuacion = () => {
+    setShowAddActuacionModal(false);
+    setEditingActuacion(null);
+    setNewActFecha('');
+    setNewActTipo('AUTO');
+    setNewActAnotacion('');
+  };
+
+  // Abre el modal precargado con los datos de la actuación a corregir
+  const abrirEdicionActuacion = (a) => {
+    setEditingActuacion(a);
+    // fecha_actuacion es una columna @db.Date: se corta el ISO para no
+    // desplazar el día al pasarlo al input type="date" (ver hallazgo H-27)
+    setNewActFecha(new Date(a.fecha_actuacion).toISOString().slice(0, 10));
+    setNewActTipo(a.tipo);
+    setNewActAnotacion(a.anotacion);
+    setShowAddActuacionModal(true);
+  };
+
+  const handleAddActuacion = async (e) => {
+    e.preventDefault();
+    try {
+      setSavingActuacion(true);
+      const payload = {
+        fecha_actuacion: newActFecha,
+        tipo: newActTipo,
+        anotacion: newActAnotacion
+      };
+
+      const res = editingActuacion
+        ? await api.put(`/actuaciones/${editingActuacion.id_actuacion}`, payload)
+        : await api.post('/actuaciones', { id_proceso: id, ...payload });
+
+      toast.success(res.data.message || 'Actuación registrada');
+      cerrarModalActuacion();
+      fetchActuaciones();
+      fetchProceso();
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.error || 'Error al guardar la actuación');
+    } finally {
+      setSavingActuacion(false);
+    }
+  };
+
+  const handleEliminarActuacion = async (a) => {
+    if (!window.confirm(
+      `¿Eliminar la actuación "${a.tipo}: ${a.anotacion.slice(0, 60)}"?\n\n` +
+      'Esta acción quedará registrada en el historial del expediente.'
+    )) {
+      return;
+    }
+    try {
+      const res = await api.delete(`/actuaciones/${a.id_actuacion}`);
+      toast.success(res.data.message || 'Actuación eliminada');
+      fetchActuaciones();
+      fetchProceso();
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.error || 'Error al eliminar la actuación');
+    }
+  };
+
   const fetchDocuments = async () => {
     try {
       setLoadingDocs(true);
@@ -170,6 +260,13 @@ export default function ProcesoDetalle() {
 
   // Handle lazy loading for tab views
   useEffect(() => {
+    if (activeTab === 'actuaciones') {
+      fetchActuaciones();
+    } else if (activeTab === 'terminos') {
+      // El modal de término ofrece elegir la actuación de origen (HU-37)
+      fetchActuaciones();
+    }
+
     if (activeTab === 'documentos') {
       fetchDocuments();
     } else if (activeTab === 'agenda') {
@@ -417,7 +514,8 @@ export default function ProcesoDetalle() {
         nombre: termNombre,
         fecha_vencimiento: termFechaVencimiento,
         es_critico: termEsCritico,
-        recordatorios: recordatoriosListFormatted
+        recordatorios: recordatoriosListFormatted,
+        ...(termIdActuacion && { id_actuacion: termIdActuacion })
       };
 
       const res = await api.post('/terminos', data);
@@ -426,6 +524,7 @@ export default function ProcesoDetalle() {
       setTermNombre('');
       setTermFechaVencimiento('');
       setTermEsCritico(false);
+      setTermIdActuacion('');
       setTermRecordatoriosList([]);
       fetchTerminos();
     } catch (error) {
@@ -715,6 +814,7 @@ export default function ProcesoDetalle() {
       <div className="flex border-b border-neutral-800 overflow-x-auto scrollbar-none gap-2 pb-px">
         {[
           { id: 'general', label: 'General', icon: Briefcase },
+          { id: 'actuaciones', label: 'Actuaciones', icon: Gavel },
           { id: 'documentos', label: 'Documentos', icon: FileText },
           { id: 'agenda', label: 'Agenda / Audiencias', icon: Calendar },
           { id: 'terminos', label: 'Términos Judiciales', icon: ListTodo }
@@ -813,7 +913,7 @@ export default function ProcesoDetalle() {
                     <p className="text-white font-semibold text-base flex items-center gap-1.5 mt-1">
                       <Calendar size={15} className="text-neutral-500" />
                       {proceso.fecha_radicado 
-                        ? new Date(proceso.fecha_radicado).toLocaleDateString()
+                        ? formatFechaSinHora(proceso.fecha_radicado)
                         : 'No registrada'
                       }
                     </p>
@@ -1407,6 +1507,183 @@ export default function ProcesoDetalle() {
         </div>
       )}
 
+      {/* TAB CONTENT: ACTUACIONES (HU-37) */}
+      {activeTab === 'actuaciones' && (
+        <div className="space-y-4 md:space-y-6 animate-fade-in">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-bold text-white">Actuaciones Procesales</h2>
+              <p className="text-xs text-neutral-400">Cronología de los actos ocurridos en el juzgado. De aquí nacen los términos judiciales.</p>
+            </div>
+            <button
+              onClick={() => setShowAddActuacionModal(true)}
+              className="flex items-center gap-1.5 bg-white text-black hover:bg-neutral-200 font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer text-xs"
+            >
+              <Plus size={14} />
+              <span>Registrar Actuación</span>
+            </button>
+          </div>
+
+          {loadingActuaciones ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="animate-spin text-neutral-500" size={32} />
+            </div>
+          ) : actuaciones.length === 0 ? (
+            <div className="text-center py-16 bg-neutral-950 border border-neutral-800 rounded-3xl">
+              <Gavel className="mx-auto text-neutral-700 mb-3" size={40} />
+              <h3 className="text-white font-bold text-sm">Sin Actuaciones Registradas</h3>
+              <p className="text-neutral-400 text-xs mt-1">Registre los autos, sentencias y notificaciones del expediente para reconstruir su historia.</p>
+            </div>
+          ) : (
+            <div className="bg-neutral-950 border border-neutral-800 rounded-3xl overflow-hidden shadow-xl">
+              <div className="divide-y divide-neutral-900">
+                {actuaciones.map((a) => (
+                  <div key={a.id_actuacion} className="p-4 md:p-6 hover:bg-neutral-900/20 transition-colors">
+                    <div className="flex flex-col md:flex-row md:items-start gap-3 md:gap-6">
+                      <div className="flex-shrink-0 flex md:flex-col items-center md:items-start gap-2">
+                        <span className="px-2.5 py-1 bg-neutral-900 border border-neutral-800 text-neutral-300 rounded-lg text-[10px] font-bold tracking-wider">
+                          {a.tipo}
+                        </span>
+                        <span className="text-[11px] text-neutral-500 font-semibold">
+                          {formatFechaSinHora(a.fecha_actuacion)}
+                        </span>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-sm text-white leading-relaxed">{a.anotacion}</p>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {canModify && (
+                              <button
+                                onClick={() => abrirEdicionActuacion(a)}
+                                className="p-1 hover:bg-neutral-900 rounded text-neutral-500 hover:text-white transition-colors cursor-pointer"
+                                title="Corregir actuación"
+                              >
+                                <Edit3 size={12} />
+                              </button>
+                            )}
+                            {isAdmin && (
+                              <button
+                                onClick={() => handleEliminarActuacion(a)}
+                                className="p-1 hover:bg-neutral-900 rounded text-neutral-500 hover:text-rose-400 transition-colors cursor-pointer"
+                                title="Eliminar actuación"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-neutral-500 mt-1.5">
+                          Registrada por {a.usuario?.nombre || 'un usuario del sistema'}
+                        </p>
+
+                        {a.terminos && a.terminos.length > 0 && (
+                          <div className="mt-3 space-y-1.5">
+                            <p className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider">
+                              Términos originados por esta actuación
+                            </p>
+                            {a.terminos.map((t) => (
+                              <div key={t.id_termino} className="flex flex-wrap items-center gap-2 text-xs">
+                                <Clock size={12} className={t.es_critico ? 'text-rose-400' : 'text-neutral-500'} />
+                                <span className="text-neutral-300 font-semibold">{t.nombre}</span>
+                                <span className="text-neutral-500">
+                                  vence {new Date(t.fecha_vencimiento).toLocaleDateString()}
+                                </span>
+                                <span className="px-1.5 py-0.5 bg-neutral-900 border border-neutral-800 text-neutral-400 rounded text-[9px] font-bold">
+                                  {t.estado}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* MODAL - ADD ACTUACION (HU-37) */}
+      {showAddActuacionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
+          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-2xl animate-scale-in my-8">
+            <button
+              onClick={cerrarModalActuacion}
+              className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <X size={24} />
+            </button>
+
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-neutral-400 bg-clip-text text-transparent mb-2">
+              {editingActuacion ? 'Corregir Actuación Procesal' : 'Registrar Actuación Procesal'}
+            </h2>
+            <p className="text-sm text-neutral-400 mb-6">
+              {editingActuacion
+                ? 'Corrija los datos mal digitados. El cambio quedará registrado en el historial del expediente con el valor anterior.'
+                : 'Registre el acto tal como ocurrió en el juzgado. La fecha de la actuación es la de la providencia, no la de hoy.'}
+            </p>
+
+            <form onSubmit={handleAddActuacion} className="space-y-4 md:space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    Fecha de la actuación
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={newActFecha}
+                    onChange={(e) => setNewActFecha(e.target.value)}
+                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    Tipo de actuación
+                  </label>
+                  <select
+                    value={newActTipo}
+                    onChange={(e) => setNewActTipo(e.target.value)}
+                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
+                  >
+                    {TIPOS_ACTUACION.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                  Anotación
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={newActAnotacion}
+                  onChange={(e) => setNewActAnotacion(e.target.value)}
+                  placeholder="Ej. Auto admisorio de demanda"
+                  className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-white resize-none"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={savingActuacion}
+                className="w-full bg-white text-black hover:bg-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed font-bold py-3.5 rounded-xl transition-all cursor-pointer text-sm flex items-center justify-center gap-2"
+              >
+                {savingActuacion ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                <span>{editingActuacion ? 'Guardar Cambios' : 'Registrar Actuación'}</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* MODAL - EDIT PROCESO */}
       {showEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
@@ -1869,7 +2146,7 @@ export default function ProcesoDetalle() {
                             defaultValue="EMAIL"
                             className="w-full bg-neutral-950 border border-neutral-800 focus:outline-none focus:border-white rounded-lg px-2 py-1.5 text-xs text-neutral-300"
                           >
-                            <option value="EMAIL">Email</option>
+                            <option value="EMAIL">Correo</option>
                             <option value="PLATAFORMA">Plataforma</option>
                             <option value="AMBOS">Ambos</option>
                           </select>
@@ -1974,6 +2251,27 @@ export default function ProcesoDetalle() {
                 </div>
 
                 <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    Actuación que origina el término <span className="text-neutral-500 normal-case">- Opcional</span>
+                  </label>
+                  <select
+                    value={termIdActuacion}
+                    onChange={(e) => setTermIdActuacion(e.target.value)}
+                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300"
+                  >
+                    <option value="">Sin actuación asociada</option>
+                    {actuaciones.map((a) => (
+                      <option key={a.id_actuacion} value={a.id_actuacion}>
+                        {formatFechaSinHora(a.fecha_actuacion)} · {a.tipo} · {a.anotacion.slice(0, 45)}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-neutral-500">
+                    Vincular el plazo a su actuación permite responder de dónde nace el término.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400 block mb-1">
                     ¿Es un Término Crítico?
                   </label>
@@ -2058,7 +2356,7 @@ export default function ProcesoDetalle() {
                             onChange={(e) => setNewTermRecCanal(e.target.value)}
                             className="w-full bg-neutral-950 border border-neutral-800 focus:outline-none focus:border-white rounded-lg px-2 py-1.5 text-xs text-neutral-300"
                           >
-                            <option value="EMAIL">Email</option>
+                            <option value="EMAIL">Correo</option>
                             <option value="PLATAFORMA">Plataforma</option>
                             <option value="AMBOS">Ambos</option>
                           </select>

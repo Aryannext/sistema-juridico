@@ -1,5 +1,14 @@
 # Reporte de Coherencia de Documentación — Proyecto SGPA
 
+> ⚠️ **DOCUMENTO CADUCADO — no usar como referencia.**
+> Analiza archivos que ya no existen (`Historias_de_Usuario_Sistema_Juridico.docx`, `Diagramas.xml`)
+> y reporta como pendientes cosas ya resueltas: HU-31 a HU-34 existen y están implementadas,
+> la contradicción RF28/RF29 está corregida y RF34 ya figura en HU-21.
+> **Documento vigente:** [00-AUDITORIA-DE-COHERENCIA.md](../00-AUDITORIA-DE-COHERENCIA.md), que lo reemplaza.
+> Se conserva como registro histórico. Detalle en el hallazgo H-12.
+
+---
+
 Este documento presenta un análisis detallado de la coherencia entre las especificaciones de requerimientos (`sistema.docx`), las historias de usuario (`Historias_de_Usuario_Sistema_Juridico.docx`) y los diagramas de arquitectura, roles y flujos (`Diagramas.xml`), con el fin de asegurar que la información sea consistente antes de realizar la carga en Jira.
 
 ---

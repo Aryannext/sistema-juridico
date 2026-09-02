@@ -76,7 +76,7 @@ Haz clic sobre cualquier expediente en la lista para entrar a su "Ficha". Dentro
 
 *(Nota: Este módulo solo es visible si tienes el rol de "ADMINISTRADOR")*
 
-Si eres el dueño o administrador del consultorio, verás la pestaña **Access Control (Control de Acceso)**. Aquí manejas a tu equipo de trabajo.
+Si eres el dueño o administrador del consultorio, verás la pestaña **Control de acceso**. Aquí manejas a tu equipo de trabajo.
 
 ### Tipos de Roles en el Equipo:
 *   **Administrador:** Tiene acceso a todo el sistema, puede ver todos los casos, agregar nuevos empleados y ver los reportes.
@@ -84,7 +84,7 @@ Si eres el dueño o administrador del consultorio, verás la pestaña **Access C
 *   **Asistente:** Tiene permisos limitados, diseñados para trabajo administrativo de apoyo (como registrar datos iniciales) sin acceso total a modificar expedientes de otros abogados.
 
 ### ¿Cómo agregar un Abogado/Asistente?
-1. Ve a **Access Control**.
+1. Ve a **Control de acceso**.
 2. Llena el formulario con el Nombre, Correo, Contraseña inicial y selecciona el Rol (Abogado o Asistente).
 3. Presiona **Crear Cuenta**.
 

@@ -48,21 +48,21 @@ export default function TwoFactorPage() {
             <Scale size={32} className="text-[#DFB971]" />
           </div>
           <h1 className="text-4xl font-extrabold tracking-widest uppercase mb-1">
-            <span className="bg-gradient-to-r from-[#DFB971] via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent">Lexica</span>
+            <span className="bg-gradient-to-r from-[#DFB971] via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent">SGPA</span>
           </h1>
         </div>
 
         <div className="bg-neutral-950/40 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.6)] rounded-3xl p-8 animate-scale-in">
           <div className="mb-8 text-center flex flex-col items-center">
             <ShieldCheck size={40} className="text-[#DFB971] mb-3" />
-            <h2 className="text-2xl font-semibold text-white mb-2">Two-Factor Auth</h2>
-            <p className="text-sm text-neutral-400">Enter the 6-digit code sent to your email</p>
+            <h2 className="text-2xl font-semibold text-white mb-2">Verificación en dos pasos</h2>
+            <p className="text-sm text-neutral-400">Ingresa el código de 6 dígitos enviado a tu correo</p>
           </div>
 
           <form onSubmit={onSubmit} className="space-y-6">
             <div className="space-y-3">
               <label htmlFor="codigo" className="text-xs font-medium text-[#DFB971] uppercase tracking-wider text-center block">
-                Security Code
+                Código de seguridad
               </label>
               <input 
                 id="codigo" 
@@ -86,7 +86,7 @@ export default function TwoFactorPage() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-              ) : 'Verify Identity'}
+              ) : 'Verificar identidad'}
             </button>
           </form>
         </div>

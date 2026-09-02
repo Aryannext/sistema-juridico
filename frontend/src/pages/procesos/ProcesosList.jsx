@@ -8,6 +8,7 @@ import {
   Trash2, Loader2, ChevronLeft, ChevronRight 
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatFechaSinHora } from '../../lib/utils';
 
 export default function ProcesosList() {
   const [procesos, setProcesos] = useState([]);
@@ -324,7 +325,7 @@ export default function ProcesosList() {
                   {proceso.fecha_radicado && (
                     <div className="flex items-center gap-1.5">
                       <Calendar size={13} className="text-neutral-600" />
-                      <span>Radicado el: {new Date(proceso.fecha_radicado).toLocaleDateString()}</span>
+                      <span>Radicado el: {formatFechaSinHora(proceso.fecha_radicado)}</span>
                     </div>
                   )}
                 </div>

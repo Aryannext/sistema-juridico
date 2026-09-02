@@ -40,7 +40,7 @@ export default function RegisterPage() {
       {/* Left side: Background Image */}
       <div className="hidden lg:flex w-1/2 relative items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <img src={`${import.meta.env.BASE_URL}sgpa-bg.png`} alt="Legal background" className="object-cover w-full h-full opacity-50" />
+          <img src={`${import.meta.env.BASE_URL}sgpa-bg.png`} alt="Fondo jurídico" className="object-cover w-full h-full opacity-50" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0c] via-black/40 to-transparent"></div>
           <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0c] via-transparent to-transparent"></div>
         </div>
@@ -74,8 +74,8 @@ export default function RegisterPage() {
 
           <div className="bg-neutral-950/40 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.6)] rounded-3xl p-8 animate-scale-in">
             <div className="mb-8 text-center">
-              <h2 className="text-2xl font-semibold text-white mb-2">Create an Account</h2>
-              <p className="text-sm text-neutral-400">Select your profile type to join SGPA</p>
+              <h2 className="text-2xl font-semibold text-white mb-2">Crear una cuenta</h2>
+              <p className="text-sm text-neutral-400">Elige tu tipo de perfil para unirte a SGPA</p>
             </div>
 
           <div className="grid grid-cols-2 gap-4 mb-8">
@@ -89,7 +89,7 @@ export default function RegisterPage() {
               onClick={() => setTipo('INDEPENDIENTE')}
             >
               <User size={28} />
-              <span className="text-sm font-semibold uppercase tracking-wider">Independent</span>
+              <span className="text-sm font-semibold uppercase tracking-wider">Independiente</span>
             </button>
             <button 
               type="button"
@@ -101,7 +101,7 @@ export default function RegisterPage() {
               onClick={() => setTipo('CONSULTORIO')}
             >
               <Building2 size={28} />
-              <span className="text-sm font-semibold uppercase tracking-wider">Firm / Office</span>
+              <span className="text-sm font-semibold uppercase tracking-wider">Consultorio</span>
             </button>
           </div>
 
@@ -109,7 +109,7 @@ export default function RegisterPage() {
             {tipo === 'CONSULTORIO' && (
               <div className="space-y-2">
                 <label className="text-xs font-medium text-[#DFB971] uppercase tracking-wider">
-                  Firm Name *
+                  Nombre del consultorio *
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
@@ -117,7 +117,7 @@ export default function RegisterPage() {
                   </div>
                   <input 
                     className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:bg-white/10 focus:border-[#DFB971] transition-all rounded-xl pl-10 pr-4 py-3 outline-none"
-                    placeholder="Enter the firm's name"
+                    placeholder="Nombre del consultorio"
                     {...register('nombre_consultorio', { required: tipo === 'CONSULTORIO' ? 'El nombre es requerido' : false })}
                   />
                 </div>
@@ -127,7 +127,7 @@ export default function RegisterPage() {
 
             <div className="space-y-2">
               <label className="text-xs font-medium text-[#DFB971] uppercase tracking-wider">
-                Full Name (Admin) *
+                Nombre completo del administrador *
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
@@ -135,7 +135,7 @@ export default function RegisterPage() {
                 </div>
                 <input 
                   className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:bg-white/10 focus:border-[#DFB971] transition-all rounded-xl pl-10 pr-4 py-3 outline-none"
-                  placeholder="Enter admin full name"
+                  placeholder="Nombre y apellidos"
                   onInput={(e) => e.target.value = e.target.value.replace(/[0-9]/g, '')}
                   {...register('nombre_admin', { required: 'El nombre es requerido' })}
                 />
@@ -146,7 +146,7 @@ export default function RegisterPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="space-y-2">
                 <label className="text-xs font-medium text-[#DFB971] uppercase tracking-wider">
-                  Email Address *
+                  Correo electrónico *
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
@@ -164,7 +164,7 @@ export default function RegisterPage() {
 
               <div className="space-y-2">
                 <label className="text-xs font-medium text-[#DFB971] uppercase tracking-wider">
-                  Password *
+                  Contraseña *
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
@@ -193,7 +193,7 @@ export default function RegisterPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-[#DFB971] uppercase tracking-wider">
-                    Tax ID (NIT) <span className="text-neutral-500 normal-case">- Optional</span>
+                    NIT <span className="text-neutral-500 normal-case">- Opcional</span>
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
@@ -211,7 +211,7 @@ export default function RegisterPage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-[#DFB971] uppercase tracking-wider">
-                    Phone <span className="text-neutral-500 normal-case">- Optional</span>
+                    Teléfono <span className="text-neutral-500 normal-case">- Opcional</span>
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
@@ -243,15 +243,15 @@ export default function RegisterPage() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-              ) : 'Complete Registration'}
+              ) : 'Completar registro'}
             </button>
           </form>
 
           </div>
           <div className="mt-8 text-center text-sm text-neutral-400">
-            Already have an account?{' '}
+            ¿Ya tienes una cuenta?{' '}
             <Link to="/login" className="text-[#DFB971] hover:text-white transition-colors font-medium">
-              Sign In Here
+              Inicia sesión aquí
             </Link>
           </div>
         </div>

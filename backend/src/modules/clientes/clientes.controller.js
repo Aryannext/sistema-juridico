@@ -1,4 +1,5 @@
 const prisma = require('../../config/prisma');
+const { triggerWebhook } = require('../../config/webhook');
 
 exports.createCliente = async (req, res) => {
   try {
@@ -26,6 +27,9 @@ exports.createCliente = async (req, res) => {
         fecha_nacimiento: fecha_nacimiento ? new Date(fecha_nacimiento) : null,
       }
     });
+
+    // Disparar automatización en n8n sin bloquear la respuesta
+    triggerWebhook('NUEVO_CLIENTE', { cliente, usuario_creador: req.user.nombre });
 
     res.status(201).json({ message: 'Cliente registrado exitosamente', cliente });
   } catch (error) {

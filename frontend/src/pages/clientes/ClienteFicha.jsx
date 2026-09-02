@@ -7,6 +7,7 @@ import {
   Briefcase, Plus, AlertCircle, Eye, ShieldAlert, Award, FileCode2, X
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatFechaSinHora } from '../../lib/utils';
 
 export default function ClienteFicha() {
   const { id } = useParams();
@@ -206,7 +207,7 @@ export default function ClienteFicha() {
                   <span className="text-neutral-400">Fecha de Nacimiento</span>
                   <span className="text-white font-medium flex items-center gap-1.5">
                     <Calendar size={14} className="text-neutral-500" />
-                    {new Date(cliente.fecha_nacimiento).toLocaleDateString()}
+                    {formatFechaSinHora(cliente.fecha_nacimiento)}
                   </span>
                 </div>
               )}

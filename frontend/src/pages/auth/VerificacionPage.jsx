@@ -43,7 +43,7 @@ export default function VerificacionPage() {
             <Scale size={32} className="text-[#DFB971]" />
           </div>
           <h1 className="text-4xl font-extrabold tracking-widest uppercase mb-1">
-            <span className="bg-gradient-to-r from-[#DFB971] via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent">Lexica</span>
+            <span className="bg-gradient-to-r from-[#DFB971] via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent">SGPA</span>
           </h1>
         </div>
 
@@ -57,15 +57,15 @@ export default function VerificacionPage() {
           </div>
           
           <h2 className="text-2xl font-semibold text-white mb-3 tracking-wide">
-            {status === 'verifying' && 'Verifying Account...'}
-            {status === 'success' && 'Account Verified!'}
-            {status === 'error' && 'Verification Failed'}
+            {status === 'verifying' && 'Verificando tu cuenta…'}
+            {status === 'success' && '¡Cuenta verificada!'}
+            {status === 'error' && 'No pudimos verificar tu cuenta'}
           </h2>
           
           <p className="text-sm text-neutral-400 mb-8">
-            {status === 'verifying' && 'Please wait while we confirm your credentials.'}
-            {status === 'success' && 'Your email has been confirmed successfully. You can now securely access the system.'}
-            {status === 'error' && 'The verification link may have expired or is invalid. Please try registering again or contact support.'}
+            {status === 'verifying' && 'Espera un momento mientras confirmamos tus datos.'}
+            {status === 'success' && 'Tu correo fue confirmado. Ya puedes ingresar al sistema.'}
+            {status === 'error' && 'El enlace de verificación es inválido o ya expiró. Intenta registrarte de nuevo o contacta al administrador.'}
           </p>
           
           {status !== 'verifying' && (
@@ -73,7 +73,7 @@ export default function VerificacionPage() {
               className="w-full bg-gradient-to-r from-[#C29B4F] to-[#E5C37A] hover:from-[#E5C37A] hover:to-[#C29B4F] text-black font-semibold shadow-[0_0_15px_rgba(223,185,113,0.3)] hover:shadow-[0_0_25px_rgba(223,185,113,0.5)] transition-all duration-300 rounded-xl py-3.5 uppercase tracking-wider text-sm flex justify-center items-center cursor-pointer"
               onClick={() => navigate('/login')}
             >
-              Return to Login
+              Volver al inicio de sesión
             </button>
           )}
         </div>

@@ -1,4 +1,5 @@
 const prisma = require('../../config/prisma');
+const { triggerWebhook } = require('../../config/webhook');
 
 // 1. Crear un expediente jurídico digital
 exports.createProceso = async (req, res) => {
@@ -420,6 +421,14 @@ exports.cambiarEstadoProceso = async (req, res) => {
         detalle: `Expediente ${proceso.numero_radicado} cambiado a estado ${estado}. Justificación: ${justificacion}`,
         ip_adress: req.ip || '127.0.0.1'
       }
+    });
+
+    // Disparar Webhook a n8n
+    triggerWebhook('ACTUALIZACION_PROCESO', { 
+      proceso: updatedProceso, 
+      estado_anterior: proceso.estado,
+      justificacion,
+      usuario_modificador: req.user.nombre 
     });
 
     res.json({ message: `Estado del expediente actualizado a ${estado} exitosamente`, proceso: updatedProceso });

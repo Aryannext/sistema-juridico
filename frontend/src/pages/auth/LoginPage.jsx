@@ -68,7 +68,7 @@ export default function LoginPage() {
       {/* Left side: Background Image */}
       <div className="hidden lg:flex w-1/2 relative items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <img src={`${import.meta.env.BASE_URL}sgpa-bg.png`} alt="Legal background" className="object-cover w-full h-full opacity-50" />
+          <img src={`${import.meta.env.BASE_URL}sgpa-bg.png`} alt="Fondo jurídico" className="object-cover w-full h-full opacity-50" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0c] via-black/40 to-transparent"></div>
           <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0c] via-transparent to-transparent"></div>
         </div>
@@ -98,13 +98,13 @@ export default function LoginPage() {
             <h1 className="text-4xl font-extrabold tracking-widest uppercase mb-1">
               <span className="bg-gradient-to-r from-[#DFB971] via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent">SGPA</span>
             </h1>
-            <p className="text-xs tracking-[0.2em] text-neutral-400 uppercase">Legal System</p>
+            <p className="text-xs tracking-[0.2em] text-neutral-400 uppercase">Sistema jurídico</p>
           </div>
 
           <div className="bg-neutral-950/40 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.6)] rounded-3xl p-8 animate-scale-in">
             <div className="mb-8 text-center">
-              <h2 className="text-2xl font-semibold text-white mb-2">Welcome to SGPA</h2>
-              <p className="text-sm text-neutral-400">Secure Portal for Legal Professionals</p>
+              <h2 className="text-2xl font-semibold text-white mb-2">Bienvenido a SGPA</h2>
+              <p className="text-sm text-neutral-400">Portal seguro para profesionales del derecho</p>
             </div>
 
             {lockUntilTime && (
@@ -118,7 +118,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="space-y-2">
               <label htmlFor="email" className="text-xs font-medium text-[#DFB971] uppercase tracking-wider">
-                Email Address
+                Correo electrónico
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
@@ -127,7 +127,7 @@ export default function LoginPage() {
                 <input 
                   id="email" 
                   type="email" 
-                  placeholder="Enter your email"
+                  placeholder="Ingresa tu correo"
                   autoComplete="off"
                   className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:bg-white/10 focus:border-[#DFB971] transition-all rounded-xl pl-10 pr-4 py-3 outline-none"
                   {...register('email', { required: 'El correo es requerido' })}
@@ -138,7 +138,7 @@ export default function LoginPage() {
 
             <div className="space-y-2">
               <label htmlFor="password" className="text-xs font-medium text-[#DFB971] uppercase tracking-wider">
-                Password
+                Contraseña
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
@@ -163,11 +163,19 @@ export default function LoginPage() {
               {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password.message}</p>}
             </div>
 
-            <div className="flex items-center justify-end">
-              <Link to="#" className="text-xs font-medium text-neutral-400 hover:text-[#DFB971] transition-colors">
-                Forgot Password?
-              </Link>
-            </div>
+            {/*
+              Enlace de recuperación de contraseña oculto a propósito.
+              Apuntaba a "#" y no hacía nada: mostrarlo traducido solo hace más
+              evidente que no funciona. Se restablece cuando existan los endpoints
+              POST /api/auth/recuperar y POST /api/auth/restablecer.
+              Ver docs/10-PLAN-DE-REMEDIACION.md (Ola 4.1) y RNF02.
+
+              <div className="flex items-center justify-end">
+                <Link to="/recuperar" className="text-xs font-medium text-neutral-400 hover:text-[#DFB971] transition-colors">
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </div>
+            */}
 
             <button 
               type="submit" 
@@ -179,15 +187,15 @@ export default function LoginPage() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-              ) : lockUntilTime ? 'Locked' : 'Sign In'}
+              ) : lockUntilTime ? 'Bloqueado' : 'Iniciar sesión'}
             </button>
           </form>
 
           </div>
           <div className="mt-8 text-center text-sm text-neutral-400">
-            New User?{' '}
+            ¿Eres nuevo?{' '}
             <Link to="/registro" className="text-[#DFB971] hover:text-white transition-colors font-medium">
-              Register Now
+              Regístrate aquí
             </Link>
           </div>
         </div>

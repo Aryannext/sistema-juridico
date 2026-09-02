@@ -1,5 +1,13 @@
 # Especificaciones Técnicas - SGPA
 
+> ⚠️ **DOCUMENTO OBSOLETO — no usar como referencia.**
+> Declara React 18, Tailwind v3, React Router v6, Node 18+ y almacenamiento en Supabase.
+> La plataforma corre React 19, Tailwind 4, Router 7, Node 24 y Cloudflare R2.
+> **Documentos vigentes:** [01-ARQUITECTURA.md](../01-ARQUITECTURA.md) y [09-COMPATIBILIDAD-NODE.md](../09-COMPATIBILIDAD-NODE.md).
+> Se conserva como registro histórico. Detalle en [00-AUDITORIA-DE-COHERENCIA.md](../00-AUDITORIA-DE-COHERENCIA.md) (H-05, H-06, H-07).
+
+---
+
 El SGPA (Sistema de Gestión de Procesos de Abogados) es un sistema SaaS B2B robusto, construido con tecnologías modernas web para garantizar escalabilidad, seguridad en los datos sensibles de los casos y alto rendimiento.
 
 ## 1. Stack Tecnológico (Core)

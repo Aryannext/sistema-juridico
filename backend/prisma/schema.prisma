@@ -18,20 +18,20 @@ enum PlanTenant {
 }
 
 model Tenant {
-  id_tenant    String      @id @default(uuid()) @db.Uuid
-  nombre       String      @db.VarChar(150)
-  tipo         TipoTenant
-  razon_social String?     @db.VarChar(200)
-  nit          String?     @db.VarChar(20)
-  email_admin  String      @db.VarChar(150)
-  plan         PlanTenant?
-  activo       Boolean     @default(true)
-  logo_url     String?
-  telefono     String?     @db.VarChar(20)
-  direccion    String?
-  ciudad       String?     @db.VarChar(100)
-  created_at   DateTime    @default(now())
-  horas_ocultar_notificaciones Int @default(48)
+  id_tenant                    String      @id @default(uuid()) @db.Uuid
+  nombre                       String      @db.VarChar(150)
+  tipo                         TipoTenant
+  razon_social                 String?     @db.VarChar(200)
+  nit                          String?     @db.VarChar(20)
+  email_admin                  String      @db.VarChar(150)
+  plan                         PlanTenant?
+  activo                       Boolean     @default(true)
+  logo_url                     String?
+  telefono                     String?     @db.VarChar(20)
+  direccion                    String?
+  ciudad                       String?     @db.VarChar(100)
+  created_at                   DateTime    @default(now())
+  horas_ocultar_notificaciones Int         @default(48)
 
   usuarios            Usuario[]
   clientes            Cliente[]
@@ -43,6 +43,7 @@ model Tenant {
   notificaciones      Notificacion[]
   bitacora_auditoria  BitacoraAuditoria[]
   historial_proceso   HistorialProceso[]
+  actuaciones         Actuacion[]
 
   @@map("tenants")
 }
@@ -88,6 +89,7 @@ model Usuario {
   notificaciones       Notificacion[]
   bitacora             BitacoraAuditoria[]
   historial_realizado  HistorialProceso[]
+  actuaciones          Actuacion[]
 
   @@map("usuario")
 }
@@ -171,12 +173,13 @@ model Proceso {
   cliente      Cliente @relation(fields: [id_cliente], references: [id_cliente])
   abogado_resp Usuario @relation(fields: [id_abogado_resp], references: [id_usuario])
 
-  abogados   ProcesoAbogado[]
-  partes     ParteProcesal[]
-  documentos Documento[]
-  audiencias Audiencia[]
-  terminos   TerminoJudicial[]
-  historial  HistorialProceso[]
+  abogados    ProcesoAbogado[]
+  partes      ParteProcesal[]
+  documentos  Documento[]
+  audiencias  Audiencia[]
+  terminos    TerminoJudicial[]
+  historial   HistorialProceso[]
+  actuaciones Actuacion[]
 
   @@map("procesos")
 }
@@ -222,6 +225,49 @@ model ParteProcesal {
   proceso Proceso @relation(fields: [id_proceso], references: [id_proceso])
 
   @@map("partes_procesales")
+}
+
+/// Catálogo cerrado de tipos de actuación procesal.
+/// Los valores provienen de la Consulta de Procesos Nacional Unificada
+/// (pestaña "Actuaciones"), documentados en docs/07-GLOSARIO-JURIDICO.md
+enum TipoActuacion {
+  AUTO
+  SENTENCIA
+  NOTIFICACION
+  AUDIENCIA
+  MEMORIAL
+  DEMANDA
+  CONTESTACION
+  RECURSO
+  TRASLADO
+  OTRO
+}
+
+/// Cada acto individual que ocurre dentro del proceso (Art. 3 CGP).
+/// No confundir con HistorialProceso: el historial registra cambios que los
+/// usuarios hacen EN EL SISTEMA; la actuación registra hechos que ocurren
+/// EN EL JUZGADO. Ver docs/07-GLOSARIO-JURIDICO.md
+model Actuacion {
+  id_actuacion    String        @id @default(uuid()) @db.Uuid
+  tenant_id       String        @db.Uuid
+  id_proceso      String        @db.Uuid
+  fecha_actuacion DateTime      @db.Date
+  tipo            TipoActuacion
+  anotacion       String
+  /// Fecha en que se digitó en el sistema, distinta de fecha_actuacion
+  fecha_registro  DateTime      @default(now())
+  registrado_por  String        @db.Uuid
+
+  tenant  Tenant  @relation(fields: [tenant_id], references: [id_tenant])
+  proceso Proceso @relation(fields: [id_proceso], references: [id_proceso])
+  usuario Usuario @relation(fields: [registrado_por], references: [id_usuario])
+
+  /// Términos judiciales que nacen de esta actuación
+  terminos TerminoJudicial[]
+
+  @@index([tenant_id, id_proceso])
+  @@index([id_proceso, fecha_actuacion])
+  @@map("actuaciones")
 }
 
 enum CategoriaDocumento {
@@ -342,6 +388,9 @@ model TerminoJudicial {
   id_termino        String        @id @default(uuid()) @db.Uuid
   tenant_id         String        @db.Uuid
   id_proceso        String        @db.Uuid
+  /// Actuación procesal que originó este término. Opcional: RF32 permite
+  /// registrar un término manualmente sin vincularlo a una actuación.
+  id_actuacion      String?       @db.Uuid
   nombre            String        @db.VarChar(150)
   fecha_vencimiento DateTime
   es_critico        Boolean       @default(false)
@@ -352,10 +401,11 @@ model TerminoJudicial {
   created_by        String        @db.Uuid
   created_at        DateTime      @default(now())
 
-  tenant          Tenant   @relation(fields: [tenant_id], references: [id_tenant])
-  proceso         Proceso  @relation(fields: [id_proceso], references: [id_proceso])
-  usuario_gestion Usuario? @relation("TerminoGestionado", fields: [gestionado_por], references: [id_usuario])
-  usuario_creador Usuario  @relation("TerminoCreado", fields: [created_by], references: [id_usuario])
+  tenant          Tenant     @relation(fields: [tenant_id], references: [id_tenant])
+  proceso         Proceso    @relation(fields: [id_proceso], references: [id_proceso])
+  actuacion       Actuacion? @relation(fields: [id_actuacion], references: [id_actuacion])
+  usuario_gestion Usuario?   @relation("TerminoGestionado", fields: [gestionado_por], references: [id_usuario])
+  usuario_creador Usuario    @relation("TerminoCreado", fields: [created_by], references: [id_usuario])
 
   recordatorios RecordatorioTermino[]
 

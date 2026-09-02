@@ -1,5 +1,14 @@
 # Arquitectura del Sistema de Gestión de Procesos de Abogados (SGPA)
 
+> ⚠️ **DOCUMENTO OBSOLETO — no usar como referencia.**
+> Describe el sistema como "microservicios lógicos" (no lo es), React 18, React Router v6 y
+> almacenamiento en Supabase. Nada de eso corresponde a la plataforma actual, y menciona un
+> `tenant.middleware.js` que no existe.
+> **Documento vigente:** [01-ARQUITECTURA.md](../01-ARQUITECTURA.md).
+> Se conserva como registro histórico del proyecto. Detalle en [00-AUDITORIA-DE-COHERENCIA.md](../00-AUDITORIA-DE-COHERENCIA.md) (H-01, H-02, H-05).
+
+---
+
 ## 1. Visión General
 El SGPA está diseñado bajo una arquitectura de microservicios lógicos (modular) separando claramente el Frontend del Backend, comunicándose a través de una API RESTful. Además, el sistema implementa una arquitectura **Multi-Tenant** (Multiusuario), donde cada Consultorio Jurídico o Abogado Independiente opera en su propio entorno lógico de datos, garantizando aislamiento y seguridad.
 

@@ -1,5 +1,14 @@
 # Combined Sprint Stories
 
+> ⚠️ **DOCUMENTO DESACTUALIZADO — no usar como referencia.**
+> Lista 34 historias de usuario; el backlog vigente tiene **36**. Faltan HU-35 (Registro en la
+> plataforma) y HU-36 (Configurar perfil del consultorio), ambas ya implementadas.
+> Además, la distribución de sprints deja el Sprint 1 con 54 puntos.
+> **Documento vigente:** [04-HISTORIAS-DE-USUARIO.md](../04-HISTORIAS-DE-USUARIO.md).
+> Se conserva como registro histórico. Detalle en el hallazgo H-11.
+
+---
+
 ## Sprint 1: Registro de clientes y creación de expedientes
 
 | ID | Historia de Usuario |

@@ -1,0 +1,19 @@
+# Nunca copiar dependencias del host: se instalan dentro de la imagen
+node_modules
+npm-debug.log*
+
+# Secretos: se inyectan en tiempo de ejecución con env_file, no se hornean
+# dentro de la imagen (quedarían visibles para quien la descargue)
+.env
+.env.*
+!.env.example
+
+# Ruido
+.git
+.gitignore
+Dockerfile
+.dockerignore
+*.md
+
+# Las pruebas no hacen falta en la imagen de producción
+src/tests

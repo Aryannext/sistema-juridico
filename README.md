@@ -6,14 +6,31 @@ Este repositorio contiene el código fuente completo del sistema, dividido en un
 
 ---
 
+## 📚 Documentación completa
+
+Toda la documentación técnica y funcional del proyecto vive en la carpeta `docs/`:
+
+👉 **[Índice de documentación](./docs/README.md)**
+
+Arquitectura, modelo de datos, catálogo de requisitos (RF/RNF/RN), historias de usuario,
+matriz de trazabilidad, catálogo de la API, glosario jurídico y decisiones de arquitectura.
+
+---
+
 ## 🏗️ Arquitectura y Especificaciones Técnicas
 
-El sistema está diseñado bajo una arquitectura de **microservicios lógicos (modular)** separando claramente el Frontend del Backend, comunicándose a través de una API RESTful. Implementa una arquitectura **Multi-Tenant** (Multiusuario), donde cada Consultorio Jurídico opera en su propio entorno lógico de datos garantizando un aislamiento total.
+El sistema está construido como un **monolito modular** desplegado en dos artefactos (una SPA estática y una API REST), que se comunican mediante una API RESTful. El backend se organiza **por dominio de negocio** (`src/modules/procesos`, `src/modules/clientes`, …) y, dentro de cada módulo, por capas: Router → Middlewares → Controlador → Prisma → PostgreSQL.
+
+Implementa además una arquitectura **Multi-Tenant**, donde cada Consultorio Jurídico opera en su propio entorno lógico de datos mediante una columna discriminadora `tenant_id`.
+
+> Detalle completo, con diagramas: **[docs/01-ARQUITECTURA.md](./docs/01-ARQUITECTURA.md)**
 
 ### Stack Tecnológico
-- **Frontend**: React 18, Vite, Tailwind CSS v4, React Router v7, Axios, React Hook Form, Sonner, Lucide React.
-- **Backend**: Node.js (v18+), Express.js, Prisma ORM v5, JWT (Autenticación), Bcrypt (Hashing), Helmet y Rate-Limiting.
+- **Frontend**: React 19, Vite 8, Tailwind CSS v4, React Router v7, Axios, React Hook Form, Sonner, Lucide React.
+- **Backend**: Node.js (v22+, probado en v24), Express.js 4, Prisma ORM v5, JWT (Autenticación), Bcrypt (Hashing), Helmet y Rate-Limiting.
 - **Base de Datos**: PostgreSQL (v15+) alojado en Supabase con Connection Pooling (PgBouncer).
+- **Almacenamiento de archivos**: Cloudflare R2 (compatible con S3), con URLs firmadas temporales.
+- **Tareas programadas**: `node-cron` dentro del propio proceso de la API (recordatorios cada 15 minutos).
 
 ### Seguridad y Multi-Tenancy
 1. **Multi-Tenancy Lógico**: Todas las consultas a la base de datos están estrictamente encapsuladas por el `tenant_id` del usuario en sesión, garantizando que los datos de un consultorio jamás se filtren a otro.
@@ -47,7 +64,7 @@ Tu centro de comando. Al ingresar, el sistema te muestra métricas clave, una ag
   - Subir y centralizar **Documentos** probatorios.
 
 ### 4. Control de Acceso y Auditoría
-Si eres el Administrador del despacho, tienes acceso a la pestaña de **Access Control**. Desde allí puedes invitar a tus colegas abogados, asignarles permisos y revisar la Bitácora de Auditoría para saber qué hizo cada empleado y cuándo.
+Si eres el Administrador del despacho, tienes acceso a la pestaña de **Control de acceso**. Desde allí puedes invitar a tus colegas abogados, asignarles permisos y revisar la Bitácora de Auditoría para saber qué hizo cada empleado y cuándo.
 
 ---
 
@@ -56,8 +73,9 @@ Si eres el Administrador del despacho, tienes acceso a la pestaña de **Access C
 Si deseas descargar este repositorio y ejecutarlo en tu máquina local, sigue estas instrucciones detalladas paso a paso.
 
 ### Requisitos Previos
-- Instalar **Node.js** (versión 18 o superior).
+- Instalar **Node.js versión 22 o superior** (el proyecto está probado en v24; ver `.nvmrc`).
 - Tener una cuenta gratuita en [Supabase](https://supabase.com/) (o una instancia local de PostgreSQL).
+- Tener un bucket de **Cloudflare R2** para el almacenamiento de documentos. Sin credenciales de R2 el sistema arranca, pero no se pueden subir archivos.
 
 ### Paso 1: Clonar el Repositorio
 ```bash
@@ -72,15 +90,25 @@ cd sistema-juridico
    cd backend
    cp .env.example .env
    ```
-3. Edita tu nuevo archivo `backend/.env` y completa los datos (Asegúrate de cambiar los URLs de la base de datos y generar tu propia clave JWT).
+3. Edita tu nuevo archivo `backend/.env` y completa los datos. El archivo `.env.example` documenta **todas** las variables que el código lee, con explicación de cada una.
 
-Ejemplo de `.env`:
+Ejemplo mínimo de `.env`:
 ```env
 DATABASE_URL="postgresql://postgres:TUPASSWORD@aws-0-eu-central-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
 DIRECT_URL="postgresql://postgres:TUPASSWORD@aws-0-eu-central-1.pooler.supabase.com:5432/postgres"
 JWT_SECRET="alguna_clave_secreta_aleatoria"
 PORT=3000
+
+# Necesarias para subir documentos (Cloudflare R2)
+R2_ENDPOINT="https://<account-id>.r2.cloudflarestorage.com"
+R2_ACCESS_KEY_ID="..."
+R2_SECRET_ACCESS_KEY="..."
+
+# Base de los enlaces de verificación por correo
+FRONTEND_URL="http://localhost:5173/sistema-juridico"
 ```
+
+> Referencia completa de variables de entorno: **[docs/09-COMPATIBILIDAD-NODE.md](./docs/09-COMPATIBILIDAD-NODE.md)**
 
 ### Paso 3: Inicializar el Backend
 Dentro de la carpeta `backend`, instala las dependencias y sincroniza el esquema de la base de datos:
@@ -110,25 +138,40 @@ npm install
 # Iniciar el entorno de desarrollo
 npm run dev
 ```
-La interfaz web estará disponible en tu navegador en `http://localhost:5173`.
+La interfaz web estará disponible en tu navegador en `http://localhost:5173/sistema-juridico/`.
+
+> ⚠️ **Ojo con la subcarpeta.** El proyecto se sirve bajo la ruta `/sistema-juridico/`
+> (`vite.config.js` fija `base` y `App.jsx` fija `basename`). Abrir `http://localhost:5173`
+> a secas devuelve una página en blanco. Todo enlace absoluto que escribas debe construirse
+> con `import.meta.env.BASE_URL`.
+
+### Paso 5: Ejecutar las pruebas
+```bash
+cd backend && npm test
+```
 
 ---
 
 ## 🚀 Guía de Despliegue en Producción
 
-El sistema está listo para montarse en la nube de forma gratuita o de pago.
+El despliegue actual del sistema es un **VPS con Nginx**, sirviendo el frontend como archivos
+estáticos en la subcarpeta `/sistema-juridico/` y haciendo proxy inverso de `/api` hacia el
+proceso Node en el puerto 3000.
 
-1. **Backend (Render / AWS / Railway)**:
-   - Configura el servicio usando Node.
-   - El *Build Command* es: `npm install && npx prisma generate`
-   - El *Start Command* es: `npm start`
-   - Configura todas las variables de entorno de tu archivo `.env`.
-   
-2. **Frontend (Vercel)**:
-   - Conecta tu repositorio de GitHub directamente a Vercel.
-   - Selecciona el directorio `frontend` como raíz.
-   - Agrega la variable de entorno `VITE_API_URL` apuntando a la URL pública de tu backend.
-   - El archivo `vercel.json` incluido en el repositorio se encargará automáticamente del ruteo para aplicaciones SPA.
+1. **Backend (Node en el VPS)**:
+   - *Build*: `npm ci && npx prisma generate`
+   - *Start*: `npm start` (se recomienda un gestor de procesos como PM2 o un servicio systemd).
+   - Configura todas las variables de entorno del archivo `.env`.
+   - El proceso también ejecuta el cron de recordatorios; **no levantes varias instancias**
+     sin leer antes el ADR-007, o se enviarán correos duplicados.
+
+2. **Frontend (estático detrás de Nginx)**:
+   - *Build*: `npm ci && npm run build` → genera `frontend/dist`.
+   - Publica el contenido de `dist` en la ruta `/sistema-juridico/` del servidor web.
+   - Configura `VITE_API_URL` si la API no está en `/sistema-juridico/api`.
+   - Nginx debe redirigir las rutas no encontradas a `index.html` (comportamiento SPA).
+
+> Detalle de la topología de despliegue: **[docs/01-ARQUITECTURA.md](./docs/01-ARQUITECTURA.md)**
 
 ---
 **SGPA** © 2024. Diseñado para modernizar el trabajo jurídico.

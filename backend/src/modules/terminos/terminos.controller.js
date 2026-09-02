@@ -3,7 +3,7 @@ const prisma = require('../../config/prisma');
 // 1. Crear un nuevo vencimiento de término judicial (HU-21, HU-22)
 exports.createTermino = async (req, res) => {
   try {
-    const { id_proceso, nombre, fecha_vencimiento, es_critico, recordatorios } = req.body;
+    const { id_proceso, nombre, fecha_vencimiento, es_critico, recordatorios, id_actuacion } = req.body;
 
     if (!id_proceso || !nombre || !fecha_vencimiento) {
       return res.status(400).json({ error: 'Faltan campos requeridos para crear el término judicial' });
@@ -18,12 +18,27 @@ exports.createTermino = async (req, res) => {
       return res.status(404).json({ error: 'Expediente no encontrado o no pertenece a su consultorio' });
     }
 
+    // Vínculo opcional con la actuación procesal que originó el término.
+    // Es opcional porque RF32 permite registrar términos manualmente.
+    if (id_actuacion) {
+      const actuacion = await prisma.actuacion.findFirst({
+        where: { id_actuacion, id_proceso, tenant_id: req.tenant_id }
+      });
+
+      if (!actuacion) {
+        return res.status(400).json({
+          error: 'La actuación indicada no existe o no pertenece a este expediente.'
+        });
+      }
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       // Crear el término
       const termino = await tx.terminoJudicial.create({
         data: {
           tenant_id: req.tenant_id,
           id_proceso,
+          id_actuacion: id_actuacion || null,
           nombre,
           fecha_vencimiento: new Date(fecha_vencimiento),
           es_critico: es_critico || false,
@@ -165,7 +180,10 @@ exports.getProcesoTerminos = async (req, res) => {
       where: { id_proceso, tenant_id: req.tenant_id },
       include: {
         usuario_creador: { select: { nombre: true } },
-        usuario_gestion: { select: { nombre: true } }
+        usuario_gestion: { select: { nombre: true } },
+        // Actuación que originó el término: permite responder
+        // "¿de dónde sale este plazo?" desde la ficha del expediente
+        actuacion: { select: { id_actuacion: true, tipo: true, fecha_actuacion: true, anotacion: true } }
       },
       orderBy: { fecha_vencimiento: 'asc' }
     });

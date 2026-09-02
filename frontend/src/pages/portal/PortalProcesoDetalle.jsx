@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import api from '../../api/axios';
 import { Briefcase, Calendar, Clock, FileText, ArrowLeft, Download, Shield, User, Info } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatFechaSinHora } from '../../lib/utils';
 
 export default function PortalProcesoDetalle() {
   const { id } = useParams();
@@ -184,7 +185,7 @@ export default function PortalProcesoDetalle() {
                 <div className="p-5 rounded-2xl bg-white/5 border border-white/10 shadow-inner hover:border-[#DFB971]/30 transition-colors">
                   <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Fecha Radicación</p>
                   <p className="text-sm font-bold text-white mt-1">
-                    {proceso.fecha_radicado ? new Date(proceso.fecha_radicado).toLocaleDateString('es-CO') : 'No especificada'}
+                    {formatFechaSinHora(proceso.fecha_radicado)}
                   </p>
                 </div>
               </div>

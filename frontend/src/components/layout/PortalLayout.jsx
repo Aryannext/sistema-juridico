@@ -34,8 +34,8 @@ export default function PortalLayout() {
   const isCurrent = (path) => location.pathname === path;
 
   const menuItems = [
-    { path: '/portal', label: 'My Cases', icon: LayoutDashboard },
-    { path: '/portal/ajustes', label: 'Settings', icon: Settings },
+    { path: '/portal', label: 'Mis procesos', icon: LayoutDashboard },
+    { path: '/portal/ajustes', label: 'Ajustes', icon: Settings },
   ];
 
   return (
@@ -58,14 +58,14 @@ export default function PortalLayout() {
             <h2 className="text-xl font-extrabold tracking-widest uppercase">
               <span className="bg-gradient-to-r from-[#DFB971] via-[#FFF1C6] to-[#DFB971] bg-clip-text text-transparent">SGPA</span>
             </h2>
-            <p className="text-[10px] tracking-[0.2em] text-neutral-500 uppercase font-medium">Client Portal</p>
+            <p className="text-[10px] tracking-[0.2em] text-neutral-500 uppercase font-medium">Portal del cliente</p>
           </div>
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
           <div className="mb-6">
-            <p className="px-3 text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-2">Main Menu</p>
+            <p className="px-3 text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-2">Menú principal</p>
             {menuItems.map((item) => {
               const active = isCurrent(item.path);
               return (
@@ -106,7 +106,7 @@ export default function PortalLayout() {
             className="flex items-center justify-center gap-2 w-full px-3 py-2.5 text-neutral-400 hover:text-red-400 hover:bg-red-950/30 rounded-xl transition-all duration-300 border border-transparent hover:border-red-900/50 cursor-pointer"
           >
             <LogOut size={16} />
-            <span className="text-sm font-medium">Sign Out</span>
+            <span className="text-sm font-medium">Cerrar sesión</span>
           </button>
         </div>
       </div>
@@ -117,7 +117,7 @@ export default function PortalLayout() {
         <header className="h-16 border-b border-white/10 bg-neutral-950/20 backdrop-blur-md flex items-center justify-between px-6 lg:px-8 relative z-40">
           <div className="flex items-center gap-3 text-neutral-400 text-sm">
             <Scale size={20} className="lg:hidden text-[#DFB971]" />
-            <span className="text-white font-semibold tracking-wide">Portal Workspace</span>
+            <span className="text-white font-semibold tracking-wide">Portal del cliente</span>
           </div>
           <div className="flex items-center gap-4 relative">
             <button 
