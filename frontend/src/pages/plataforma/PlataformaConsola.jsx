@@ -56,7 +56,7 @@ export default function PlataformaConsola() {
 
   useEffect(() => {
     if (!admin) {
-      navigate('/plataforma');
+      navigate('/login');
       return;
     }
     // set-state-in-effect: `cargar` pone el indicador de carga antes de pedir
@@ -69,7 +69,7 @@ export default function PlataformaConsola() {
 
   const salir = () => {
     cerrarSesionPlataforma();
-    navigate('/plataforma');
+    navigate('/login');
   };
 
   const cambiarEstado = async (consultorio, activo) => {

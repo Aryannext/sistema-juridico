@@ -51,13 +51,34 @@ sirve para recuperar el acceso si se olvida.
 
 ## 3. Entrar
 
+**Por la pantalla de acceso de siempre**, la misma que usan los abogados:
+
 ```
-https://proyectosena.online/sistema-juridico/plataforma
+https://proyectosena.online/sistema-juridico/login
 ```
 
-Es una dirección distinta de la de los consultorios y **no hay ningún enlace entre las dos**,
-para que nadie confunda las puertas. La sesión se guarda con otra clave en el navegador, así
-que se puede tener abierta a la vez que la de un consultorio sin que se pisen.
+Si las credenciales no corresponden a ningún consultorio, el sistema prueba si son de un
+administrador de plataforma y, en ese caso, lleva directamente a la consola.
+
+> **Esto no relaja el aislamiento.** La separación de [ADR-012](11-DECISIONES-ARQUITECTONICAS.md)
+> vive en el token y en la API, no en la dirección web. El token que se obtiene por esta vía
+> sigue siendo de tipo `PLATAFORMA`, sigue viniendo de otra tabla y sigue sin servir contra los
+> expedientes de ningún consultorio. Lo único que se unificó es la puerta.
+
+Tres detalles del comportamiento:
+
+- **Un usuario de consultorio no toca nunca el acceso de plataforma.** Solo se prueba la segunda
+  vía cuando la primera responde 401 por credenciales.
+- **Un 403 no dispara la segunda vía.** Si la cuenta o el consultorio están inactivos, hay que
+  enseñar ese mensaje, no buscar por otro lado.
+- **Con credenciales que no son de nadie** se muestra *«Credenciales inválidas»*, sin dar
+  ninguna pista de que exista una administración de plataforma.
+
+La sesión se guarda con otra clave en el navegador, así que se puede tener abierta a la vez que
+la de un consultorio sin que se pisen.
+
+La dirección `/sistema-juridico/plataforma` sigue existiendo como acceso directo, por si alguna
+vez conviene entrar sin pasar por la pantalla general.
 
 ---
 

@@ -13,12 +13,21 @@ const { plataformaMiddleware } = require('../../middlewares/plataforma.middlewar
  * una puerta más expuesta a internet para la cuenta de mayor privilegio.
  */
 
-// Limitador propio y estricto. Esta es la credencial más valiosa del sistema:
-// el limitador general de la API (1000 peticiones cada 15 minutos) no sirve
-// para protegerla.
+// Limitador propio. Esta es la credencial más valiosa del sistema: el limitador
+// general de la API (1000 peticiones cada 15 minutos) no sirve para protegerla.
+//
+// El margen es de 20 y no de 10 por una interacción concreta: la pantalla de
+// acceso es única, así que cuando alguien falla la contraseña de SU consultorio
+// el navegador prueba también aquí por si fuera un administrador de plataforma.
+// Con un margen estrecho, un usuario torpe dejaría fuera al administrador que
+// compartiera su dirección IP —en un despacho, todos.
+//
+// `skipSuccessfulRequests` hace que solo cuenten los intentos fallidos, que es
+// lo que interesa frenar.
 const limitadorLogin = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 20,
+  skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Demasiados intentos. Espere unos minutos.' },

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../../api/axios';
+import apiPlataforma, { guardarSesionPlataforma } from '../../api/plataforma';
 import { useAuth } from '../../context/AuthContext';
 import { Lock, Mail, Eye, EyeOff, Scale } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
@@ -37,11 +38,39 @@ export default function LoginPage() {
     return () => clearInterval(interval);
   }, [lockUntilTime]);
 
+  /**
+   * Si las credenciales no son de ningún consultorio, prueba si son de un
+   * administrador de la plataforma. Devuelve true si entró por esa vía.
+   *
+   * Esto es una comodidad de la interfaz —una sola puerta en lugar de dos—, no
+   * una relajación del aislamiento: la separación de ADR-012 vive en el token y
+   * en la API, no en la dirección web. El token que se obtiene aquí sigue siendo
+   * de tipo PLATAFORMA, sigue viniendo de otra tabla y sigue sin servir contra
+   * los expedientes de ningún consultorio.
+   */
+  const intentarComoPlataforma = async (data) => {
+    try {
+      const res = await apiPlataforma.post('/login', {
+        email: data.email,
+        password: data.password,
+      });
+      guardarSesionPlataforma(res.data.token, res.data.admin);
+      toast.success(`Administración de la plataforma · ${res.data.admin.nombre}`);
+      navigate('/plataforma/consola');
+      return true;
+    } catch {
+      // No es un administrador de plataforma. Se ignora en silencio: quien
+      // falla la contraseña de su consultorio debe ver el error de SU acceso,
+      // no enterarse de que existe otro.
+      return false;
+    }
+  };
+
   const onSubmit = async (data) => {
     setLoading(true);
     try {
       const response = await api.post('/auth/login', data);
-      
+
       if (response.data.require2FA) {
         toast.info('Verificación de dos pasos requerida');
         navigate('/2fa', { state: { preAuthToken: response.data.preAuthToken } });
@@ -51,6 +80,17 @@ export default function LoginPage() {
         navigate('/dashboard');
       }
     } catch (error) {
+      const estado = error.response?.status;
+
+      // Solo se prueba la otra vía cuando el fallo es de credenciales (401).
+      // Un 403 significa que el usuario existe pero su cuenta o su consultorio
+      // están inactivos: ahí hay que enseñar ese mensaje, no buscar por otro
+      // lado. Y si la cuenta está bloqueada por intentos fallidos, tampoco.
+      if (estado === 401 && !error.response?.data?.lockUntil) {
+        const entro = await intentarComoPlataforma(data);
+        if (entro) return;
+      }
+
       const lockUntil = error.response?.data?.lockUntil;
       if (lockUntil) {
         setLockUntilTime(lockUntil);

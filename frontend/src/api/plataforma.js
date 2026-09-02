@@ -26,11 +26,12 @@ apiPlataforma.interceptors.request.use((config) => {
 apiPlataforma.interceptors.response.use(
   (respuesta) => respuesta,
   (error) => {
-    // Sesión caducada: se limpia y se vuelve al acceso de plataforma, no al de
-    // los consultorios.
+    // Sesión caducada: se limpia y se vuelve a la pantalla de acceso, que es la
+    // misma para todos. La separación entre plataforma y consultorios está en
+    // el token, no en la dirección (ver ADR-012).
     if (error.response?.status === 401 && !error.config.url.includes('/login')) {
       cerrarSesionPlataforma();
-      window.location.href = `${import.meta.env.BASE_URL}plataforma`;
+      window.location.href = `${import.meta.env.BASE_URL}login`;
     }
     return Promise.reject(error);
   }

@@ -72,7 +72,8 @@ if (problemas.length > 0) {
 
     const total = await prisma.adminPlataforma.count({ where: { activo: true } });
     console.log(`  Administradores activos en total: ${total}`);
-    console.log('  Entra en:  https://<tu-dominio>/sistema-juridico/plataforma\n');
+    console.log('  Entra por la pantalla de acceso de siempre, con este correo:');
+    console.log('    https://<tu-dominio>/sistema-juridico/login\n');
   } catch (error) {
     console.error('\n  Error creando el administrador:', error.message, '\n');
     process.exitCode = 1;
