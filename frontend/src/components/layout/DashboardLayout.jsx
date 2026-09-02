@@ -8,9 +8,22 @@ import api from '../../api/axios';
 export default function DashboardLayout() {
   const [showNotif, setShowNotif] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
+  // Identidad visual del consultorio. El logo se podía subir desde Ajustes
+  // pero no se mostraba en ninguna parte de la plataforma: solo volvía a la
+  // vista previa de la propia pantalla donde se había subido.
+  const [consultorio, setConsultorio] = useState(null);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    if (!user) return;
+    // GET /tenant/perfil solo exige estar autenticado, así que sirve para
+    // cualquier rol, no solo para el administrador.
+    api.get('/tenant/perfil')
+      .then((res) => setConsultorio(res.data))
+      .catch((error) => console.error('No se pudo cargar el perfil del consultorio:', error));
+  }, [user]);
 
   useEffect(() => {
     const checkNotifs = async () => {
@@ -171,8 +184,23 @@ export default function DashboardLayout() {
         {/* Topbar */}
         <header className="h-16 border-b border-white/10 bg-neutral-950/20 backdrop-blur-md flex items-center justify-between px-6 lg:px-8 relative z-40">
           <div className="flex items-center gap-3 text-neutral-400 text-sm">
-            <Scale size={20} className="lg:hidden text-[#DFB971]" />
-            <span className="text-white font-semibold tracking-wide">Espacio de trabajo SGPA</span>
+            {consultorio?.logo_url ? (
+              <img
+                src={consultorio.logo_url}
+                alt={`Logotipo de ${consultorio.nombre}`}
+                className="h-8 w-8 rounded-lg object-contain bg-white/5 border border-white/10 p-0.5"
+                // Si la imagen ya no está disponible en el almacenamiento, se
+                // oculta y queda la balanza de siempre: nunca un icono roto.
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
+            ) : (
+              <Scale size={20} className="lg:hidden text-[#DFB971]" />
+            )}
+            <span className="text-white font-semibold tracking-wide">
+              {consultorio?.nombre
+                ? `Espacio de trabajo · ${consultorio.nombre}`
+                : 'Espacio de trabajo SGPA'}
+            </span>
           </div>
           <div className="flex items-center gap-4 relative">
             <button 

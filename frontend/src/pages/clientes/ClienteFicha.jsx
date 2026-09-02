@@ -7,7 +7,7 @@ import {
   Briefcase, Plus, AlertCircle, Eye, ShieldAlert, Award, FileCode2, X
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatFechaSinHora } from '../../lib/utils';
+import { formatFechaSinHora, soloAbogadosResponsables, nombreRol } from '../../lib/utils';
 
 export default function ClienteFicha() {
   const { id } = useParams();
@@ -50,9 +50,12 @@ export default function ClienteFicha() {
       // In a real application we would have a GET /usuarios endpoint or similar
       // Since we just registered the admin endpoints, we can fetch from GET /admin/usuarios
       const res = await api.get('/admin/usuarios');
-      setAbogados(res.data);
-      if (res.data.length > 0) {
-        setIdAbogadoResp(res.data[0].id_usuario);
+
+      const candidatos = soloAbogadosResponsables(res.data);
+
+      setAbogados(candidatos);
+      if (candidatos.length > 0) {
+        setIdAbogadoResp(candidatos[0].id_usuario);
       }
     } catch (error) {
       console.error('No se pudieron obtener abogados, usando el usuario actual:', error);
@@ -459,7 +462,7 @@ export default function ClienteFicha() {
                   >
                     {abogados.map(abogado => (
                       <option key={abogado.id_usuario} value={abogado.id_usuario}>
-                        {abogado.nombre} ({abogado.rol})
+                        {abogado.nombre} ({nombreRol(abogado.rol)})
                       </option>
                     ))}
                   </select>

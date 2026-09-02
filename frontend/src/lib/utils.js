@@ -28,3 +28,36 @@ export function formatFechaSinHora(valor, respaldo = 'No especificada') {
   if (Number.isNaN(fecha.getTime())) return respaldo;
   return fecha.toLocaleDateString('es-CO', { timeZone: 'UTC' });
 }
+
+/** Roles que pueden figurar como abogado responsable de un expediente. */
+const ROLES_RESPONSABLES = ['ADMINISTRADOR', 'ABOGADO'];
+
+/**
+ * Filtra la lista de usuarios del consultorio dejando solo a quienes pueden
+ * ser abogado responsable de un expediente.
+ *
+ * Los desplegables de "Abogado Responsable" pintaban la lista completa que
+ * devuelve `/admin/usuarios`, así que ofrecían también a los colaboradores
+ * (ASISTENTE) y a los clientes con acceso al portal. Un asistente no puede
+ * responder de un caso ante un juzgado.
+ *
+ * Los colaboradores sí pueden trabajar en el expediente: se añaden desde el
+ * detalle, en Equipo de trabajo, que es una relación distinta.
+ */
+export function soloAbogadosResponsables(usuarios) {
+  if (!Array.isArray(usuarios)) return [];
+  return usuarios.filter(
+    (u) => ROLES_RESPONSABLES.includes(u.rol) && u.activo !== false
+  );
+}
+
+/** Nombre del rol tal como debe leerlo el usuario (ver ADR-004). */
+export function nombreRol(rol) {
+  const NOMBRES = {
+    ADMINISTRADOR: 'Administrador',
+    ABOGADO: 'Abogado',
+    ASISTENTE: 'Colaborador',
+    CLIENTE: 'Cliente',
+  };
+  return NOMBRES[rol] || rol;
+}

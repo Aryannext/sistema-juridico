@@ -189,3 +189,27 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ─────────────────────────────────────────────────────────────────
+   Opciones de los desplegables
+
+   La lista que se abre al pulsar un <select> NO la dibuja la página:
+   la dibuja el sistema operativo, y por defecto la pinta con fondo
+   blanco. Como los <select> de la plataforma heredan el texto claro
+   del tema oscuro, el resultado era texto blanco sobre fondo blanco:
+   las opciones parecían vacías y solo se leían al pasar el ratón por
+   encima, cuando el sistema resalta la fila.
+
+   Se define aquí, una sola vez, en lugar de repetir clases en los 29
+   desplegables que tiene la plataforma.
+   ───────────────────────────────────────────────────────────────── */
+select option {
+  background-color: #171717; /* neutral-900, el fondo de los paneles */
+  color: #fafafa;            /* neutral-50 */
+}
+
+/* La opción deshabilitada que hace de marcador de posición
+   ("Seleccione una opción...") se atenúa, como en el resto de campos. */
+select option:disabled {
+  color: #737373; /* neutral-500 */
+}

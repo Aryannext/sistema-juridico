@@ -8,7 +8,7 @@ import {
   Trash2, Loader2, ChevronLeft, ChevronRight 
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatFechaSinHora } from '../../lib/utils';
+import { formatFechaSinHora, soloAbogadosResponsables, nombreRol } from '../../lib/utils';
 
 export default function ProcesosList() {
   const [procesos, setProcesos] = useState([]);
@@ -87,9 +87,12 @@ export default function ProcesosList() {
       }
 
       if (usuariosRes && usuariosRes.data) {
-        setAbogados(usuariosRes.data);
-        if (usuariosRes.data.length > 0) {
-          setIdAbogadoResp(usuariosRes.data[0].id_usuario);
+        // Sin filtrar, el desplegable ofrecia tambien a colaboradores y
+        // clientes como abogado responsable del expediente.
+        const candidatos = soloAbogadosResponsables(usuariosRes.data);
+        setAbogados(candidatos);
+        if (candidatos.length > 0) {
+          setIdAbogadoResp(candidatos[0].id_usuario);
         }
       } else {
         const cachedUser = JSON.parse(localStorage.getItem('user'));
@@ -520,7 +523,7 @@ export default function ProcesosList() {
                   >
                     {abogados.map(abogado => (
                       <option key={abogado.id_usuario} value={abogado.id_usuario}>
-                        {abogado.nombre} ({abogado.rol})
+                        {abogado.nombre} ({nombreRol(abogado.rol)})
                       </option>
                     ))}
                   </select>

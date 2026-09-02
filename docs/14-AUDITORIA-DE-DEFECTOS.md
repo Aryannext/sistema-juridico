@@ -31,6 +31,98 @@ listo después y se despliega aparte.
 | D-07 | El código 2FA y el enlace de verificación se escribían en los registros | **Alta, seguridad** | Corregido |
 | D-08 | Ocho bloques `catch` descartaban el error sin dejar rastro | Media | Corregido |
 | D-09 | Suspender un consultorio no impedía que sus usuarios entraran | Alta | Corregido |
+| D-10 | Las opciones de los 29 desplegables eran ilegibles | Alta (uso) | Corregido |
+| D-11 | La bitácora escribía rutas de la API en vez de lenguaje llano | Media | Corregido |
+| D-12 | El logo del consultorio se subía pero no se mostraba en ninguna parte | Media | Corregido |
+| D-13 | El icono del navegador era el logotipo de otra herramienta | Baja | Corregido |
+| D-14 | El desplegable de abogado responsable ofrecía a colaboradores y clientes | Media | Corregido |
+
+> Los cinco de aquí abajo (D-10 a D-14) los encontró el usuario **usando la plataforma en
+> producción**, no una revisión de código. Vale la pena anotarlo: ninguna de las auditorías
+> anteriores los detectó, porque todas miraban el código o la documentación y ninguna se sentó
+> a trabajar con la aplicación.
+
+### D-10 · Las opciones de los desplegables eran invisibles
+
+El síntoma que se reportó: *«la lista está en blanco; paso el ratón por encima y ahí sí me deja
+ver cuáles hay»*. Y no era un desplegable, eran **los 29** de la plataforma.
+
+La causa no está en la aplicación. La lista que se abre al pulsar un `<select>` **la dibuja el
+sistema operativo**, no la página, y la pinta con fondo blanco. Como los desplegables heredan el
+texto claro del tema oscuro, el resultado era **texto blanco sobre fondo blanco**. Solo se leía
+la fila resaltada bajo el cursor, porque esa sí la pinta el sistema con su propio color.
+
+**Arreglo.** Una regla de CSS global en `index.css`, no una clase repetida en 29 sitios:
+
+```css
+select option { background-color: #171717; color: #fafafa; }
+```
+
+Verificado sobre el estilo calculado, no de vista: fondo `rgb(23,23,23)` y texto
+`rgb(250,250,250)`.
+
+### D-11 · La bitácora hablaba en lenguaje de desarrollador
+
+El detalle de cada registro decía literalmente:
+
+```
+Acción CREAR realizada en /api/clientes
+```
+
+El middleware componía el texto con `req.originalUrl`. A un abogado administrando su consultorio
+eso no le dice nada, y la bitácora existe precisamente para que él pueda auditar quién hizo qué.
+
+**Arreglo.** El middleware envuelve `res.json` para quedarse con la respuesta del controlador
+—que trae la entidad ya guardada— y redacta la frase a partir del patrón de ruta, no de la URL.
+Ahora dice:
+
+```
+Registró el cliente María Fernanda Rojas
+Creó el expediente con radicado 41001310300120260014500
+Registró a Pedro Gómez como demandado en el expediente
+Cambió el estado del expediente a archivado
+```
+
+Distinguir el patrón importa: `POST /api/procesos/:id/partes` es *«registró una parte
+procesal»*, no *«creó un expediente»*, aunque ambas empiecen igual.
+
+> **Los registros antiguos NO se reescriben.** Una bitácora de auditoría no debe poder
+> modificarse (RNF03), así que los que ya existen conservan su texto técnico. Solo mejoran los
+> nuevos.
+
+**Vigilancia.** `src/tests/auditoria_detalle.test.js`, 16 casos. Entre ellos uno que recorre
+varias rutas y **exige que ningún detalle vuelva a contener `/api/`**.
+
+### D-12 · El logo del consultorio no iba a ninguna parte
+
+`logo_url` solo se usaba **dentro de la propia pantalla de Ajustes**, para mostrar la vista
+previa de lo que acababas de subir. No aparecía en ningún otro lugar de la plataforma.
+
+**Arreglo.** Se muestra en la barra superior, junto al nombre del consultorio: *«Espacio de
+trabajo · Consultorio Jurídico Demo»*. Si no hay logo, queda exactamente como antes. Si la
+imagen ya no está disponible en el almacenamiento, se oculta y vuelve la balanza: nunca un icono
+roto.
+
+### D-13 · El icono del navegador era de otra herramienta
+
+`public/favicon.svg` no era el logotipo de la plataforma sino una figura morada (`#863bff`)
+heredada del andamiaje inicial del proyecto. Sustituido por una balanza en el dorado de la marca
+(`#DFB971`) sobre fondo oscuro.
+
+### D-14 · El abogado responsable podía ser la asistente
+
+El desplegable pintaba la lista completa de `/admin/usuarios` sin filtrar, así que ofrecía como
+responsable del caso a colaboradores (`ASISTENTE`) y a clientes con acceso al portal. Un
+asistente no puede responder de un caso ante un juzgado.
+
+**Arreglo.** `soloAbogadosResponsables()` en `lib/utils.js`, usada en los dos sitios donde se
+abre un expediente. Además el rol se muestra con su nombre legible (*Administrador*, no
+*ADMINISTRADOR*), siguiendo [ADR-004](11-DECISIONES-ARQUITECTONICAS.md).
+
+> **Sigue pendiente, y es distinto:** un expediente admite un solo abogado responsable
+> (`id_abogado_resp`). Para varios abogados existe la tabla `ProcesoAbogado` y se gestionan
+> desde *Equipo de trabajo* en el detalle del expediente. Lo que falta es poder añadirlos ya
+> desde el formulario de creación.
 
 ### D-09 · `Tenant.activo` era un interruptor sin conectar
 
@@ -256,8 +348,8 @@ npm --prefix backend run lint
 
 | | Antes | Ahora |
 |---|---:|---:|
-| Suites | 8 | **10** |
-| Casos | 21 | **33** |
+| Suites | 8 | **11** |
+| Casos | 21 | **49** |
 
 La suite nueva, `src/tests/aislamiento_consultorio.test.js`, fija como prueba unitaria lo que
 antes solo se comprobaba de extremo a extremo con la base levantada: que el radicado y el
