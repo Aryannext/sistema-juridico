@@ -22,6 +22,7 @@ Lo que se consulta a diario, con enlace directo:
 | **Cómo desplegar sin romper el VPS** | [12 — Despliegue en VPS compartido](12-DESPLIEGUE-VPS-COMPARTIDO.md) |
 | **Deuda técnica y calidad del código** | [13 — Calidad de código](13-CALIDAD-DE-CODIGO.md) |
 | **Defectos encontrados y corregidos** | [14 — Auditoría de defectos](14-AUDITORIA-DE-DEFECTOS.md) |
+| **Suspender o dar de baja un consultorio** | [15 — Administración de la plataforma](15-ADMINISTRACION-DE-PLATAFORMA.md) |
 
 ---
 
@@ -72,7 +73,8 @@ docs/
 | 11 | [Decisiones de arquitectura (ADR)](11-DECISIONES-ARQUITECTONICAS.md) | Las 11 decisiones estructurales, con contexto y consecuencias |
 | 12 | [Despliegue en VPS compartido](12-DESPLIEGUE-VPS-COMPARTIDO.md) | Cómo actualizar Node y desplegar sin romper la aplicación del otro usuario |
 | 13 | [Calidad de código](13-CALIDAD-DE-CODIGO.md) | Revisión SOLID y de código limpio, con métricas reales y un plan de refactor por pasos |
-| 14 | [Auditoría de defectos](14-AUDITORIA-DE-DEFECTOS.md) | 7 defectos reproducidos contra la base de datos y corregidos; reparto de `ProcesoDetalle.jsx` |
+| 14 | [Auditoría de defectos](14-AUDITORIA-DE-DEFECTOS.md) | 16 defectos reproducidos contra la base de datos y corregidos; reparto de `ProcesoDetalle.jsx` |
+| 15 | [Administración de la plataforma](15-ADMINISTRACION-DE-PLATAFORMA.md) | Alta, suspensión y baja de consultorios sin entrar al servidor |
 | — | [Manual de usuario](MANUAL_USUARIO.md) | Guía para el usuario final, sin lenguaje técnico |
 
 ---

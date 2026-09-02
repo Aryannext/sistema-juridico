@@ -491,3 +491,51 @@ model HistorialProceso {
 
   @@map("historial_proceso")
 }
+
+// ─────────────────────────────────────────────────────────────────
+// Administración de la PLATAFORMA (no de un consultorio)
+//
+// Deliberadamente separado de `Usuario`. Un administrador de plataforma no es
+// un usuario de ningún consultorio: no tiene `tenant_id`, su token es de otro
+// tipo y el middleware de consultorios lo rechaza. Así no puede acceder a
+// expedientes ni por error, que en un sistema jurídico importa: los procesos
+// están cubiertos por el secreto profesional entre abogado y cliente.
+//
+// Solo se crean con `npm run crear-admin-plataforma` en el servidor. No existe
+// ninguna ruta web que permita registrarlos.
+// ─────────────────────────────────────────────────────────────────
+model AdminPlataforma {
+  id_admin      String    @id @default(uuid()) @db.Uuid
+  nombre        String    @db.VarChar(100)
+  email         String    @unique @db.VarChar(150)
+  password_hash String
+  activo        Boolean   @default(true)
+  ultimo_acceso DateTime?
+  created_at    DateTime  @default(now())
+
+  acciones BitacoraPlataforma[]
+
+  @@map("admin_plataforma")
+}
+
+/// Bitácora de las acciones de plataforma.
+///
+/// Va aparte de `BitacoraAuditoria` por una razón concreta: aquella cuelga del
+/// consultorio, así que al eliminar uno se borraría también el registro de que
+/// alguien lo eliminó. Esta sobrevive, y por eso guarda el nombre del
+/// consultorio como texto y no como clave foránea.
+model BitacoraPlataforma {
+  id_registro       String   @id @default(uuid()) @db.Uuid
+  id_admin          String   @db.Uuid
+  accion            String   @db.VarChar(60)
+  tenant_id         String?  @db.Uuid
+  tenant_nombre     String   @db.VarChar(150)
+  justificacion     String?
+  ip_address        String?  @db.VarChar(60)
+  created_at        DateTime @default(now())
+
+  admin AdminPlataforma @relation(fields: [id_admin], references: [id_admin])
+
+  @@index([created_at])
+  @@map("bitacora_plataforma")
+}

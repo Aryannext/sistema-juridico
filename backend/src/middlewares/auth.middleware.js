@@ -11,6 +11,20 @@ const authMiddleware = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
     const decoded = verifyToken(token);
 
+    // Un token de plataforma no sirve para entrar a un consultorio. Ambos se
+    // firman con el mismo secreto, así que sin esta comprobación bastaría con
+    // que un token de plataforma trajera un `id_usuario` para colarse aquí.
+    // La comprobación simétrica está en plataforma.middleware.js.
+    //
+    // Va ANTES de mirar `id_usuario`: si fuera después, un token de plataforma
+    // caería en el 401 genérico y quien lo usara no sabría por qué, cuando la
+    // causa real es que se ha equivocado de sesión.
+    if (decoded && decoded.tipo === 'PLATAFORMA') {
+      return res.status(403).json({
+        error: 'Esta sesión es de administración de la plataforma y no da acceso a los expedientes de ningún consultorio.'
+      });
+    }
+
     if (!decoded || !decoded.id_usuario) {
       return res.status(401).json({ error: 'Token inválido o expirado' });
     }

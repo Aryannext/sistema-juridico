@@ -21,6 +21,10 @@ import PortalDashboard from './pages/portal/PortalDashboard';
 import PortalProcesoDetalle from './pages/portal/PortalProcesoDetalle';
 import PortalAjustes from './pages/portal/PortalAjustes';
 
+// Administración de la PLATAFORMA (no de un consultorio): sesión aparte
+import PlataformaLogin from './pages/plataforma/PlataformaLogin';
+import PlataformaConsola from './pages/plataforma/PlataformaConsola';
+
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
   
@@ -63,6 +67,11 @@ function App() {
           <Route path="/registro" element={<RegisterPage />} />
           <Route path="/verificacion" element={<VerificacionPage />} />
           <Route path="/2fa" element={<TwoFactorPage />} />
+
+          {/* Plataforma. Fuera de ProtectedRoute a propósito: no usa el
+              AuthContext de los consultorios, sino su propia sesión. */}
+          <Route path="/plataforma" element={<PlataformaLogin />} />
+          <Route path="/plataforma/consola" element={<PlataformaConsola />} />
           
           {/* Admin & Lawyer Protected Routes */}
           <Route 

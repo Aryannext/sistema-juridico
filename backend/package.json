@@ -11,6 +11,8 @@
     "dev": "nodemon server.js",
     "test": "jest",
     "lint": "eslint .",
+    "verificar:plataforma": "node -r dotenv/config scripts/verificar-admin-plataforma.js",
+    "crear-admin-plataforma": "node -r dotenv/config scripts/crear-admin-plataforma.js",
     "defectos": "node -r dotenv/config scripts/reproducir-defectos.js",
     "arreglos": "node -r dotenv/config scripts/verificar-arreglos.js",
     "seed:dev": "node prisma/seed-dev.js",

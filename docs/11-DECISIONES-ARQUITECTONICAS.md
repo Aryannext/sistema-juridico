@@ -458,6 +458,67 @@ Qué más se consideró y por qué no.
 Lo bueno, lo malo y lo que habrá que vigilar.
 ```
 
+## ADR-012 — El administrador de plataforma es una identidad separada, no un rol más
+
+**Fecha:** 2 de septiembre de 2026
+
+### Contexto
+
+Hacía falta dar de alta, suspender y eliminar consultorios sin entrar por SSH al VPS, con vistas
+a un modelo de suscripción: cortar el acceso a quien no paga la mensualidad. Hasta ahora
+`Tenant.activo` existía pero **no se comprobaba en ningún sitio** (defecto D-09): marcarlo no
+tenía ningún efecto.
+
+La decisión de fondo no es técnica sino de alcance: **¿ese administrador puede abrir los
+expedientes de los consultorios?** Los procesos judiciales están cubiertos por el secreto
+profesional entre abogado y cliente. Un administrador con acceso de lectura a todos los
+despachos es una decisión con consecuencias legales, no un detalle de implementación.
+
+### Decisión
+
+**Solo gestión administrativa.** Ve el nombre del consultorio, su tipo, contacto, plan, estado,
+fecha de alta y **recuentos** de usuarios, clientes y expedientes. No puede abrir ningún
+expediente, cliente ni documento. Para cobrar suscripciones y suspender morosos no hace falta
+nada más.
+
+Y se implementa como **identidad separada**, no como un rol añadido a `RolUsuario`:
+
+- Tabla propia `AdminPlataforma`, sin `tenant_id`.
+- Token propio, marcado con `tipo: "PLATAFORMA"`.
+- Middleware propio que además **no define `req.tenant_id` ni `req.user`**: si un controlador de
+  consultorio se invocara por error, filtraría por `undefined` y no devolvería nada, en lugar de
+  devolverlo todo.
+- Comprobación en los dos sentidos: `auth.middleware.js` rechaza los tokens de plataforma y
+  `plataforma.middleware.js` rechaza los de consultorio.
+- Bitácora propia, `BitacoraPlataforma`. La del consultorio se borra con él, así que ahí
+  desaparecería el registro de quién lo borró.
+- Se crean **solo desde el servidor**. No existe ninguna ruta web de registro para la cuenta de
+  mayor privilegio del sistema.
+
+### Alternativas descartadas
+
+| Alternativa | Por qué no |
+|---|---|
+| Añadir `SUPERADMIN` a `RolUsuario` | Todo `Usuario` exige `tenant_id`. Un superadministrador tendría que pertenecer a algún consultorio, lo cual es falso, y quedaría a un `UPDATE` de distancia de cualquier cuenta normal |
+| Un booleano `es_admin_plataforma` en `Usuario` | Más simple, pero mezcla en una misma fila a quien litiga y a quien factura. El token seguiría siendo el mismo, así que la separación dependería de comprobaciones dispersas en vez de la forma del token |
+| Dar acceso de lectura a los expedientes | No hace falta para el objetivo, y convierte una cuenta administrativa en una llave maestra sobre información amparada por el secreto profesional |
+
+### Consecuencias
+
+**A favor.** La separación no depende de acordarse de comprobar un rol: depende de que el token
+sea de otro tipo. Verificado en ambos sentidos, comprobaciones P-03 y P-04 de
+`npm run verificar:plataforma`.
+
+**En contra.** Hay dos sistemas de sesión que mantener, y quien sea administrador de plataforma
+y además abogado en un consultorio necesita dos cuentas. Se acepta: es el precio de que una no
+pueda convertirse en la otra.
+
+**Lo que NO resuelve.** Es la palanca, no la maquinaria de suscripción. `Tenant.plan` sigue sin
+leerse y no hay campos de vencimiento ni de pago. Suspender por impago sigue siendo una acción
+manual.
+
+---
+
 Un ADR **nunca se borra ni se reescribe**. Si una decisión se revierte, se añade un ADR nuevo
 que la supere y se marca el anterior como `Superado por ADR-0NN`. El valor de un registro de
 decisiones está en poder reconstruir por qué se pensó lo que se pensó, incluso cuando se

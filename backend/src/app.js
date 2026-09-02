@@ -44,6 +44,7 @@ const terminosRoutes = require('./modules/terminos/terminos.routes');
 const notificacionesRoutes = require('./modules/notificaciones/notificaciones.routes');
 const portalRoutes = require('./modules/portal/portal.routes');
 const reportesRoutes = require('./modules/reportes/reportes.routes');
+const plataformaRoutes = require('./modules/plataforma/plataforma.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/tenant', tenantRoutes);
@@ -57,6 +58,10 @@ app.use('/api/terminos', terminosRoutes);
 app.use('/api/notificaciones', notificacionesRoutes);
 app.use('/api/portal', portalRoutes);
 app.use('/api/reportes', reportesRoutes);
+
+// Administración de la plataforma, no de un consultorio. Va deliberadamente
+// aparte: su middleware es otro y sus tokens no dan acceso a expedientes.
+app.use('/api/plataforma', plataformaRoutes);
 
 
 
