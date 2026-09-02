@@ -17,7 +17,7 @@ exports.registro = async (req, res) => {
     const tokenVerificacion = generateVerificationToken();
 
     // Perform inside a transaction
-    const result = await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx) => {
       // 1. Create Tenant
       const tenant = await tx.tenant.create({
         data: {
@@ -56,11 +56,17 @@ exports.registro = async (req, res) => {
     const frontendUrl = process.env.FRONTEND_URL || 'https://proyectosena.online/sistema-juridico';
     const verificationUrl = `${frontendUrl}/verificacion?token=${tokenVerificacion}`;
 
-    console.log('\n=========================================');
-    console.log('REGISTRATION LOG:');
-    console.log('Auto-Verify active:', isAutoVerify);
-    console.log('Verification URL:', verificationUrl);
-    console.log('=========================================\n');
+    // El enlace lleva el token de verificación: quien lo lea puede activar la
+    // cuenta ajena. Fuera de desarrollo no se escribe en los registros.
+    if (process.env.NODE_ENV !== 'production') {
+      /* eslint-disable no-console -- Impresión deliberada y solo fuera de producción. */
+      console.log('\n=========================================');
+      console.log('REGISTRO (solo desarrollo)');
+      console.log('Autoverificación activa:', isAutoVerify);
+      console.log('Enlace de verificación:', verificationUrl);
+      console.log('=========================================\n');
+      /* eslint-enable no-console */
+    }
 
     // El tenant y el usuario ya están creados y confirmados en la base.
     // Si el envío del correo falla, NO se puede devolver un error: la cuenta
@@ -135,6 +141,7 @@ exports.verificarEmail = async (req, res) => {
 
     res.json({ message: 'Cuenta verificada exitosamente. Ya puedes iniciar sesión.' });
   } catch (error) {
+    console.error('Error en verificarCuenta:', error);
     res.status(500).json({ error: 'Error verificando cuenta' });
   }
 };
@@ -212,11 +219,19 @@ exports.login = async (req, res) => {
         data: { codigo_2fa: otp, expira_2fa: expira }
       });
 
-      console.log('\n=========================================');
-      console.log('DEV LOCAL 2FA CODE LOG:');
-      console.log('User:', user.email);
-      console.log('2FA OTP Code:', otp);
-      console.log('=========================================\n');
+      // El código de un solo uso NO puede acabar en los registros de
+      // producción: cualquiera con acceso a los logs del contenedor podría
+      // completar el segundo factor de otra persona. En desarrollo sí es útil,
+      // porque evita depender del correo para poder entrar.
+      if (process.env.NODE_ENV !== 'production') {
+        /* eslint-disable no-console -- Impresión deliberada y solo fuera de producción. */
+        console.log('\n=========================================');
+        console.log('CÓDIGO 2FA (solo desarrollo)');
+        console.log('Usuario:', user.email);
+        console.log('Código:', otp);
+        console.log('=========================================\n');
+        /* eslint-enable no-console */
+      }
 
       try {
         await sendEmail({
@@ -272,7 +287,9 @@ exports.verificar2FA = async (req, res) => {
     let decoded;
     try {
       decoded = jwt.verify(preAuthToken, process.env.JWT_SECRET);
-    } catch(err) {
+    } catch {
+      // Un token temporal caducado o manipulado es un caso esperado, no una
+      // anomalía: no se registra para no llenar el log de ruido.
       return res.status(401).json({ error: 'Token temporal inválido o expirado' });
     }
 
@@ -309,6 +326,7 @@ exports.verificar2FA = async (req, res) => {
     });
 
   } catch (error) {
+    console.error('Error en verificar2FA:', error);
     res.status(500).json({ error: 'Error verificando 2FA' });
   }
 };
@@ -328,6 +346,7 @@ exports.configurar2FA = async (req, res) => {
 
     res.json({ message: `Autenticación de dos factores ${enable ? 'habilitada' : 'deshabilitada'} exitosamente.` });
   } catch (error) {
+    console.error('Error en configurar2FA:', error);
     res.status(500).json({ error: 'Error configurando 2FA' });
   }
 };

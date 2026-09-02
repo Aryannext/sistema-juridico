@@ -15,7 +15,10 @@ jest.mock('../config/prisma', () => ({
   bitacoraAuditoria: {
     create: jest.fn()
   },
-  $transaction: jest.fn((callback) => callback({
+  // Se expone para poder afirmar sobre las tablas que se borran en cascada.
+  // Si el controlador toca una tabla que no esté aquí, la llamada revienta y la
+  // prueba falla: es justo lo que pasó al añadir las actuaciones.
+  __tx: {
     procesoAbogado: { deleteMany: jest.fn() },
     parteProcesal: { deleteMany: jest.fn() },
     audiencia: { findMany: jest.fn().mockResolvedValue([]), deleteMany: jest.fn() },
@@ -25,8 +28,10 @@ jest.mock('../config/prisma', () => ({
     documento: { findMany: jest.fn().mockResolvedValue([]), deleteMany: jest.fn() },
     versionDocumento: { deleteMany: jest.fn() },
     historialProceso: { deleteMany: jest.fn() },
+    actuacion: { deleteMany: jest.fn() },
     proceso: { delete: jest.fn() }
-  }))
+  },
+  $transaction: jest.fn(function (callback) { return callback(this.__tx); })
 }));
 
 describe('HU-34: Eliminación estricta de expediente (ADMINISTRADOR)', () => {
@@ -88,6 +93,15 @@ describe('HU-34: Eliminación estricta de expediente (ADMINISTRADOR)', () => {
     await procesosController.deleteProcesoDefinitivo(req, res);
 
     expect(prisma.$transaction).toHaveBeenCalled();
+
+    // Las actuaciones deben borrarse en la cascada. Su clave foránea hacia el
+    // proceso es ON DELETE RESTRICT, así que omitirlas hacía que el borrado
+    // fallara con un 500 en cuanto el expediente tuviera una sola actuación.
+    expect(prisma.__tx.actuacion.deleteMany).toHaveBeenCalledWith({
+      where: { id_proceso: 'uuid-expediente-123' }
+    });
+    expect(prisma.__tx.proceso.delete).toHaveBeenCalled();
+
     expect(prisma.bitacoraAuditoria.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         accion: 'ELIMINAR_EXPEDIENTE_DEFINTIVO',

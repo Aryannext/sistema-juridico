@@ -5,9 +5,14 @@ exports.createCliente = async (req, res) => {
   try {
     const { tipo, nombre, razon_social, tipo_documento, numero_documento, nit, representante, telefono, email, direccion, fecha_nacimiento } = req.body;
 
-    const existingDoc = await prisma.cliente.findUnique({ where: { numero_documento } });
+    // Limitado al consultorio en sesión: una misma persona puede ser cliente de
+    // dos oficinas distintas, y el mensaje de error no debe revelar que otro
+    // consultorio ya la tiene registrada.
+    const existingDoc = await prisma.cliente.findFirst({
+      where: { numero_documento, tenant_id: req.tenant_id }
+    });
     if (existingDoc) {
-      return res.status(400).json({ error: 'El número de documento ya está registrado' });
+      return res.status(400).json({ error: 'Su consultorio ya tiene un cliente con ese número de documento' });
     }
 
     const cliente = await prisma.cliente.create({
@@ -46,6 +51,7 @@ exports.getClientes = async (req, res) => {
     });
     res.json(clientes);
   } catch (error) {
+    console.error('Error en getClientes:', error);
     res.status(500).json({ error: 'Error obteniendo clientes' });
   }
 };
@@ -72,14 +78,50 @@ exports.getClienteById = async (req, res) => {
       tiene_acceso_portal: !!userAccess
     });
   } catch (error) {
+    console.error('Error en getClienteById:', error);
     res.status(500).json({ error: 'Error obteniendo cliente' });
   }
 };
 
+// Campos que el usuario puede modificar. Todo lo demás que venga en el cuerpo
+// se descarta. Antes se volcaba `req.body` entero en Prisma, de modo que enviar
+// {"tenant_id": "<otro>"} movía el cliente al consultorio ajeno; también se
+// podían reescribir `id_usuario` y `create_at`.
+const CAMPOS_EDITABLES_CLIENTE = [
+  'tipo', 'nombre', 'razon_social', 'tipo_documento', 'numero_documento',
+  'nit', 'representante', 'telefono', 'email', 'direccion', 'fecha_nacimiento'
+];
+
 exports.updateCliente = async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
+
+    const updateData = {};
+    for (const campo of CAMPOS_EDITABLES_CLIENTE) {
+      if (req.body[campo] !== undefined) updateData[campo] = req.body[campo];
+    }
+    if (updateData.fecha_nacimiento) {
+      updateData.fecha_nacimiento = new Date(updateData.fecha_nacimiento);
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: 'No se envió ningún campo modificable' });
+    }
+
+    // El documento sigue siendo único dentro del consultorio: hay que verificar
+    // que el nuevo valor no choque con otro cliente de la misma oficina.
+    if (updateData.numero_documento) {
+      const duplicado = await prisma.cliente.findFirst({
+        where: {
+          numero_documento: updateData.numero_documento,
+          tenant_id: req.tenant_id,
+          NOT: { id_cliente: id }
+        }
+      });
+      if (duplicado) {
+        return res.status(400).json({ error: 'Su consultorio ya tiene un cliente con ese número de documento' });
+      }
+    }
 
     const cliente = await prisma.cliente.update({
       where: { id_cliente: id, tenant_id: req.tenant_id },
@@ -88,6 +130,11 @@ exports.updateCliente = async (req, res) => {
 
     res.json({ message: 'Cliente actualizado', cliente });
   } catch (error) {
+    // P2025: el cliente no existe o es de otro consultorio. No es un 500.
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Cliente no encontrado' });
+    }
+    console.error('Error en updateCliente:', error);
     res.status(500).json({ error: 'Error actualizando cliente' });
   }
 };

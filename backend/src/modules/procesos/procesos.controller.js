@@ -6,9 +6,16 @@ exports.createProceso = async (req, res) => {
   try {
     const { numero_radicado, juzgado, tipo_proceso, clase_proceso, area_derecho, estado, fecha_radicado, id_cliente, id_abogado_resp } = req.body;
 
-    const existingProceso = await prisma.proceso.findUnique({ where: { numero_radicado } });
+    // La comprobación se limita al consultorio en sesión a propósito. Buscar en
+    // todo el sistema tenía dos consecuencias: impedía que la contraparte, que
+    // litiga el mismo proceso con el mismo radicado desde otra oficina, lo
+    // registrara; y el mensaje de error revelaba que un consultorio ajeno lleva
+    // ese caso.
+    const existingProceso = await prisma.proceso.findFirst({
+      where: { numero_radicado, tenant_id: req.tenant_id }
+    });
     if (existingProceso) {
-      return res.status(400).json({ error: 'El número de radicado ya existe en el sistema' });
+      return res.status(400).json({ error: 'Su consultorio ya tiene registrado un expediente con ese número de radicado' });
     }
 
     const proceso = await prisma.proceso.create({
@@ -173,7 +180,11 @@ exports.updateProceso = async (req, res) => {
     const { id } = req.params;
     const { juzgado, clase_proceso, area_derecho, fecha_radicado } = req.body;
 
-    const procesoOld = await prisma.proceso.findUnique({ where: { id_proceso: id } });
+    // Sin el filtro por consultorio, un expediente ajeno superaba este 404 y el
+    // fallo aparecía después como un 500 opaco en el update.
+    const procesoOld = await prisma.proceso.findFirst({
+      where: { id_proceso: id, tenant_id: req.tenant_id }
+    });
     if (!procesoOld) return res.status(404).json({ error: 'Expediente no encontrado' });
 
     const proceso = await prisma.proceso.update({
@@ -608,6 +619,12 @@ exports.deleteProcesoDefinitivo = async (req, res) => {
       await tx.documento.deleteMany({ where: { id_proceso: id } });
       // Eliminar historial
       await tx.historialProceso.deleteMany({ where: { id_proceso: id } });
+      // Eliminar actuaciones procesales. Va DESPUÉS de los términos: estos
+      // apuntan a la actuación de la que nacen, y aunque esa clave foránea es
+      // ON DELETE SET NULL, borrar primero los términos evita dejar filas
+      // intermedias. La de actuaciones hacia el proceso sí es ON DELETE
+      // RESTRICT, así que sin esta línea el borrado del expediente falla.
+      await tx.actuacion.deleteMany({ where: { id_proceso: id } });
       // Finalmente, eliminar el Proceso
       await tx.proceso.delete({ where: { id_proceso: id } });
     });

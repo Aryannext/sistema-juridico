@@ -130,7 +130,9 @@ model Cliente {
   nombre           String      @db.VarChar(150)
   razon_social     String?     @db.VarChar(150)
   tipo_documento   String      @db.VarChar(20)
-  numero_documento String      @unique @db.VarChar(30)
+  /// Único DENTRO del consultorio, no en todo el sistema: la misma persona
+  /// puede ser cliente de dos oficinas distintas. Ver @@unique al final.
+  numero_documento String      @db.VarChar(30)
   nit              String?     @db.VarChar(20)
   representante    String?     @db.VarChar(100)
   telefono         String      @db.VarChar(20)
@@ -144,6 +146,7 @@ model Cliente {
   usuario_creador Usuario   @relation(fields: [id_usuario], references: [id_usuario])
   procesos        Proceso[]
 
+  @@unique([tenant_id, numero_documento])
   @@map("clientes")
 }
 
@@ -157,7 +160,10 @@ enum EstadoProceso {
 model Proceso {
   id_proceso      String        @id @default(uuid()) @db.Uuid
   tenant_id       String        @db.Uuid
-  numero_radicado String        @unique @db.VarChar(50)
+  /// Único DENTRO del consultorio, no en todo el sistema: en un mismo proceso
+  /// judicial la contraparte litiga con EL MISMO radicado desde otra oficina.
+  /// Un único global impedía que ambas lo registraran. Ver @@unique al final.
+  numero_radicado String        @db.VarChar(50)
   juzgado         String?       @db.VarChar(150)
   tipo_proceso    String        @db.VarChar(100)
   clase_proceso   String?       @db.VarChar(100)
@@ -181,6 +187,7 @@ model Proceso {
   historial   HistorialProceso[]
   actuaciones Actuacion[]
 
+  @@unique([tenant_id, numero_radicado])
   @@map("procesos")
 }
 
