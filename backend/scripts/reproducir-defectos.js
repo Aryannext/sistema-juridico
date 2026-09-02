@@ -9,6 +9,10 @@
  * Se niega a ejecutarse contra cualquier base que no sea local.
  */
 const prisma = require('../src/config/prisma');
+const { signToken } = require('../src/utils/jwt');
+const { authMiddleware } = require('../src/middlewares/auth.middleware');
+const authController = require('../src/modules/auth/auth.controller');
+const { hashPassword } = require('../src/utils/bcrypt');
 
 const url = process.env.DATABASE_URL || '';
 if (!/localhost|127\.0\.0\.1/.test(url)) {
@@ -185,12 +189,74 @@ async function defecto06() {
     const semudo = despues.tenant_id === b.tenant.id_tenant;
     registrar('D-06', 'Reescritura de tenant_id vía updateCliente', semudo,
       semudo
-        ? 'El cliente quedó registrado en el consultorio ajeno.'
+        ? 'El cliente quedó registrado en el consultorio ajeno. OJO: esto replica ' +
+          'Prisma en crudo, que sigue permitiéndolo y siempre lo permitirá; el ' +
+          'arreglo está en el controlador, que ya filtra los campos. Lo comprueba A-06.'
         : 'Prisma ignoró el tenant_id del cuerpo.');
   } catch (error) {
     registrar('D-06', 'Reescritura de tenant_id vía updateCliente', false,
       `Prisma lo rechazó: ${error.code || error.message.split('\n').pop().trim()}`);
   }
+}
+
+// ── D-09 ────────────────────────────────────────────────────────────────
+// Suspender un consultorio (tenant.activo = false) no impide que sus
+// usuarios sigan entrando y trabajando: nadie comprueba ese campo.
+async function defecto09() {
+  const tenant = await prisma.tenant.create({
+    data: {
+      nombre: `${marca}_d09`,
+      tipo: 'CONSULTORIO',
+      email_admin: `${marca}_d09@local.test`,
+      activo: false, // consultorio SUSPENDIDO, p. ej. por impago
+    },
+  });
+  creados.tenants.push(tenant.id_tenant);
+
+  const usuario = await prisma.usuario.create({
+    data: {
+      tenant_id: tenant.id_tenant,
+      nombre: 'Abogado del consultorio suspendido',
+      email: `${marca}_d09@local.test`,
+      password_hash: await hashPassword('Clave1234*'),
+      rol: 'ABOGADO',
+      activo: true, // el usuario en sí nunca se desactivó
+    },
+  });
+  creados.usuarios.push(usuario.id_usuario);
+
+  // 1) ¿Puede usar la API con un token válido?
+  const token = signToken({
+    id_usuario: usuario.id_usuario,
+    tenant_id: tenant.id_tenant,
+    rol: usuario.rol,
+  });
+
+  let pasoElMiddleware = false;
+  const req = { headers: { authorization: `Bearer ${token}` } };
+  const res = { status: () => res, json: () => res };
+  await authMiddleware(req, res, () => { pasoElMiddleware = true; });
+
+  registrar('D-09a', 'El consultorio suspendido sigue usando la API', pasoElMiddleware,
+    pasoElMiddleware
+      ? 'El middleware dejó pasar la petición pese a estar el consultorio inactivo.'
+      : 'El middleware la bloqueó.');
+
+  // 2) ¿Puede iniciar sesión de nuevo?
+  const resLogin = { statusCode: 200, body: null };
+  resLogin.status = (c) => { resLogin.statusCode = c; return resLogin; };
+  resLogin.json = (b) => { resLogin.body = b; return resLogin; };
+
+  await authController.login(
+    { body: { email: usuario.email, password: 'Clave1234*' }, ip: '203.0.113.9' },
+    resLogin
+  );
+
+  const entro = resLogin.statusCode === 200 && !!(resLogin.body && resLogin.body.token);
+  registrar('D-09b', 'El consultorio suspendido puede iniciar sesión', entro,
+    entro
+      ? 'El login devolvió un token válido.'
+      : `HTTP ${resLogin.statusCode}: ${resLogin.body && resLogin.body.error}`);
 }
 
 async function limpiar() {
@@ -207,6 +273,7 @@ async function limpiar() {
     await defecto04();
     await defecto05();
     await defecto06();
+    await defecto09();
   } finally {
     await limpiar();
     await prisma.$disconnect();

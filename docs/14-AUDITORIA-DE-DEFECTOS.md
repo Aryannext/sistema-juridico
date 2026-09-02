@@ -1,8 +1,10 @@
 # 14 — Auditoría de defectos y refactorización
 
 **Fecha:** 2 de septiembre de 2026
-**Alcance:** búsqueda de defectos en la plataforma y reparto de `ProcesoDetalle.jsx`.
-**Estado:** todo aplicado en el árbol de trabajo y verificado. **Nada subido al repositorio.**
+**Alcance:** búsqueda de defectos en la plataforma, reparto de `ProcesoDetalle.jsx` y
+suspensión de consultorios.
+**Estado:** aplicado y verificado. D-01 a D-08 están en `main` y desplegados; D-09 quedó
+listo después y se despliega aparte.
 
 > **Método.** Ningún defecto de este documento se afirma por lectura del código. Cada uno se
 > reprodujo contra la base de datos real antes de tocar nada, y se volvió a comprobar después.
@@ -28,6 +30,53 @@
 | D-06 | `updateCliente` permitía mudar un cliente a otro consultorio | **Alta, seguridad** | Corregido |
 | D-07 | El código 2FA y el enlace de verificación se escribían en los registros | **Alta, seguridad** | Corregido |
 | D-08 | Ocho bloques `catch` descartaban el error sin dejar rastro | Media | Corregido |
+| D-09 | Suspender un consultorio no impedía que sus usuarios entraran | Alta | Corregido |
+
+### D-09 · `Tenant.activo` era un interruptor sin conectar
+
+Salió al preguntar cómo se desactiva un consultorio que no ha pagado la suscripción. El modelo
+tiene el campo desde el principio:
+
+```prisma
+model Tenant {
+  activo  Boolean  @default(true)
+}
+```
+
+Pero **no se comprobaba en ningún sitio**. El login validaba `user.activo` y el middleware de
+autenticación también, y ninguno de los dos miraba el consultorio. Consecuencia: marcar un
+consultorio como inactivo no tenía **ningún efecto**. Sus abogados seguían entrando, creando
+expedientes y subiendo documentos con total normalidad.
+
+Es la peor clase de defecto: un campo que cualquiera daría por hecho que sirve para suspender
+una oficina, y que no sirve. Nada avisa de que la suspensión no funciona hasta que alguien
+confía en ella.
+
+Reproducido con un consultorio `activo: false` y un usuario suyo activo:
+
+```
+REPRODUCIDO  D-09a  El middleware dejó pasar la petición pese a estar el consultorio inactivo.
+REPRODUCIDO  D-09b  El login devolvió un token válido.
+```
+
+**Arreglo.** El middleware y el login incluyen ahora el consultorio en la consulta y responden
+**403** con `consultorioSuspendido: true` si está inactivo. Dos decisiones de detalle:
+
+- **La comprobación va después de validar la contraseña**, no antes. Si fuera antes, cualquiera
+  podría averiguar qué oficinas están suspendidas probando correos ajenos.
+- **El mensaje es distinto del de «cuenta inactiva»** a propósito: al abogado no le sirve
+  *«verifica tu correo»* cuando el problema real es que su consultorio dejó de pagar.
+
+**Vigilancia.** `src/tests/consultorio_suspendido.test.js` (6 casos) y las comprobaciones A-09
+a A-09d, que verifican **las dos caras**: que el suspendido queda fuera y que el activo sigue
+entrando. Un arreglo que bloqueara a todo el mundo también «pasaría» si solo se mirase la
+primera.
+
+> **Lo que esto NO resuelve.** Queda la palanca, no la maquinaria. `Tenant.plan`
+> (`BASICO`/`PRO`) sigue sin leerse en ningún sitio, y **no existe ni un solo campo de
+> suscripción**: ni fecha de pago, ni de vencimiento, ni estado, ni historial. Suspender sigue
+> siendo un `UPDATE` manual. La administración de la plataforma es un área de negocio nueva que
+> ninguno de los 59 requisitos documentados menciona.
 
 ### D-01 · El borrado definitivo no contemplaba las actuaciones
 
@@ -207,8 +256,8 @@ npm --prefix backend run lint
 
 | | Antes | Ahora |
 |---|---:|---:|
-| Suites | 8 | **9** |
-| Casos | 21 | **27** |
+| Suites | 8 | **10** |
+| Casos | 21 | **33** |
 
 La suite nueva, `src/tests/aislamiento_consultorio.test.js`, fija como prueba unitaria lo que
 antes solo se comprobaba de extremo a extremo con la base levantada: que el radicado y el

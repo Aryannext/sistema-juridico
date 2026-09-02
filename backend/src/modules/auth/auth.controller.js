@@ -150,7 +150,10 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await prisma.usuario.findUnique({ where: { email } });
+    const user = await prisma.usuario.findUnique({
+      where: { email },
+      include: { tenant: { select: { activo: true } } }
+    });
 
     if (!user) {
       // Generic error
@@ -201,6 +204,19 @@ exports.login = async (req, res) => {
 
     if (!user.activo) {
       return res.status(403).json({ error: 'Cuenta inactiva. Verifica tu correo o contacta al administrador.' });
+    }
+
+    // La suspensión del consultorio se comprueba DESPUÉS de validar la
+    // contraseña, no antes: si no, cualquiera podría averiguar qué oficinas
+    // están suspendidas probando correos ajenos.
+    // El mensaje es distinto del de cuenta inactiva a propósito: al abogado
+    // no le sirve "verifica tu correo" cuando el problema es que su
+    // consultorio dejó de pagar.
+    if (!user.tenant.activo) {
+      return res.status(403).json({
+        error: 'El acceso de su consultorio está suspendido. Contacte al administrador de la plataforma.',
+        consultorioSuspendido: true
+      });
     }
 
     // Reset attempts on successful login

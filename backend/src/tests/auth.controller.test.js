@@ -79,7 +79,10 @@ describe('HU-01 y HU-32: Autenticación y 2FA', () => {
       intentos_fallidos: 0,
       bloqueado_hasta: null,
       activo: true,
-      dos_factores: true
+      dos_factores: true,
+      // El login comprueba también que el consultorio no esté suspendido.
+      // Ver src/tests/consultorio_suspendido.test.js
+      tenant: { activo: true }
     });
 
     comparePassword.mockResolvedValue(true);

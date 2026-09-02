@@ -16,12 +16,29 @@ const authMiddleware = async (req, res, next) => {
     }
 
     const user = await prisma.usuario.findUnique({
-      where: { id_usuario: decoded.id_usuario }
+      where: { id_usuario: decoded.id_usuario },
+      include: { tenant: { select: { activo: true } } }
     });
 
     if (!user || !user.activo) {
       return res.status(401).json({ error: 'Usuario no encontrado o inactivo' });
     }
+
+    // Suspensión del consultorio entero, independiente de la de cada usuario.
+    // Es la palanca para cortar el acceso de una oficina completa —por impago
+    // de la suscripción, por ejemplo— con un solo cambio, en vez de desactivar
+    // a sus usuarios uno por uno. Antes este campo no se comprobaba en ningún
+    // sitio: marcar un consultorio como inactivo no tenía ningún efecto.
+    if (!user.tenant.activo) {
+      return res.status(403).json({
+        error: 'El acceso de su consultorio está suspendido. Contacte al administrador de la plataforma.',
+        consultorioSuspendido: true
+      });
+    }
+
+    // El objeto `tenant` solo se incluyó para esta comprobación; no debe
+    // filtrarse al resto de la aplicación como si fuera parte del usuario.
+    delete user.tenant;
 
     req.user = user;
     req.tenant_id = user.tenant_id;

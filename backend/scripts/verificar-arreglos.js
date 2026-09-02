@@ -14,6 +14,10 @@
 const prisma = require('../src/config/prisma');
 const procesos = require('../src/modules/procesos/procesos.controller');
 const clientes = require('../src/modules/clientes/clientes.controller');
+const auth = require('../src/modules/auth/auth.controller');
+const { authMiddleware } = require('../src/middlewares/auth.middleware');
+const { signToken } = require('../src/utils/jwt');
+const { hashPassword } = require('../src/utils/bcrypt');
 
 const url = process.env.DATABASE_URL || '';
 if (!/localhost|127\.0\.0\.1/.test(url)) {
@@ -247,6 +251,84 @@ async function arreglo02() {
     `HTTP ${res.statusCode}: ${res.body && res.body.error}`);
 }
 
+// ── A-09 ── Suspensión de un consultorio completo ──────────────────────
+// Comprueba las dos caras: que el suspendido queda fuera y que el activo
+// sigue entrando. Un arreglo que bloqueara a todos también "pasaría" si solo
+// se mirase la primera.
+async function arreglo09() {
+  const clave = 'Clave1234*';
+  const hash = await hashPassword(clave);
+
+  const crear = async (sufijo, tenantActivo) => {
+    const tenant = await prisma.tenant.create({
+      data: {
+        nombre: `${marca}_${sufijo}`,
+        tipo: 'CONSULTORIO',
+        email_admin: `${marca}_${sufijo}@local.test`,
+        activo: tenantActivo,
+      },
+    });
+    creados.tenants.push(tenant.id_tenant);
+
+    const usuario = await prisma.usuario.create({
+      data: {
+        tenant_id: tenant.id_tenant,
+        nombre: `Abogado ${sufijo}`,
+        email: `${marca}_${sufijo}@local.test`,
+        password_hash: hash,
+        rol: 'ABOGADO',
+        activo: true,
+      },
+    });
+    creados.usuarios.push(usuario.id_usuario);
+    return { tenant, usuario };
+  };
+
+  const pasaElMiddleware = async (usuario, tenant) => {
+    const token = signToken({
+      id_usuario: usuario.id_usuario,
+      tenant_id: tenant.id_tenant,
+      rol: usuario.rol,
+    });
+    let paso = false;
+    const res = fakeRes();
+    await authMiddleware(
+      { headers: { authorization: `Bearer ${token}` } },
+      res,
+      () => { paso = true; }
+    );
+    return { paso, estado: res.statusCode };
+  };
+
+  const intentarLogin = async (usuario) => {
+    const res = fakeRes();
+    await auth.login({ body: { email: usuario.email, password: clave }, ip: '203.0.113.9' }, res);
+    return res;
+  };
+
+  // Consultorio suspendido: fuera.
+  const susp = await crear('a09susp', false);
+  const mwSusp = await pasaElMiddleware(susp.usuario, susp.tenant);
+  comprobar('A-09', 'Consultorio suspendido no puede usar la API', !mwSusp.paso && mwSusp.estado === 403,
+    `El middleware respondió ${mwSusp.estado} y no dejó pasar.`);
+
+  const loginSusp = await intentarLogin(susp.usuario);
+  comprobar('A-09b', 'Consultorio suspendido no puede iniciar sesión',
+    loginSusp.statusCode === 403 && !(loginSusp.body && loginSusp.body.token),
+    `HTTP ${loginSusp.statusCode}: ${loginSusp.body && loginSusp.body.error}`);
+
+  // Consultorio activo: sigue trabajando con normalidad.
+  const act = await crear('a09act', true);
+  const mwAct = await pasaElMiddleware(act.usuario, act.tenant);
+  comprobar('A-09c', 'Consultorio activo sigue usando la API', mwAct.paso,
+    mwAct.paso ? 'El middleware lo dejó pasar.' : `Bloqueado con ${mwAct.estado}: NO debería.`);
+
+  const loginAct = await intentarLogin(act.usuario);
+  comprobar('A-09d', 'Consultorio activo sigue iniciando sesión',
+    loginAct.statusCode === 200 && !!(loginAct.body && loginAct.body.token),
+    loginAct.statusCode === 200 ? 'Recibió su token.' : `HTTP ${loginAct.statusCode}.`);
+}
+
 async function limpiar() {
   await prisma.historialProceso.deleteMany({ where: { id_proceso: { in: creados.procesos } } });
   await prisma.actuacion.deleteMany({ where: { id_actuacion: { in: creados.actuaciones } } });
@@ -265,6 +347,7 @@ async function limpiar() {
     await arreglo04();
     await arreglo05();
     await arreglo06();
+    await arreglo09();
   } catch (error) {
     console.error('\nError inesperado durante la verificación:\n', error);
     fallo = true;
