@@ -22,7 +22,14 @@ Se identificaron **28 hallazgos**, clasificados así:
 | 🟥 **Defecto de implementación** | 10 | El requisito es correcto y el código no lo cumple. Se corrige el código. |
 | 🟨 **Ambigüedad de especificación** | 3 | Dos documentos se contradicen entre sí. Hace falta una decisión humana. |
 
-Siete son de severidad alta: H-10, H-19, H-20, H-21, H-24, **H-27** y **H-28**.
+Siete son de severidad alta: H-10, ~~H-19~~, H-20, H-21, H-24, **H-27** y **H-28**.
+
+> **Estado al 2 de septiembre de 2026.** **H-19 queda corregido** (unicidad por consultorio),
+> junto con **H-27** y **H-28**, resueltos en la Ola 1. La auditoría de defectos del 2 de
+> septiembre encontró además cinco problemas que esta revisión no había buscado, porque comparaba
+> documentación contra plataforma y no buscaba fallos de ejecución. Están en
+> [14-AUDITORIA-DE-DEFECTOS.md](14-AUDITORIA-DE-DEFECTOS.md); el más grave permitía **mover un
+> cliente a otro consultorio** enviando `tenant_id` en el cuerpo de la petición.
 Los dos últimos no se encontraron leyendo código, sino **ejecutando el sistema**: H-27 al
 probar la plataforma con datos reales y H-28 al montar el despliegue de producción. Es el
 argumento a favor de verificar ejecutando, no solo revisando.
@@ -190,7 +197,16 @@ Diagrama: `varchar(20)`. Esquema real: `@db.VarChar(255)`. El diagrama es incorr
 - **Verificación:** `grep -rn "ESCRITO" backend/src frontend/src` → sin resultados.
 - **Impacto:** bajo funcionalmente (los escritos caen en `OTRO`), pero es un incumplimiento literal y verificable de un RF. Corrección: agregar el valor al enum + migración. Coste estimado: 30 minutos.
 
-### H-19 🟥 **[SEVERIDAD ALTA]** Tres restricciones `@unique` son globales y deberían ser por tenant
+### H-19 ✅ **[CORREGIDO el 2 de septiembre de 2026]** Restricciones `@unique` globales que debían ser por tenant
+
+> **Resuelto.** Migración `20260902090623_unicidad_por_consultorio`: `numero_documento` y
+> `numero_radicado` pasan a `@@unique([tenant_id, campo])`, y los controladores a `findFirst`
+> acotado al consultorio. `Usuario.email` permanece global, como se razonaba abajo.
+> El defecto se reprodujo antes de tocar nada y se volvió a comprobar después
+> (`npm --prefix backend run defectos` / `arreglos`). Detalle en
+> [14-AUDITORIA-DE-DEFECTOS.md § D-04](14-AUDITORIA-DE-DEFECTOS.md).
+>
+> El análisis original se conserva íntegro:
 
 ```prisma
 model Usuario  { email            String @unique }   // schema.prisma

@@ -21,6 +21,7 @@ Lo que se consulta a diario, con enlace directo:
 | **Qué significa un término jurídico** | [07 — Glosario jurídico](07-GLOSARIO-JURIDICO.md) |
 | **Cómo desplegar sin romper el VPS** | [12 — Despliegue en VPS compartido](12-DESPLIEGUE-VPS-COMPARTIDO.md) |
 | **Deuda técnica y calidad del código** | [13 — Calidad de código](13-CALIDAD-DE-CODIGO.md) |
+| **Defectos encontrados y corregidos** | [14 — Auditoría de defectos](14-AUDITORIA-DE-DEFECTOS.md) |
 
 ---
 
@@ -71,6 +72,7 @@ docs/
 | 11 | [Decisiones de arquitectura (ADR)](11-DECISIONES-ARQUITECTONICAS.md) | Las 11 decisiones estructurales, con contexto y consecuencias |
 | 12 | [Despliegue en VPS compartido](12-DESPLIEGUE-VPS-COMPARTIDO.md) | Cómo actualizar Node y desplegar sin romper la aplicación del otro usuario |
 | 13 | [Calidad de código](13-CALIDAD-DE-CODIGO.md) | Revisión SOLID y de código limpio, con métricas reales y un plan de refactor por pasos |
+| 14 | [Auditoría de defectos](14-AUDITORIA-DE-DEFECTOS.md) | 7 defectos reproducidos contra la base de datos y corregidos; reparto de `ProcesoDetalle.jsx` |
 | — | [Manual de usuario](MANUAL_USUARIO.md) | Guía para el usuario final, sin lenguaje técnico |
 
 ---

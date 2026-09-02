@@ -4,6 +4,21 @@
 **Método:** medición sobre el código real, no impresiones. Cada afirmación de este documento
 lleva el número que la respalda y el comando que lo reproduce.
 
+> ## ⚠️ Este documento describe el estado del 1 de septiembre
+>
+> El **2 de septiembre** se ejecutaron el **Paso 2** (repartir `ProcesoDetalle.jsx`) y el
+> **Paso 4** (linter del backend), y se corrigieron siete defectos que esta revisión no había
+> buscado. Lo que cambió:
+>
+> | | Aquí se dice | Hoy |
+> |---|---:|---:|
+> | `ProcesoDetalle.jsx` | 3 094 líneas, 76 `useState` | **2 522 líneas, 8 `useState`** |
+> | Linter del backend | no existe | **0 errores** |
+> | Pruebas | 21 en 8 suites | **27 en 9 suites** |
+>
+> El resto del análisis —los principios SOLID, la duplicación del backend, los Pasos 0, 1 y 3—
+> **sigue vigente sin cambios**. Detalle en [14-AUDITORIA-DE-DEFECTOS.md](14-AUDITORIA-DE-DEFECTOS.md).
+
 ---
 
 ## Resumen honesto
@@ -26,6 +41,11 @@ Y una advertencia que vale más que cualquier recomendación de este documento:
 > **No se debe refactorizar esto todavía.** Con 21 pruebas unitarias, una refactorización de
 > este alcance se hace a ciegas. El orden correcto es **primero pruebas, después refactor**.
 > Ver la sección 6.
+
+> **Nota del 2 de septiembre.** El reparto se hizo, y sigue siendo cierto que el frontend no
+> tiene pruebas. Lo que redujo el riesgo a algo aceptable fue una restricción de método: los
+> hooks devuelven los mismos nombres de variable que había en el componente, de modo que el JSX
+> no se tocó. Se movió estado, no se reescribió interfaz. Sigue pendiente escribir esas pruebas.
 
 ---
 

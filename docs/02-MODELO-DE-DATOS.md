@@ -107,7 +107,7 @@ erDiagram
         varchar nombre
         varchar razon_social "opcional"
         varchar tipo_documento
-        varchar numero_documento UK "unico GLOBAL - ver H-19"
+        varchar numero_documento UK "unico POR CONSULTORIO desde 02-09-2026"
         varchar nit "opcional"
         varchar representante "opcional"
         varchar telefono
@@ -121,7 +121,7 @@ erDiagram
     PROCESOS {
         uuid id_proceso PK
         uuid tenant_id FK
-        varchar numero_radicado UK "unico GLOBAL - ver H-19"
+        varchar numero_radicado UK "unico POR CONSULTORIO desde 02-09-2026"
         varchar juzgado "opcional"
         varchar tipo_proceso
         varchar clase_proceso "opcional"
@@ -381,7 +381,7 @@ Priorizada. El detalle de ejecución está en [10-PLAN-DE-REMEDIACION.md](10-PLA
 
 | # | Problema | Impacto | Corrección |
 |---|---|---|---|
-| 1 | `numero_documento` y `numero_radicado` únicos globalmente | **Alto** — rompe el aislamiento entre tenants (H-19) | `@@unique([tenant_id, campo])` |
+| 1 | ~~`numero_documento` y `numero_radicado` únicos globalmente~~ | ~~**Alto** — rompe el aislamiento entre tenants (H-19)~~ | ✅ **CORREGIDO** el 2-09-2026, migración `unicidad_por_consultorio`. Ver [doc 14 § D-04](14-AUDITORIA-DE-DEFECTOS.md) |
 | 2 | Sin índices explícitos en `tenant_id` ni en campos de búsqueda | **Medio** — RNF05 exige respuesta < 2 s; sin índice, cada búsqueda es un recorrido secuencial | `@@index([tenant_id])`, `@@index([tenant_id, estado])` |
 | 3 | Falta el valor `ESCRITO` en `CategoriaDocumento` | Bajo | Añadir al enum + migración |
 | 4 | `ip_adress` está mal escrito (falta la `d`: *address*) | Cosmético | Renombrar con `@map("ip_adress")` para no romper la columna existente |
