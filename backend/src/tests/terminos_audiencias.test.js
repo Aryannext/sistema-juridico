@@ -1,5 +1,5 @@
 const terminosController = require('../modules/terminos/terminos.controller');
-const audienciasController = require('../modules/audiencias/audiencias.controller');
+
 const prisma = require('../config/prisma');
 
 jest.mock('../config/prisma', () => ({

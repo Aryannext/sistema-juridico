@@ -1,7 +1,7 @@
 const authController = require('../modules/auth/auth.controller');
 const prisma = require('../config/prisma');
 const { sendEmail } = require('../config/mailer');
-const { hashPassword, comparePassword } = require('../utils/bcrypt');
+const { comparePassword } = require('../utils/bcrypt');
 
 jest.mock('../config/prisma', () => ({
   usuario: {

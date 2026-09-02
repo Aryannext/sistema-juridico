@@ -54,6 +54,7 @@ const requirePermission = (modulo, accion) => {
 
       next();
     } catch (error) {
+      console.error('Error verificando permisos:', error);
       res.status(500).json({ error: 'Error verificando permisos' });
     }
   };

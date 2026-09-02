@@ -8,7 +8,9 @@ const signToken = (payload, expiresIn = process.env.JWT_EXPIRES_IN || '8h') => {
 const verifyToken = (token) => {
   try {
     return jwt.verify(token, process.env.JWT_SECRET);
-  } catch (err) {
+  } catch {
+    // Firma inválida o token caducado. Devolver null es la respuesta
+    // esperada; quien llama decide qué hacer.
     return null;
   }
 };

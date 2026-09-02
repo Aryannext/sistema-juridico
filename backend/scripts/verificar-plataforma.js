@@ -248,7 +248,7 @@ async function registrarConsultorio(nombre) {
   comprobar('RN03', 'El cambio de estado exige justificación escrita',
     sinJust.estado === 400, `estado=${sinJust.estado}`);
 
-  const term2 = await pedir('POST', '/terminos', { token: A.token, body: {
+  await pedir('POST', '/terminos', { token: A.token, body: {
     id_proceso: idProceso, nombre: 'Pendiente sin gestionar',
     fecha_vencimiento: '2027-01-15T17:00:00.000Z'
   }});

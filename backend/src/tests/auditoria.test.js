@@ -1,4 +1,4 @@
-const authController = require('../modules/auth/auth.controller');
+
 const prisma = require('../config/prisma');
 
 jest.mock('../config/prisma', () => ({

@@ -27,6 +27,7 @@ const authMiddleware = async (req, res, next) => {
     req.tenant_id = user.tenant_id;
     next();
   } catch (error) {
+    console.error('Error en el middleware de autenticación:', error);
     res.status(500).json({ error: 'Error de autenticación' });
   }
 };
