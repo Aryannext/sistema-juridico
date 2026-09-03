@@ -505,6 +505,59 @@ manual.
 
 ---
 
+## ADR-013 — El cifrado en reposo se hereda de la infraestructura; no se cifra en la aplicación
+
+**Fecha:** 3 de septiembre de 2026
+
+### Contexto
+
+RNF01 pide *«cifrado en reposo AES-256»*. Hoy se cumple en dos de sus cuatro criterios y por
+herencia: TLS lo pone Nginx, los documentos heredan el cifrado por defecto de Cloudflare R2, y la
+base de datos —desde [ADR-011](#adr-011--contenedores-para-aislar-el-despliegue-en-un-vps-compartido),
+que la trajo a un contenedor propio— depende del cifrado de disco del VPS y de nada más.
+
+Lo que falta (RNF01.4) es cifrado **en la aplicación**: que los datos salgan cifrados de aquí, de
+modo que quien obtenga el volcado de la base —o el respaldo, ahora que existen— no pueda leerlos
+aunque tenga el disco. Para un sistema que custodia procesos judiciales bajo secreto profesional,
+la pregunta es legítima y hay que responderla, no dejarla en rojo sin explicación.
+
+### Decisión
+
+**No se cifra en la aplicación, por ahora, y se declara así en toda afirmación de cumplimiento.**
+
+La razón no es el esfuerzo de cifrar: es **dónde vive la clave**. Cifrar en la aplicación solo
+protege si la clave no está junto a los datos, y en este despliegue —un contenedor y su volumen en
+el mismo VPS, sin gestor de secretos— la clave acabaría en el `.env` del mismo servidor que
+guarda la base. Quien pueda leer el disco puede leer las dos cosas. Se habría cambiado un riesgo
+real por la apariencia de haberlo resuelto, que es peor: nadie vuelve a mirar lo que ya figura
+en verde.
+
+### Alternativas descartadas
+
+- **Cifrar columnas sensibles con una clave en el `.env`.** Es lo que suele hacerse y es
+  precisamente lo anterior: clave y datos en la misma máquina. Además rompe la búsqueda —RNF05 y
+  HU-31 buscan por radicado, juzgado y nombre de cliente, y sobre texto cifrado no hay `ILIKE` ni
+  índice de trigramas que valga—, y obliga a descifrar en memoria para filtrar.
+- **`pgcrypto` dentro de PostgreSQL.** Traslada el problema: la clave viaja en cada consulta o
+  vive en la configuración del mismo servidor.
+- **Un gestor de claves externo** (KMS de un proveedor, Vault). Es la respuesta correcta y **la
+  única que cambiaría algo de verdad**, porque saca la clave del servidor que guarda los datos.
+  Se descarta hoy por coste y por dependencia externa, no por criterio técnico.
+
+### Consecuencias
+
+- ✅ La búsqueda sigue funcionando y los índices de trigramas siguen sirviendo.
+- ✅ No hay claves que rotar, perder ni custodiar. Perder la clave habría sido perder los datos.
+- ⚠️ **Un volcado de la base es legible.** Vale tanto para el atacante que llegue al disco como
+  para el respaldo diario: por eso las copias tienen que salir del VPS a un destino con su propio
+  control de acceso, y por eso `respaldos/` está excluido del repositorio.
+- ⚠️ RNF01 se queda en 🔵 y RNF01.4 en 🟥, con esta decisión como razón. **No debe presentarse
+  como «cumple AES-256» sin la precisión de quién lo aporta.**
+- 🔄 Se revisa si el sistema pasa a un proveedor con gestor de claves, o si un consultorio lo exige
+  por contrato. Entonces la alternativa buena ya está identificada.
+
+---
+
 ## Cómo añadir un ADR nuevo
 
 Cuando se tome una decisión estructural —cambiar de proveedor de almacenamiento, introducir una

@@ -34,6 +34,19 @@ depende del cifrado de disco del VPS y de nada más.**
 > cuenta: confía en la infraestructura. Afirmar «cumple AES-256» sin esa precisión sería
 > impreciso.
 
+**RNF01.4 no está pendiente: está decidido**, y desde el 3 de septiembre de 2026 con su razón
+escrita en [ADR-013](../../docs/11-DECISIONES-ARQUITECTONICAS.md). El motivo no es el esfuerzo de
+cifrar, sino **dónde viviría la clave**: en este despliegue acabaría en el `.env` del mismo
+servidor que guarda la base, así que quien pudiera leer el disco leería las dos cosas. Se habría
+cambiado un riesgo real por la apariencia de haberlo resuelto, que es peor, porque nadie vuelve a
+mirar lo que ya figura en verde. Cifrar además rompería la búsqueda: sobre texto cifrado no hay
+`ILIKE` ni índice de trigramas que valgan.
+
+La respuesta correcta —un gestor de claves fuera del servidor— está identificada y descartada por
+coste, no por criterio. **La consecuencia que hay que tener presente:** un volcado de la base es
+legible, y eso vale también para el respaldo diario. Por eso las copias deben salir del VPS a un
+destino con su propio control de acceso.
+
 ---
 
 ## RNF02 · Seguridad de las credenciales y la sesión
@@ -186,37 +199,70 @@ garantía y no solo en una comodidad: tres es el tamaño del trigrama.
 
 ## RNF07 · Disponibilidad
 
-**Enunciado.** Disponibilidad mensual igual o superior al 99,5 %.
-
 | | Criterio | |
 |---|---|:--:|
 | RNF07.1 | El servicio está disponible de forma continua | 🔵 |
-| RNF07.2 | Existe monitoreo que permita medir la disponibilidad | 🟥 |
-| RNF07.3 | Existe página de estado o alerta ante caída | 🟥 |
+| RNF07.2 | Existe monitoreo que permita medir la disponibilidad | ✅ |
+| RNF07.3 | Existe página de estado o alerta ante caída | 🟡 |
 
-**Estado 🔵.** Depende enteramente del VPS: la API, el cron y la base de datos corren allí.
+**Estado 🟡.** RNF07.2 se cerró el 3 de septiembre de 2026.
 
-**No se puede afirmar que se cumpla, porque no se mide.** Sin monitoreo, el 99,5 % es una
-aspiración, no un dato. Declararlo cumplido sería inventarlo.
+> **Por qué las tres estaban en rojo por la misma causa.** La única ruta de salud que existía,
+> `GET /`, devuelve un texto fijo: contesta *«SGPA API is running»* aunque la base esté caída,
+> porque no comprueba nada. Vigilar con ella habría dicho que todo iba bien mientras el sistema no
+> podía atender a nadie — peor que no vigilar, porque da tranquilidad falsa.
+
+**RNF07.2** se cumple con `GET /api/estado`, que sí mira sus dependencias: consulta la base y
+devuelve **200 solo si el servicio puede trabajar**, o 503 en cuanto no puede. Es lo que un
+vigilante externo necesita, porque no lee el mensaje: mira el código. Incluye el tiempo que tardó
+cada dependencia —una respuesta de tres segundos no está caída, pero tampoco está bien— y el
+tiempo en marcha del proceso, que delata un reinicio que nadie pidió.
+
+No lleva autenticación, porque un vigilante no tiene sesión; y por eso mismo **no dice nada que no
+se pueda contar en público**: ni versiones, ni rutas internas, ni el motivo del fallo. Los errores
+de conexión de PostgreSQL incluyen la dirección y el puerto de la base, y en una ruta abierta eso
+es un mapa de la infraestructura. El motivo se traza en el servidor.
+
+**RNF07.3 queda a medias, y es honesto decirlo.** La señal existe y es consumible; lo que no hay
+es **nadie escuchándola**. Falta apuntar un vigilante externo —UptimeRobot, o un `curl` en `cron`
+que avise por correo— a esa dirección. Es configuración del servidor, no código.
+
+**RNF07.1 no puede cerrarse desde el repositorio.** «Disponible de forma continua» es una medida
+que se acumula con el tiempo sobre un sistema en marcha; hasta que RNF07.3 esté conectado y haya
+histórico, no hay nada que afirmar. Con la ruta ya existe cómo medirlo, que antes no lo había.
 
 ---
 
 ## RNF08 · Concurrencia y tiempos de escritura
 
-**Enunciado.** 50 usuarios concurrentes; consultas por debajo de 3 segundos y escrituras por
-debajo de 5.
-
 | | Criterio | |
 |---|---|:--:|
-| RNF08.1 | Soporta 50 usuarios concurrentes | ❓ |
-| RNF08.2 | Las consultas responden en menos de 3 segundos | ❓ |
-| RNF08.3 | Las escrituras responden en menos de 5 segundos | ❓ |
+| RNF08.1 | Soporta 50 usuarios concurrentes | ✅ |
+| RNF08.2 | Las consultas responden en menos de 3 segundos | ✅ |
+| RNF08.3 | Las escrituras responden en menos de 5 segundos | ✅ |
 
-**Estado ❓ — nunca medido.** No hay pruebas de carga en el repositorio.
+**Estado ✅ — medido el 3 de septiembre de 2026.** Estuvo en ❓ *«nunca medido»*, que ante un
+evaluador es peor que un incumplimiento: de un incumplimiento se conoce el tamaño; de algo sin
+medir no se puede afirmar nada en ninguna dirección.
 
-> Es el único requisito del catálogo del que **no se puede afirmar nada**. Las mediciones
-> puntuales del 2 de septiembre (5–17 ms por endpoint) sugieren margen amplio, pero se hicieron
-> con un solo usuario. Un dato con un usuario no dice nada sobre cincuenta.
+Se mide con `npm run medir:concurrencia`. No simula: levanta el servidor real —el mismo `app`, con
+su autenticación y su base— y lo golpea por HTTP sosteniendo **50 peticiones simultáneas** contra
+un consultorio con 300 expedientes de fondo.
+
+| Operación | Mediana | p95 | p99 | Máximo | Límite | Errores |
+|---|---:|---:|---:|---:|---:|---:|
+| Lectura (búsqueda paginada) | 97 ms | 364 ms | 447 ms | 467 ms | 3 000 ms | 0 |
+| Escritura (crear expediente) | 65 ms | 82 ms | 83 ms | 83 ms | 5 000 ms | 0 |
+
+Se mide la **búsqueda** y no una lectura cualquiera porque es la consulta más cara del sistema y
+la que RNF05 somete a su propio límite; y **crear un expediente** porque toca la validación del
+responsable, el único de radicado y la bitácora: es una escritura completa, no un `INSERT` suelto.
+
+> **Qué NO dice este número, y hay que decirlo al presentarlo.** La medición corre en la máquina de
+> desarrollo, contra PostgreSQL local, sin la latencia de la red ni el Nginx del VPS. Describe
+> **cómo se comporta el sistema bajo carga simultánea**, no cuánto tardará el navegador de un
+> abogado en Neiva. Un número con su entorno declarado vale; el mismo número presentado como si
+> fuera producción, no. Repetirlo en el servidor es una línea de orden.
 
 ---
 
@@ -229,8 +275,8 @@ referencial.
 |---|---|:--:|
 | RNF10.1 | Las operaciones de varios pasos son atómicas | ✅ |
 | RNF10.2 | La integridad referencial está garantizada por la base de datos | ✅ |
-| RNF10.3 | **Existen respaldos diarios** | 🟥 |
-| RNF10.4 | Los respaldos se conservan 30 días | 🟥 |
+| RNF10.3 | **Existen respaldos diarios** | 🔵 |
+| RNF10.4 | Los respaldos se conservan 30 días | 🔵 |
 
 **Estado 🟡, y es el punto más delicado del catálogo.**
 
@@ -238,18 +284,31 @@ RNF10.1 y RNF10.2 se cumplen: hay transacciones en el registro de consultorio, l
 términos y audiencias, y el borrado de expedientes; las claves foráneas impiden dejar registros
 huérfanos.
 
-> ### ⚠️ RNF10.3 y RNF10.4 no se cumplen
+> ### ⚠️ RNF10.3 y RNF10.4: el mecanismo existe, los respaldos todavía no
 >
-> Cuando la base de datos vivía en un proveedor gestionado, los respaldos venían incluidos. Al
-> pasarla a un contenedor propio **se ganó aislamiento y se perdió el respaldo automático**, sin
-> poner nada en su lugar. Hoy, si el volumen se corrompe, se pierden los expedientes de todos
-> los consultorios.
+> **Sigue siendo el punto más delicado del catálogo, y el único cuyo daño es irreversible.** Todo
+> lo demás degrada el servicio; esto pierde expedientes judiciales de terceros.
 >
-> Detectado el 2 de septiembre de 2026 al revisar este mismo requisito. Hay procedimiento manual
-> documentado en [el runbook de despliegue](../../docs/12-DESPLIEGUE-VPS-COMPARTIDO.md), y la
-> automatización está definida pero no instalada.
+> El 3 de septiembre de 2026 se escribió y se probó el mecanismo: `npm run respaldo`
+> (`backend/scripts/respaldo.js`). Vuelca la base comprimida, con la fecha en el nombre, **la
+> verifica** y aplica la retención de 30 días. Se comprobó de extremo a extremo: se generó un
+> volcado, se restauró en una base aparte y se compararon tablas y filas. Coincidían.
 >
-> **Es el mayor riesgo operativo del sistema, y se declara como tal.**
+> **Y aun así los criterios no se declaran cumplidos.** «Existen respaldos diarios» es una
+> afirmación sobre un sistema en marcha, no sobre un archivo del repositorio: hasta que la tarea
+> programada corra en el servidor, los respaldos no existen. Falta una línea de `cron`
+> —documentada en [doc 12 § 7 bis](../../docs/12-DESPLIEGUE-VPS-COMPARTIDO.md)— y sacar las
+> copias del VPS, porque un respaldo en la misma máquina no protege del fallo más probable, que
+> es perder la máquina.
+>
+> Se marcan 🔵 y no ✅ por eso, y no 🟥 porque ya no falta trabajo de desarrollo: falta un acto de
+> operación. La distinción importa para saber a quién le toca.
+>
+> **Por qué el guion y no la orden de una línea.** `pg_dump ... | gzip > archivo` tiene un
+> defecto que no se ve: en una tubería la shell devuelve el código del **último** proceso, o sea
+> el de `gzip`. Si `pg_dump` muere a mitad, `gzip` comprime lo que recibió y devuelve 0: queda un
+> archivo con peso, cortado, y una tarea que nunca avisa. Es la diferencia entre tener copias y
+> creer que se tienen.
 
 ---
 
@@ -303,17 +362,28 @@ endpoint nacería sin registro.
 
 | Estado | Cantidad | Cuáles |
 |---|---:|---|
-| ✅ Cumplidos | 4 | RNF02, RNF04, RNF05, RNF06 |
-| 🟡 Parciales, con el límite declarado | 3 | RNF03, RNF10, RNF11 |
-| 🔵 Dependen de infraestructura | 2 | RNF01, RNF07 |
-| ❓ Nunca medidos | 1 | RNF08 |
+| ✅ Cumplidos | 5 | RNF02, RNF04, RNF05, RNF06, RNF08 |
+| 🟡 Parciales, con el límite declarado | 4 | RNF03, RNF07, RNF10, RNF11 |
+| 🔵 Dependen de infraestructura | 1 | RNF01 |
+| ❓ Nunca medidos | 0 | — |
 
 **Los no funcionales siguen siendo el punto más débil del sistema, y conviene decirlo antes de que
-lo pregunten.** Los funcionales están en 58 de 59 cumplidos; aquí solo 4 de 10 lo están del todo.
+lo pregunten.** Los funcionales están en 58 de 59 cumplidos; aquí, 5 de 10 lo están del todo.
 
-De los tres parciales que quedan, **RNF11 lo está por una decisión y no por una carencia**: su
-único criterio abierto es devolver 403 en vez de 404, y cumplirlo empeoraría la seguridad. Los
-otros dos —RNF03 y RNF10— son la misma cosa vista dos veces: **no hay copias de seguridad**.
+**Ya no queda ninguno sin medir.** RNF08 estaba en ❓ y ahora tiene números con su entorno
+declarado, que era lo peor de la lista: de un incumplimiento se sabe el tamaño; de algo sin medir
+no se puede afirmar nada.
+
+De lo que queda, conviene separar tres cosas distintas, porque mezclarlas confunde a quien evalúa:
+
+| | Cuáles | Qué falta de verdad |
+|---|---|---|
+| **Una decisión ya tomada** | RNF11 | Su único criterio abierto es devolver 403 en vez de 404, y cumplirlo **empeoraría** la seguridad. Está argumentado, no olvidado |
+| **Un acto en el servidor** | RNF03, RNF07, RNF10 | El mecanismo de respaldo y la comprobación de estado existen y están probados. Falta programarlos allí: una línea de `cron` y un vigilante externo apuntando a `/api/estado` |
+| **Una decisión pendiente** | RNF01 | Cifrar en la aplicación, además de heredar el cifrado del disco y de R2. Exige decidir dónde viven las claves, y eso no se improvisa |
+
+**Lo único que sigue sin red es el respaldo**, y es lo único de esta lista cuyo daño es
+irreversible. Todo lo demás degrada el servicio; perder la base pierde expedientes ajenos.
 
 No es casualidad: los requisitos no funcionales exigen medir, monitorear y respaldar —trabajo que
 no produce pantallas visibles y que suele quedar para el final. Las tres carencias que más pesan

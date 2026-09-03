@@ -423,56 +423,89 @@ revierte la etiqueta y reconstruye: vuelves al estado anterior en un minuto.
 
 ---
 
-## 7 bis. Respaldos — ⚠️ hoy NO existen
+## 7 bis. Respaldos — el mecanismo existe; falta programarlo aquí
 
-**Este es el mayor riesgo operativo del sistema.**
+**Sigue siendo el mayor riesgo operativo del sistema, y es el único cuyo daño es irreversible.**
+Todo lo demás degrada el servicio; perder la base pierde expedientes judiciales de terceros.
 
-Cuando la base de datos vivía en un proveedor gestionado, los respaldos venían incluidos y nadie
-tenía que ocuparse. Al pasarla a un contenedor propio ([ADR-011](11-DECISIONES-ARQUITECTONICAS.md))
-**se ganó el aislamiento y se perdió el respaldo automático**, y no se puso nada en su lugar.
+Cuando la base vivía en un proveedor gestionado, los respaldos venían incluidos. Al pasarla a un
+contenedor propio ([ADR-011](11-DECISIONES-ARQUITECTONICAS.md)) **se ganó el aislamiento y se
+perdió el respaldo automático**, y durante un tiempo no se puso nada en su lugar.
 
-Se detectó el 2 de septiembre de 2026 al revisar RNF10, que exige *«backups diarios con 30 días
-de retención»*. Ahora mismo, si el volumen del contenedor se corrompe, **se pierden todos los
-expedientes de todos los consultorios**. En un sistema jurídico eso no es una molestia: es la
-pérdida de documentación procesal de terceros.
+Desde el 3 de septiembre de 2026 el mecanismo está en el repositorio y probado:
+`backend/scripts/respaldo.js`, que se ejecuta con `npm run respaldo`. **Lo que falta es
+programarlo en este servidor**, que es un acto de operación y no de código.
 
-### Respaldo manual, ahora mismo
+### Qué hace el guion, y por qué no es el `pg_dump` de una línea
 
 ```bash
-cd ~/proyectos/proyectosena.online/sistema-juridico
-mkdir -p respaldos
-docker compose exec -T postgres pg_dump -U sgpa sgpa | gzip > respaldos/sgpa-$(date +%F-%H%M).sql.gz
-ls -lh respaldos/
+cd ~/proyectos/proyectosena.online/sistema-juridico/backend
+npm run respaldo
 ```
 
-**Guarda ese archivo fuera del VPS.** Un respaldo en el mismo servidor no protege del fallo más
-probable, que es perder el servidor.
+Escribe en `respaldos/` un volcado comprimido con la fecha en el nombre, y **después lo
+comprueba**: que traiga la marca de cierre que PostgreSQL escribe al final y que contenga tablas.
+Luego borra los que pasen de 30 días (RNF10.4) y termina con código distinto de cero si algo
+falló.
+
+> **La comprobación es la razón de que exista el guion.** La orden habitual
+> —`pg_dump ... | gzip > archivo`— tiene un defecto que no se ve: en una tubería, el código de
+> salida que la shell devuelve es **el del último proceso**, o sea el de `gzip`. Si `pg_dump`
+> muere a mitad, `gzip` comprime lo que alcanzó a recibir y devuelve 0. El resultado es un
+> archivo con peso, aparentemente correcto, cortado por la mitad, y una tarea programada que
+> nunca avisa de nada. Ese respaldo se descubre inservible el día que hace falta.
+>
+> Es la diferencia entre tener copias y creer que se tienen.
+
+También hay una diferencia en la retención. Borrar con `find -mtime +30` mira la **fecha de
+modificación del archivo**, que cambia en cuanto alguien copia los respaldos a otro disco: justo
+cuando los pone a salvo, la retención empieza a mentir. El guion lee la fecha del nombre.
+
+### Programarlo
+
+`pg_dump` tiene que estar disponible en el host, o ejecutarse dentro del contenedor de PostgreSQL:
+
+```cron
+# Todas las noches a las 3, con la salida a un registro que se pueda revisar.
+0 3 * * * cd ~/proyectos/proyectosena.online/sistema-juridico/backend && /usr/bin/npm run respaldo >> ~/respaldo-sgpa.log 2>&1
+```
+
+Si el host no tiene el cliente de PostgreSQL, se le indica al guion cómo llamarlo:
+
+```bash
+PG_DUMP="docker compose exec -T postgres pg_dump" npm run respaldo
+```
+
+Variables que admite: `RESPALDO_DIR` (destino, por defecto `respaldos/`), `RESPALDO_DIAS`
+(retención, 30) y `PG_DUMP`.
 
 ### Restaurar
 
-```bash
-gunzip -c respaldos/sgpa-FECHA.sql.gz | docker compose exec -T postgres psql -U sgpa -d sgpa
-```
-
-> Conviene **probar la restauración al menos una vez**. Un respaldo que nunca se ha restaurado no
-> es un respaldo: es un archivo del que se supone algo.
-
-### Automatizarlo
-
-Una tarea programada diaria en el host, con rotación a 30 días para cumplir RNF10:
+El guion imprime la orden exacta al terminar. Es, en esencia:
 
 ```bash
-crontab -e
+gunzip -c respaldos/sgpa-FECHA.sql.gz | psql "postgresql://USUARIO:CLAVE@HOST:5432/sgpa"
 ```
 
-```cron
-0 3 * * * cd ~/proyectos/proyectosena.online/sistema-juridico && docker compose exec -T postgres pg_dump -U sgpa sgpa | gzip > respaldos/sgpa-$(date +\%F).sql.gz && find respaldos/ -name 'sgpa-*.sql.gz' -mtime +30 -delete
-```
+> **Ojo con la URL.** `DATABASE_URL` lleva `?schema=public`, que es un parámetro de Prisma:
+> `psql` y `pg_dump` lo rechazan con *«parámetro de URI no válido»*. El guion la traduce solo, y
+> por eso imprime la orden ya lista en vez de decir «usa `$DATABASE_URL`».
 
-Sigue sin salir del servidor. Copiarlos a otro sitio queda pendiente.
+**La restauración se probó de verdad el 3 de septiembre de 2026**, no se supone: se volcó la base
+de desarrollo, se restauró en una base aparte y se compararon las tablas y las filas. Coincidían.
+Conviene repetirlo en este servidor al menos una vez: un respaldo que nunca se ha restaurado no
+es un respaldo, es un archivo del que se supone algo.
 
-**Los documentos subidos no entran aquí:** viven en Cloudflare R2 y tienen su propia durabilidad.
-Este respaldo cubre la base de datos, que es lo que hoy no tiene ninguna red.
+### Lo que sigue pendiente, y hay que decirlo
+
+1. **Programar la tarea aquí.** Hasta que el `cron` corra en este servidor, RNF10.3 no se cumple:
+   el mecanismo existe, los respaldos no.
+2. **Sacarlos del VPS.** Un respaldo en la misma máquina no protege del fallo más probable, que
+   es perder la máquina. Copiarlos a otro sitio —Cloudflare R2 sirve, y ya está configurado—
+   sigue sin hacerse.
+
+**Los documentos subidos no entran aquí:** viven en R2 y tienen su propia durabilidad. Este
+respaldo cubre la base de datos, que es lo que hoy no tiene ninguna red.
 
 ---
 

@@ -326,6 +326,20 @@ NO sirve aquí, y el de plataforma no sirve en el resto de la API. Ver
 | Método | Ruta | Respuesta |
 |---|---|---|
 | GET | `/` | `{ "message": "SGPA API is running" }` |
+| GET | `/api/estado` | `200` con `{ estado, en_marcha_segundos, comprobaciones }`, o **`503`** si alguna dependencia no responde |
+
+> **Las dos no sirven para lo mismo, y confundirlas tiene consecuencias.** `GET /` devuelve un
+> texto fijo: contesta que la API está en marcha aunque la base esté caída, porque no comprueba
+> nada. Vale para saber que el proceso arrancó y para nada más.
+>
+> `GET /api/estado` sí consulta sus dependencias y **cambia el código de respuesta**, que es lo
+> único que un vigilante externo mira. Es la que hay que apuntar desde UptimeRobot o desde un
+> `curl` en `cron` (RNF07.2).
+>
+> Ninguna de las dos exige sesión, porque un vigilante no la tiene. Por eso `/api/estado` **no
+> devuelve el motivo del fallo**: los errores de conexión de PostgreSQL llevan dirección y puerto,
+> y en una ruta abierta a internet eso es un mapa de la infraestructura. El motivo se traza en el
+> servidor.
 
 ---
 

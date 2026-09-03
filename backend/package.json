@@ -22,7 +22,9 @@
     "arreglos": "node -r dotenv/config scripts/verificar-arreglos.js",
     "seed:dev": "node prisma/seed-dev.js",
     "verificar": "node scripts/verificar-plataforma.js",
-    "verificar:limpiar": "node scripts/limpiar-datos-verificacion.js"
+    "verificar:limpiar": "node scripts/limpiar-datos-verificacion.js",
+    "respaldo": "node scripts/respaldo.js",
+    "medir:concurrencia": "node scripts/medir-concurrencia.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1092.0",
