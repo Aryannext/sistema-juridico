@@ -9,4 +9,7 @@ router.use(authMiddleware);
 router.get('/stats', requirePermission('REPORTES', 'LEER'), reportesController.getStats);
 router.get('/export/csv', requirePermission('REPORTES', 'LEER'), reportesController.exportCSV);
 
+// Informe en PDF, para entregar (RF42)
+router.get('/export/pdf', requirePermission('REPORTES', 'LEER'), reportesController.exportPDF);
+
 module.exports = router;

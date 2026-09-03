@@ -1,4 +1,5 @@
 const prisma = require('../../config/prisma');
+const { construirCSV } = require('./exportacion-bitacora');
 const { hashPassword } = require('../../utils/bcrypt');
 
 // Crear un nuevo colaborador (Abogado o Asistente)
@@ -217,5 +218,60 @@ exports.updatePermisos = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al actualizar los permisos del usuario' });
+  }
+};
+
+/**
+ * Exporta la bitácora de auditoría a CSV — RNF03.
+ *
+ * Admite los mismos filtros que la consulta en pantalla, para que lo exportado
+ * sea exactamente lo que se está viendo. Sin filtros, exporta todo.
+ *
+ * La propia exportación queda registrada en la bitácora: quién se llevó una
+ * copia del registro de auditoría es, en sí mismo, un dato auditable.
+ */
+exports.exportarAuditoria = async (req, res) => {
+  try {
+    const { tenant_id } = req;
+    const { modulo, accion, desde, hasta } = req.query;
+
+    const where = { tenant_id };
+    if (modulo) where.modulo = modulo;
+    if (accion) where.accion = accion;
+    if (desde || hasta) {
+      where.create_at = {};
+      if (desde) where.create_at.gte = new Date(desde);
+      if (hasta) {
+        const fin = new Date(hasta);
+        fin.setHours(23, 59, 59, 999);
+        where.create_at.lte = fin;
+      }
+    }
+
+    const registros = await prisma.bitacoraAuditoria.findMany({
+      where,
+      include: { usuario: { select: { nombre: true, email: true, rol: true } } },
+      orderBy: { create_at: 'desc' },
+    });
+
+    const { csv, totalFilas } = construirCSV(registros);
+
+    await prisma.bitacoraAuditoria.create({
+      data: {
+        tenant_id,
+        id_usuario: req.user.id_usuario,
+        accion: 'EXPORTAR_BITACORA',
+        modulo: 'ADMINISTRACION',
+        detalle: `Exportó la bitácora de auditoría a CSV (${totalFilas} ${totalFilas === 1 ? 'registro' : 'registros'})`,
+        ip_adress: req.ip || '127.0.0.1',
+      },
+    });
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename=bitacora-auditoria.csv');
+    res.status(200).send(csv);
+  } catch (error) {
+    console.error('Error exportando la bitácora:', error);
+    res.status(500).json({ error: 'Error al exportar la bitácora de auditoría' });
   }
 };

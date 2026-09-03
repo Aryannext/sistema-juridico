@@ -1,5 +1,6 @@
 const prisma = require('../../config/prisma');
 const { construirCSV } = require('./exportacion');
+const { generarInforme, describirPeriodo } = require('./exportacion-pdf');
 
 // Helper to calculate date range based on filter
 const getDateRange = (filter, startDate, endDate) => {
@@ -261,7 +262,7 @@ exports.exportCSV = async (req, res) => {
         id_usuario: req.user.id_usuario,
         accion: 'EXPORTAR_REPORTES_CSV',
         modulo: 'REPORTES',
-        detalle: `Exportó el reporte de clientes y expedientes a CSV (${totalFilas} filas)`,
+        detalle: `Exportó el reporte de clientes y expedientes a CSV (${totalFilas} ${totalFilas === 1 ? 'fila' : 'filas'})`,
         ip_adress: req.ip || '127.0.0.1'
       }
     });
@@ -273,5 +274,117 @@ exports.exportCSV = async (req, res) => {
   } catch (error) {
     console.error('Error en exportCSV:', error);
     res.status(500).json({ error: 'Error al exportar datos' });
+  }
+};
+
+/**
+ * Informe de expedientes en PDF — RF42.
+ *
+ * Reutiliza la misma consulta que la exportación a CSV: si los dos formatos
+ * partieran de consultas distintas, podrían acabar diciendo cosas diferentes
+ * sobre el mismo periodo.
+ */
+exports.exportPDF = async (req, res) => {
+  try {
+    if (req.user.rol !== 'ADMINISTRADOR') {
+      return res.status(403).json({ error: 'Permiso denegado. Solo administradores pueden exportar datos del consultorio.' });
+    }
+
+    const { filter, start_date, end_date } = req.query;
+    const { start, end } = getDateRange(filter, start_date, end_date);
+    const enRango = { gte: start, lte: end };
+
+    const [consultorio, clientes, porEstado, abogados] = await Promise.all([
+      prisma.tenant.findUnique({
+        where: { id_tenant: req.tenant_id },
+        select: { nombre: true },
+      }),
+      prisma.cliente.findMany({
+        where: {
+          tenant_id: req.tenant_id,
+          OR: [{ create_at: enRango }, { procesos: { some: { create_at: enRango } } }],
+        },
+        select: {
+          nombre: true,
+          procesos: {
+            where: { create_at: enRango },
+            select: {
+              numero_radicado: true,
+              estado: true,
+              abogado_resp: { select: { nombre: true } },
+              _count: { select: { terminos: { where: { estado: 'PENDIENTE' } } } },
+            },
+            orderBy: { create_at: 'desc' },
+          },
+        },
+        orderBy: { nombre: 'asc' },
+      }),
+      prisma.proceso.groupBy({
+        by: ['estado'],
+        where: { tenant_id: req.tenant_id, create_at: enRango },
+        _count: { id_proceso: true },
+      }),
+      prisma.usuario.findMany({
+        where: { tenant_id: req.tenant_id, rol: { in: ['ADMINISTRADOR', 'ABOGADO'] } },
+        select: {
+          nombre: true,
+          rol: true,
+          _count: { select: { procesos_resp: { where: { create_at: enRango } } } },
+        },
+      }),
+    ]);
+
+    // Una fila por expediente; los clientes sin expedientes también aparecen,
+    // por la misma razón que en el CSV: tenerlos dados de alta es un dato.
+    const filas = [];
+    for (const cliente of clientes) {
+      if (cliente.procesos.length === 0) {
+        filas.push({ cliente: cliente.nombre, radicado: null, responsable: null, estado: 'SIN EXPEDIENTES' });
+        continue;
+      }
+      for (const p of cliente.procesos) {
+        filas.push({
+          cliente: cliente.nombre,
+          radicado: p.numero_radicado,
+          responsable: p.abogado_resp ? p.abogado_resp.nombre : null,
+          estado: p.estado,
+          plazosPendientes: p._count.terminos,
+        });
+      }
+    }
+
+    await prisma.bitacoraAuditoria.create({
+      data: {
+        tenant_id: req.tenant_id,
+        id_usuario: req.user.id_usuario,
+        accion: 'EXPORTAR_REPORTES_PDF',
+        modulo: 'REPORTES',
+        detalle: `Exportó el informe de expedientes a PDF (${filas.length} ${filas.length === 1 ? 'fila' : 'filas'})`,
+        ip_adress: req.ip || '127.0.0.1',
+      },
+    });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=informe-expedientes.pdf');
+
+    generarInforme({
+      consultorio: consultorio ? consultorio.nombre : 'Consultorio',
+      periodo: describirPeriodo(filter, start_date, end_date),
+      generadoPor: req.user.nombre,
+      estados: porEstado.map((e) => ({ estado: e.estado, cantidad: e._count.id_proceso })),
+      porAbogado: abogados
+        .map((a) => ({ nombre: a.nombre, rol: a.rol, procesos: a._count.procesos_resp }))
+        .filter((a) => a.procesos > 0),
+      filas,
+    }, res);
+  } catch (error) {
+    console.error('Error en exportPDF:', error);
+    // Si ya se empezó a escribir el PDF no se puede devolver JSON: la respuesta
+    // ya lleva cabeceras de PDF y el cliente recibiría un archivo corrupto.
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Error al generar el informe en PDF' });
+    } else {
+      res.end();
+    }
   }
 };

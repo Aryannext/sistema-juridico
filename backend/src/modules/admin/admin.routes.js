@@ -10,6 +10,9 @@ router.use(requireRole(['ADMINISTRADOR']));
 // Ruta de auditoría
 router.get('/auditoria', adminController.getAuditoria);
 
+// Exportación de la bitácora a CSV (RNF03). Admite ?modulo= ?accion= ?desde= ?hasta=
+router.get('/auditoria/export', adminController.exportarAuditoria);
+
 // Rutas de gestión de usuarios y sus permisos
 router.get('/usuarios', adminController.getUsuarios);
 router.post('/usuarios', adminController.createUsuario);
