@@ -3,6 +3,7 @@ const { hashPassword, comparePassword } = require('../../utils/bcrypt');
 const { signToken, generateOTP, generateVerificationToken } = require('../../utils/jwt');
 const { sendEmail } = require('../../config/mailer');
 const { validarPassword } = require('../../utils/password');
+const sesion = require('./sesion.auditoria');
 
 exports.registro = async (req, res) => {
   try {
@@ -220,7 +221,13 @@ exports.login = async (req, res) => {
         data: updateData
       });
 
+      // RF05: el intento fallido queda en la bitácora. Solo se registra si el
+      // usuario existe: un intento contra un correo no registrado no tiene
+      // consultorio al que atribuirlo.
+      await sesion.registrarIntentoFallido(user, req, attempts);
+
       if (lockMinutes > 0) {
+        await sesion.registrarBloqueo(user, req, lockMinutes);
         return res.status(401).json({ 
           error: `Demasiados intentos fallidos. Cuenta bloqueada por ${lockMinutes} minuto(s).`,
           lockUntil: updateData.bloqueado_hasta.toISOString()
@@ -302,9 +309,11 @@ exports.login = async (req, res) => {
 
     // No 2FA -> Full login
     const token = signToken({ id_usuario: user.id_usuario, tenant_id: user.tenant_id, rol: user.rol });
-    
-    // Todo: Record audit login
-    
+
+    // RF05: quién entró y cuándo. Aquí estaba el `// Todo: Record audit login`
+    // que la auditoría de coherencia registró como hallazgo H-20.
+    await sesion.registrarEntrada(user, req, false);
+
     res.json({
       token,
       user: {
@@ -358,7 +367,11 @@ exports.verificar2FA = async (req, res) => {
     });
 
     const token = signToken({ id_usuario: user.id_usuario, tenant_id: user.tenant_id, rol: user.rol });
-    
+
+    // RF05: la entrada se registra al completar el SEGUNDO factor, no antes.
+    // Superar la contraseña sin el código no es haber entrado.
+    await sesion.registrarEntrada(user, req, true);
+
     res.json({
       token,
       user: {
@@ -459,5 +472,26 @@ exports.updatePreferencias = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error actualizando preferencias de alerta' });
+  }
+};
+
+/**
+ * Cierre de sesión — RF05.
+ *
+ * El cierre era hasta ahora puramente del lado del cliente: el navegador
+ * borraba el token y ya está. Sin este endpoint, la bitácora podía decir quién
+ * entró pero no hasta cuándo estuvo dentro, que es la mitad de la pregunta.
+ *
+ * No invalida el token en el servidor —los JWT no se revocan sin una lista de
+ * revocación— pero deja constancia de la intención de salir.
+ */
+exports.logout = async (req, res) => {
+  try {
+    await sesion.registrarSalida(req.user, req);
+    res.json({ message: 'Sesión cerrada' });
+  } catch (error) {
+    console.error('Error en logout:', error);
+    // No se devuelve error: el usuario debe poder salir siempre.
+    res.json({ message: 'Sesión cerrada' });
   }
 };

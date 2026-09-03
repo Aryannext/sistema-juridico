@@ -44,6 +44,9 @@ router.post('/login', authController.login);
 // Verificación 2FA
 router.post('/2fa/verificar', authController.verificar2FA);
 
+// Cierre de sesión — deja constancia en la bitácora (RF05)
+router.post('/logout', authMiddleware, authController.logout);
+
 // Obtener Perfil de Usuario
 router.get('/perfil', authMiddleware, authController.getPerfil);
 
