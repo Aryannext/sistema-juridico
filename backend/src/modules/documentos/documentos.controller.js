@@ -1,6 +1,32 @@
 const prisma = require('../../config/prisma');
 
 /**
+ * RF19.1 — las siete categorías documentales del enunciado, en su orden.
+ *
+ * Hasta hoy eran seis: faltaba ESCRITO, y era el último criterio abierto de
+ * HU-13. Un escrito procesal —el género más frecuente en un despacho: memoriales,
+ * recursos, alegatos— tenía que archivarse como "OTRO", que es tanto como no
+ * clasificarlo.
+ *
+ * La lista se declara aquí, y no solo en el enumerado de Prisma, porque el
+ * controlador necesita rechazar una categoría inventada ANTES de llegar a la
+ * base de datos: sin esta comprobación, `categoria: "cualquier_cosa"` viajaba
+ * intacta hasta Prisma y volvía como un 500 sin explicar nada. Debe mantenerse
+ * igual al enum CategoriaDocumento de schema.prisma.
+ */
+const CATEGORIAS = [
+  'DEMANDA',
+  'PRUEBA',
+  'CONTRATO',
+  'ESCRITO',
+  'NOTIFICACION',
+  'PROVIDENCIA',
+  'OTRO',
+];
+
+exports.CATEGORIAS = CATEGORIAS;
+
+/**
  * Cloudflare R2 rechazando la operación. Merece un mensaje propio: sin él, un
  * problema de credenciales del almacenamiento se presentaba como un error
  * interno genérico y llevaba a buscarlo dentro de la aplicación.
@@ -78,6 +104,14 @@ exports.uploadDocumento = async (req, res) => {
 
     if (!req.file) {
       return res.status(400).json({ error: 'No se ha subido ningún archivo' });
+    }
+
+    // RF19.1: omitir la categoría sigue archivando en OTRO, como siempre.
+    // Enviar una que no existe es un error de quien llama, y se dice cuál es.
+    if (categoria && !CATEGORIAS.includes(categoria)) {
+      return res.status(400).json({
+        error: `Categoría no válida. Las categorías admitidas son: ${CATEGORIAS.join(', ')}.`
+      });
     }
 
     // Verificar límite global de almacenamiento (9.5 GB)
@@ -273,9 +307,30 @@ exports.uploadNuevaVersion = async (req, res) => {
 };
 
 // 3. Listar documentos de un proceso específico (HU-14)
+/**
+ * Documentos de un expediente, con filtro por categoría — RF19.2, HU-13.3.
+ *
+ * **El filtro no existía.** RF19.2 y el criterio 3 de HU-13 figuraban como
+ * cumplidos, y no había nada: ni un parámetro en la API, ni un control en la
+ * pantalla. La documentación anterior llegó a explicar que «el filtro por
+ * categoría es en cliente», que tampoco era cierto. Se implementó el 3 de
+ * septiembre de 2026, al comprobar una por una las afirmaciones del catálogo.
+ *
+ * Va en el servidor y no en el navegador porque el filtro tiene que componerse
+ * con las reglas de visibilidad de abajo (RF22): filtrar en el cliente sobre
+ * una lista ya recortada funciona, pero deja el criterio a merced de que nadie
+ * pagine nunca esta consulta.
+ */
 exports.getProcesoDocumentos = async (req, res) => {
   try {
     const { id_proceso } = req.params;
+    const { categoria } = req.query;
+
+    if (categoria && !CATEGORIAS.includes(categoria)) {
+      return res.status(400).json({
+        error: `Categoría no válida. Las categorías admitidas son: ${CATEGORIAS.join(', ')}.`
+      });
+    }
 
     // Verificar si el proceso pertenece al tenant
     const proceso = await prisma.proceso.findFirst({
@@ -316,6 +371,12 @@ exports.getProcesoDocumentos = async (req, res) => {
 
     if (!isFullAccess) {
       queryConditions.visibilidad = { in: allowedVisibilities };
+    }
+
+    // RF19.2. Se aplica DESPUÉS de la visibilidad, nunca en su lugar: filtrar
+    // por categoría no puede ampliar lo que alguien tiene derecho a ver.
+    if (categoria) {
+      queryConditions.categoria = categoria;
     }
 
     const documentos = await prisma.documento.findMany({

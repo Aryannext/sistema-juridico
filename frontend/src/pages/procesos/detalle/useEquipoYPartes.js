@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import api from '../../../api/axios';
+import { soloAbogadosResponsables } from '../../../lib/utils';
 
 /**
  * Estado del expediente, equipo de trabajo y partes procesales.
@@ -25,6 +26,13 @@ export function useEquipoYPartes(idProceso, proceso, alCambiar) {
   const [colaboradorRol, setColaboradorRol] = useState('ABOGADO');
   const [availableUsuarios, setAvailableUsuarios] = useState([]);
   const [loadingUsuarios, setLoadingUsuarios] = useState(false);
+
+  // RN04 — relevo del abogado responsable.
+  const [showCambioRespModal, setShowCambioRespModal] = useState(false);
+  const [nuevoResponsableId, setNuevoResponsableId] = useState('');
+  const [respJustificacion, setRespJustificacion] = useState('');
+  const [candidatosResp, setCandidatosResp] = useState([]);
+  const [cambiandoResp, setCambiandoResp] = useState(false);
 
   const [showAddParteModal, setShowAddParteModal] = useState(false);
   const [parteNombre, setParteNombre] = useState('');
@@ -163,7 +171,64 @@ export function useEquipoYPartes(idProceso, proceso, alCambiar) {
     }
   };
 
+  /**
+   * Candidatos a responsable: abogados del consultorio, activos, distintos del
+   * actual. Se filtra con el mismo criterio que aplica el servidor (RN04); si
+   * aquí se ofreciera a un colaborador, el servidor lo rechazaría y la persona
+   * no entendería por qué aparecía en la lista.
+   */
+  const fetchCandidatosResponsable = async () => {
+    try {
+      const res = await api.get('/admin/usuarios').catch(() => null);
+      if (!res || !res.data) {
+        toast.error('No se pudo obtener la lista de abogados del consultorio.');
+        return;
+      }
+      const candidatos = soloAbogadosResponsables(res.data).filter(
+        (u) => u.id_usuario !== proceso?.id_abogado_resp
+      );
+      setCandidatosResp(candidatos);
+      setNuevoResponsableId(candidatos.length > 0 ? candidatos[0].id_usuario : '');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleCambiarResponsable = async (e) => {
+    e.preventDefault();
+    if (!nuevoResponsableId) {
+      toast.error('Seleccione al abogado que asumirá el expediente');
+      return;
+    }
+    try {
+      setCambiandoResp(true);
+      const res = await api.put(`/procesos/${idProceso}/responsable`, {
+        id_abogado_resp: nuevoResponsableId,
+        justificacion: respJustificacion,
+      });
+      toast.success(res.data.message || 'Abogado responsable actualizado');
+      setShowCambioRespModal(false);
+      setRespJustificacion('');
+      alCambiar?.();
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.error || 'Error al cambiar el abogado responsable');
+    } finally {
+      setCambiandoResp(false);
+    }
+  };
+
   return {
+    showCambioRespModal,
+    setShowCambioRespModal,
+    nuevoResponsableId,
+    setNuevoResponsableId,
+    respJustificacion,
+    setRespJustificacion,
+    candidatosResp,
+    cambiandoResp,
+    fetchCandidatosResponsable,
+    handleCambiarResponsable,
     showChangeEstadoModal,
     setShowChangeEstadoModal,
     newEstado,

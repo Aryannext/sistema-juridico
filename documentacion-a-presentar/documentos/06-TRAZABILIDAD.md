@@ -192,7 +192,7 @@ respondiera correctamente pero sin contenido seguiría marcando fallo.
 
 > **Los dos últimos verificadores miran en direcciones distintas.** `verificar:docs` compara las
 > dos carpetas de documentación entre sí; `verificar:referencias` compara la documentación contra
-> el **código**: revisa las 67 rutas de la API, los 19 modelos, los 56 valores de enumerado y
+> el **código**: revisa las 70 rutas de la API, los 19 modelos, los 57 valores de enumerado y
 > cada archivo citado entre comillas invertidas.
 >
 > El segundo se escribió después de una revisión manual que encontró cuatro desajustes que nadie

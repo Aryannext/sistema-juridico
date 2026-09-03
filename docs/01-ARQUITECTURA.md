@@ -101,7 +101,7 @@ graph TB
     end
 
     subgraph "Proceso Node.js — puerto 3000"
-        API["<b>API REST Express</b><br/>13 módulos · 67 endpoints"]
+        API["<b>API REST Express</b><br/>13 módulos · 70 endpoints"]
         CRON["<b>node-cron</b><br/>recordatorios cada 15 min<br/>en el mismo proceso"]
     end
 

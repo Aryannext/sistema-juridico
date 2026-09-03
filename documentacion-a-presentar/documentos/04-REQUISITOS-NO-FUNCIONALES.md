@@ -49,16 +49,31 @@ JWT de 8 horas y código 2FA con vigencia de 5 minutos.
 | RNF02.4 | El token de sesión vence a las 8 horas | ✅ |
 | RNF02.5 | El código de doble factor vence a los 5 minutos | ✅ |
 | RNF02.6 | Existe recuperación de contraseña | ✅ |
-| RNF02.7 | La sesión expira por 30 minutos de inactividad | 🟥 |
+| RNF02.7 | La sesión expira por 30 minutos de inactividad | ✅ |
 | RNF02.8 | El inicio de sesión tiene un limitador de peticiones dedicado | 🟥 |
 
-**Estado 🟡.** Seis de ocho.
+**Estado 🟡.** Siete de ocho.
 
 - **RNF02.2** se cumple desde el 2 de septiembre de 2026. Antes solo lo validaba el navegador:
-  una petición directa a la API aceptaba la contraseña `"1"`.
+  una petición directa a la API aceptaba la contraseña `"1"`. El 3 de septiembre de 2026 se le
+  añadió la exigencia de **carácter especial**, que HU-01.6 pedía desde el principio y que no se
+  comprobaba en ninguna parte: `Segura2026` pasaba el filtro. Las cinco reglas están fijadas por
+  `politica_de_contrasenas.test.js`, y los dos formularios que fijan contraseña aplican ahora las
+  mismas que el servidor.
 - **RNF02.3** es escalado: 1, 5, 15, 30 y 60 minutos según los intentos acumulados.
+- **RNF02.7** se cumple desde el 3 de septiembre de 2026 (`useCierrePorInactividad.js`).
 - **RNF02.8** sigue pendiente. Lo que hoy protege el acceso es el bloqueo por usuario, que frena
   el ataque a una cuenta concreta pero no uno distribuido contra muchas.
+
+> **Hasta dónde llega RNF02.7, dicho con precisión.** Cierra la sesión **en el navegador**: borra
+> el token y devuelve a la pantalla de acceso, explicando por qué. El JWT sigue siendo válido en
+> el servidor hasta caducar a las 8 horas, porque un JWT es autocontenido y no se revoca sin
+> mantener una lista de tokens anulados, que este sistema no lleva.
+>
+> Se declara así en vez de marcarlo ✅ a secas porque el matiz importa: protege del **riesgo que
+> el requisito describe** —un portátil desatendido en una sala de audiencias o una mesa
+> compartida, con expedientes y datos de clientes a la vista— y no de alguien que hubiera copiado
+> el token antes de marcharse. Para eso haría falta una lista de revocación, que es otra decisión.
 
 ---
 
@@ -117,16 +132,34 @@ borrado, pero **tampoco hay política de retención escrita ni respaldos automá
 | RNF05.2 | El texto parcial se aplica desde 3 caracteres | ✅ |
 | RNF05.3 | Los filtros de estado y tipo se combinan con la búsqueda | ✅ |
 | RNF05.4 | Los resultados se paginan de 20 en 20 | ✅ |
-| RNF05.5 | La respuesta tarda menos de 2 segundos | 🟡 |
+| RNF05.5 | La respuesta tarda menos de 2 segundos | ✅ |
 
-**Estado 🟡.** Los cuatro primeros están verificados automáticamente.
+**Estado ✅.** Los cuatro primeros estaban verificados automáticamente. RNF05.5 se cerró el 3 de
+septiembre de 2026.
 
-Sobre RNF05.5, hay una medición real del 2 de septiembre de 2026: **el servidor responde entre 5
-y 17 ms**. El criterio se cumple hoy con holgura. Lo que **no** está garantizado es que siga
-cumpliéndose al crecer: **la base de datos solo tiene 2 índices**, y las consultas filtradas por
-consultorio recorren la tabla entera. Con pocos datos no se nota; con volumen real, sí.
+Hasta entonces se declaraba como parcial a propósito, con esta razón: había una medición real del
+2 de septiembre de 2026 —**el servidor responde entre 5 y 17 ms**— pero **la base de datos solo
+tenía 2 índices**, y las consultas filtradas por consultorio recorrían la tabla entera. El
+criterio se cumplía por el tamaño de los datos, no por el diseño. Cumplirlo por casualidad no es
+cumplirlo.
 
-> Se declara como parcial a propósito. Cumplirlo por casualidad no es cumplirlo.
+Se añadieron **once índices**. Seis son B-tree corrientes: consultorio y fecha para el listado
+paginado, los dos filtros combinables de RNF05.3, y las dos claves por las que se decide qué
+expedientes ve quien no es Administrador. Los otros cinco no podían serlo. La búsqueda parcial es
+`ILIKE '%texto%'`, con comodín por delante, y **un B-tree no puede resolverla**: ordena por
+prefijo y aquí no hay prefijo. Son índices GIN de trigramas (`pg_trgm`), que indexan la búsqueda
+por dentro de la palabra. Eso convierte el umbral de 3 caracteres de RNF05.2 en parte de la
+garantía y no solo en una comodidad: tres es el tamaño del trigrama.
+
+> **Cómo se verifica, ya que el cronómetro aquí no vale.** Con la tabla pequeña, la consulta tarda
+> lo mismo con índices que sin ellos —ese era justamente el espejismo—. Así que `npm run
+> verificar:indices` no mide tiempo: apaga el recorrido secuencial y pide a PostgreSQL el plan de
+> las diez consultas que emite el listado. Si alguna sigue recorriendo la tabla entera aun con el
+> recorrido penalizado, es que no tiene ningún índice que le sirva. Ninguna lo hace.
+>
+> Lo que se afirma, por tanto, no es «responde en X ms» —eso depende de la máquina—, sino que
+> ninguna de esas consultas tendrá que leer la tabla completa cuando crezca. Que era lo único que
+> faltaba.
 
 ---
 
@@ -245,13 +278,13 @@ RNF11.4 sí es una carencia real: los intentos cruzados no se registran.
 
 | Estado | Cantidad | Cuáles |
 |---|---:|---|
-| ✅ Cumplidos | 2 | RNF04, RNF06 |
-| 🟡 Parciales, con el límite declarado | 5 | RNF02, RNF03, RNF05, RNF10, RNF11 |
+| ✅ Cumplidos | 3 | RNF04, RNF05, RNF06 |
+| 🟡 Parciales, con el límite declarado | 4 | RNF02, RNF03, RNF10, RNF11 |
 | 🔵 Dependen de infraestructura | 2 | RNF01, RNF07 |
 | ❓ Nunca medidos | 1 | RNF08 |
 
-**Los no funcionales son el punto más débil del sistema, y conviene decirlo antes de que lo
-pregunten.** Los funcionales están en 48 de 59 cumplidos; aquí solo 2 de 10 lo están del todo.
+**Los no funcionales siguen siendo el punto más débil del sistema, y conviene decirlo antes de que
+lo pregunten.** Los funcionales están en 58 de 59 cumplidos; aquí solo 3 de 10 lo están del todo.
 
 No es casualidad: los requisitos no funcionales exigen medir, monitorear y respaldar —trabajo que
 no produce pantallas visibles y que suele quedar para el final. Las tres carencias que más pesan

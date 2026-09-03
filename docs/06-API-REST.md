@@ -1,7 +1,7 @@
 # 06 — Catálogo de la API REST
 
 **Base:** `/api` · **Formato:** JSON · **Autenticación:** `Authorization: Bearer <JWT>`
-**Total:** 67 endpoints en 13 módulos (+ 1 de salud).
+**Total:** 70 endpoints en 13 módulos (+ 1 de salud).
 Extraído directamente de los archivos `*.routes.js`. Recuento reproducible:
 
 ```bash
@@ -21,7 +21,7 @@ grep -rhoE "router\.(get|post|put|patch|delete)\(" backend/src/modules/*/*.route
 
 ---
 
-## 1. Autenticación — `/api/auth` (10)
+## 1. Autenticación — `/api/auth` (12)
 
 | Método | Ruta | Auth | Permiso | Audit | Qué hace | HU |
 |---|---|:--:|---|:--:|---|---|
@@ -34,6 +34,7 @@ grep -rhoE "router\.(get|post|put|patch|delete)\(" backend/src/modules/*/*.route
 | POST | `/2fa/verificar` | preAuth | — | — | Canjea el código OTP por el JWT definitivo | HU-32 |
 | GET | `/perfil` | ✔ | — | — | Datos del usuario en sesión + preferencias | HU-01 |
 | PUT | `/preferencias` | ✔ | — | — | Canal y prioridades por tipo de evento | HU-29 |
+| PATCH | `/nombre-usuario` | ✔ | — | — | Fija, cambia o retira el nombre de usuario propio. Único en todo el sistema; vaciarlo libera la reserva y deja el correo como único acceso (RF01.2) | HU-01 |
 | POST | `/2fa/configurar` | ✔ | — | — | Activa o desactiva el segundo factor | HU-32 |
 | POST | `/logout` | ✔ | — | — | Registra el cierre de sesión en la bitácora. El JWT sigue siendo válido hasta caducar: la sesión se descarta en el navegador (ver nota) | HU-01 |
 
@@ -48,7 +49,9 @@ grep -rhoE "router\.(get|post|put|patch|delete)\(" backend/src/modules/*/*.route
 > pretende invalidar nada: existe para que el cierre de sesión **deje rastro**. Sin ella, la
 > bitácora podría decir quién entró pero nunca quién salió.
 
-**Cuerpo de `POST /login`:** `{ email, password }`
+**Cuerpo de `POST /login`:** `{ identificador, password }` — el `identificador` es el correo **o**
+el nombre de usuario; el sistema los distingue por la arroba, que un nombre de usuario no puede
+contener. Se sigue aceptando `{ email, password }` por compatibilidad.
 **Respuesta sin 2FA:** `{ token, user: { id, nombre, rol, tenant_id } }`
 **Respuesta con 2FA:** `{ message, require2FA: true, preAuthToken }` (el `preAuthToken` vive 10 min)
 **Respuesta con cuenta bloqueada:** `403 { error, lockUntil }` — el frontend usa `lockUntil` para pintar la cuenta regresiva
@@ -76,17 +79,19 @@ grep -rhoE "router\.(get|post|put|patch|delete)\(" backend/src/modules/*/*.route
 
 ---
 
-## 4. Procesos — `/api/procesos` (10)
+## 4. Procesos — `/api/procesos` (12)
 
 | Método | Ruta | Permiso | Audit | Qué hace | HU |
 |---|---|---|:--:|---|---|
 | POST | `/` | `PROCESOS:CREAR` | ✔ | Crea expediente; valida radicado no duplicado | HU-07 |
 | GET | `/` | `PROCESOS:LEER` | — | **Búsqueda y paginación.** Query: `search`, `estado`, `tipo_proceso`, `page`, `limit` | HU-31 |
+| GET | `/atencion` | `PROCESOS:LEER` | — | Expedientes sin movimiento reciente, para el panel. **Va antes que `/:id`**: si no, Express leería "atencion" como un identificador | HU-24 |
 | GET | `/:id` | `PROCESOS:LEER` | — | Detalle con cliente, equipo, partes e historial | HU-07, HU-10 |
 | PUT | `/:id` | `PROCESOS:EDITAR` | ✔ | Edita juzgado, clase, área y fecha. **El radicado no es modificable** | HU-33 |
 | POST | `/:id/abogados` | `PROCESOS:EDITAR` | ✔ | Asigna abogado o colaborador | HU-08 |
 | DELETE | `/:id/abogados/:id_usuario` | `PROCESOS:EDITAR` | ✔ | Desasigna | HU-08 |
 | PUT | `/:id/estado` | `PROCESOS:EDITAR` | ✔ | Cambia estado aplicando RN03 y RN05; dispara webhook | HU-09 |
+| PUT | `/:id/responsable` | `PROCESOS:EDITAR` | ✔ | **Releva al abogado responsable (RN04).** Exige `justificacion`. El nuevo responsable debe ser del consultorio, estar activo y ser Abogado o Administrador. Deja rastro en bitácora e historial | HU-08 |
 | POST | `/:id/partes` | `PROCESOS:EDITAR` | ✔ | Registra parte procesal | HU-11 |
 | DELETE | `/:id/partes/:id_parte` | `PROCESOS:EDITAR` | ✔ | Elimina parte procesal | HU-11 |
 | DELETE | `/:id` | `PROCESOS:ELIMINAR` | ✔ | Borrado definitivo en cascada. Exige `ADMINISTRADOR` + `justificacion` | HU-34 |
@@ -232,8 +237,18 @@ cuyo destinatario **sigue activo**, la respuesta es `403` con el mensaje explica
 | GET | `/dashboard` | ✔ | Procesos, audiencias futuras y las 10 últimas novedades del historial | HU-27 |
 | GET | `/procesos/:id` | ✔ | Detalle con documentos `COMPARTIDO_CLIENTE` únicamente | HU-27, HU-28 |
 
-Ambas exigen `req.user.rol === 'CLIENTE'` dentro del controlador. Esto es lo que **impide
-que un Administrador suplante a un cliente**, cumpliendo la segunda prohibición de RN02.
+Ambas exigen `req.user.rol === 'CLIENTE'` dentro del controlador, lo que impide entrar aquí con
+una sesión del despacho.
+
+> **Eso solo cerraba la mitad de RN02.3, y hasta el 3 de septiembre de 2026 la otra mitad estaba
+> abierta.** Comprobar el rol impide que un Administrador entre *con su sesión*; no impedía que
+> entrara *con la del cliente*, porque era él quien fijaba esa contraseña al habilitar el acceso
+> —`POST /clientes/:id/portal-access` recibía un campo `password`— y luego se la comunicaba.
+>
+> Ese campo ya no se admite: la petición que lo lleve se rechaza con `400` y el código
+> `PASSWORD_NO_ADMITIDA`, en vez de ignorarlo en silencio, para que nadie crea que fijó una clave
+> que no existe. La cuenta nace con el hash de un secreto aleatorio que no se muestra ni se
+> guarda, y el cliente elige la suya con un enlace de un solo uso y 24 horas de vigencia.
 
 ---
 

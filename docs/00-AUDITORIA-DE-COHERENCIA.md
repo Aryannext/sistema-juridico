@@ -195,7 +195,19 @@ Son precisamente los campos que soportan 2FA, bloqueo progresivo de cuenta, veri
 
 Diagrama: `varchar(20)`. Esquema real: `@db.VarChar(255)`. El diagrama es incorrecto — 20 caracteres no alcanzan para un nombre de archivo real.
 
-### H-18 🟥 Falta la categoría documental `ESCRITOS` exigida por RF19
+### H-18 ✅ **[CORREGIDO el 3 de septiembre de 2026]** Falta la categoría documental `ESCRITOS` exigida por RF19
+
+> **Resuelto.** Migración `20260903160300_categoria_escrito`: `ALTER TYPE "CategoriaDocumento"
+> ADD VALUE 'ESCRITO'`. El valor está también en el desplegable de carga y en la lista que el
+> controlador usa para validar, y `categorias_documentales.test.js` comprueba que los tres sitios
+> coinciden: la lista vivía por triplicado y nada garantizaba que dijeran lo mismo.
+>
+> De paso se cerró un defecto vecino que la auditoría no había visto: enviar una categoría
+> inexistente devolvía un `500` desde Prisma, porque el valor viajaba sin validar. Ahora devuelve
+> un `400` que enumera las admitidas.
+>
+> El análisis original se conserva íntegro:
+
 
 - **Exige RF19:** siete categorías — *demandas, pruebas, contratos, **escritos**, notificaciones, providencias, otros*. HU-13 repite las siete.
 - **Implementa el código:** `enum CategoriaDocumento { DEMANDA, PRUEBA, CONTRATO, NOTIFICACION, PROVIDENCIA, OTRO }` — **seis**. Falta `ESCRITO`.
@@ -323,6 +335,20 @@ De 275 comentarios en `backend/src`, aproximadamente **177 están en inglés** (
 
 ### H-26 🟥 Siete requisitos declarados no están completamente implementados
 
+> **Parcialmente resuelto.** La fila de la política de contraseñas se cerró del todo el 3 de
+> septiembre de 2026, y merece una nota porque el cierre llegó en dos tiempos y el primero pasó
+> por completo: el 2-09-2026 se añadió la validación en el servidor (`utils/password.js`), pero
+> **sin la exigencia de símbolo** que esta misma fila enumera. El criterio quedó marcado como
+> cumplido mientras `Segura2026` seguía pasando el filtro. La regla que faltaba y una prueba que
+> fija las cinco están desde el 3-09-2026 (`politica_de_contrasenas.test.js`).
+>
+> Un requisito dado por cerrado sin comprobar cada una de sus partes es la forma más silenciosa
+> de esta misma auditoría: no falta el trabajo, falta la verificación.
+>
+> El estado vigente de las demás filas está en
+> [03-CATALOGO-REQUISITOS.md](03-CATALOGO-REQUISITOS.md). El análisis original se conserva:
+
+
 Detalle completo con evidencia en [03-CATALOGO-REQUISITOS.md](03-CATALOGO-REQUISITOS.md). Resumen:
 
 | Requisito | Qué exige | Qué hay | Brecha |
@@ -333,7 +359,7 @@ Detalle completo con evidencia en [03-CATALOGO-REQUISITOS.md](03-CATALOGO-REQUIS
 | RNF03 / HU-26 | Exportar bitácora y reportes en **CSV o PDF** | Solo CSV (`reportes.controller.js:201`). La bitácora no tiene endpoint de exportación | Parcial |
 | RF54 | Enlace de verificación con vigencia de 24 h, un solo uso y reenvío | `token_verificacion` no guarda fecha de emisión; `verificarEmail` no valida vigencia; no hay endpoint de reenvío | Parcial |
 | RF17 | Aviso de proceso incompleto en **el dashboard y** la ficha | Solo en la ficha (`ProcesoDetalle.jsx:744`) | Parcial |
-| RN04 | No desasignar al único abogado responsable | `removeAbogadoProceso` asume que `id_abogado_resp` lo garantiza, pero no valida el cambio del responsable principal | Parcial |
+| ~~RN04~~ | ~~No desasignar al único abogado responsable~~ | ~~`removeAbogadoProceso` asume que `id_abogado_resp` lo garantiza, pero no valida el cambio del responsable principal~~ | ✅ **CERRADA** el 3-09-2026. El diagnóstico se quedaba corto: `createProceso` no validaba el responsable en absoluto, ni siquiera que fuera del mismo consultorio |
 
 ---
 

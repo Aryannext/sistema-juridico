@@ -53,6 +53,9 @@ router.get('/perfil', authMiddleware, authController.getPerfil);
 // Actualizar Preferencias de Alertas
 router.put('/preferencias', authMiddleware, authController.updatePreferencias);
 
+// Fijar, cambiar o retirar el propio nombre de usuario (RF01.2)
+router.patch('/nombre-usuario', authMiddleware, authController.actualizarNombreUsuario);
+
 // Configurar 2FA (Requerirá auth)
 router.post('/2fa/configurar', authMiddleware, authController.configurar2FA);
 

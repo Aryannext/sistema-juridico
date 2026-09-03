@@ -144,7 +144,10 @@ flowchart TD
     B -->|Sí| C{"¿Menos<br/>de 10 MB?"}
     C -->|No| C1["400 · Indica<br/>el tamaño máximo"] --> End1
 
-    C -->|Sí| D["Sube al almacenamiento"]
+    C -->|Sí| CA{"¿Categoría<br/>de las siete?"}
+    CA -->|No| CA1["400 · Enumera<br/>las admitidas"] --> End1
+
+    CA -->|Sí| D["Sube al almacenamiento"]
     D --> E{"¿El almacenamiento<br/>lo aceptó?"}
     E -->|No| E1["502 · Nombra el<br/>almacenamiento, no un<br/>error genérico"] --> End1
 
@@ -157,12 +160,14 @@ flowchart TD
     K --> L([Aparece en el portal])
 
     classDef rechazo fill:#3a1a1a,stroke:#c04040,color:#fff
-    class B1,C1,E1 rechazo
+    class B1,C1,CA1,E1 rechazo
 ```
 
-**Las tres ramas de rechazo dicen qué corregir.** Hasta el 2 de septiembre de 2026 las tres
-devolvían el mismo `500 "Algo salió mal!"`, porque la validación de multer ocurre **antes** del
-controlador y su `try/catch` nunca llegaba a ejecutarse.
+**Las cuatro ramas de rechazo dicen qué corregir.** Las de formato y tamaño devolvían el mismo
+`500 "Algo salió mal!"` hasta el 2 de septiembre de 2026, porque la validación de multer ocurre
+**antes** del controlador y su `try/catch` nunca llegaba a ejecutarse. La de categoría se añadió
+el 3 de septiembre: una categoría inexistente viajaba sin validar hasta Prisma y volvía con el
+mismo error opaco.
 
 ---
 

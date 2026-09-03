@@ -8,7 +8,7 @@ import {
   Users, UserPlus, Gavel
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatFechaSinHora } from '../../lib/utils';
+import { formatFechaSinHora, nombreRol } from '../../lib/utils';
 
 import { useActuaciones } from './detalle/useActuaciones';
 import { useDocumentos } from './detalle/useDocumentos';
@@ -91,6 +91,7 @@ export default function ProcesoDetalle() {
     deleteJustificacion, setDeleteJustificacion,
     deleteConfirmText, setDeleteConfirmText,
     deleteConfirmCheckbox, setDeleteConfirmCheckbox,
+    filtroCategoria, aplicarFiltroCategoria,
     docNombre, setDocNombre, docCategoria, setDocCategoria,
     docVisibilidad, setDocVisibilidad, setDocFile,
     fetchDocuments, handleDocUploadSubmit, handleNewVersionSubmit,
@@ -126,6 +127,11 @@ export default function ProcesoDetalle() {
   } = useTerminos(id);
 
   const {
+    showCambioRespModal, setShowCambioRespModal,
+    nuevoResponsableId, setNuevoResponsableId,
+    respJustificacion, setRespJustificacion,
+    candidatosResp, cambiandoResp,
+    fetchCandidatosResponsable, handleCambiarResponsable,
     showChangeEstadoModal, setShowChangeEstadoModal, newEstado, setNewEstado,
     estadoJustificacion, setEstadoJustificacion,
     forceArchivado, setForceArchivado, pendingWarnings, setPendingWarnings,
@@ -388,6 +394,23 @@ export default function ProcesoDetalle() {
                       <p className="text-xs text-neutral-400 mt-0.5">{proceso.abogado_resp?.email}</p>
                     </div>
                   </div>
+                  {/*
+                    RN04 - el relevo. Hasta ahora no existia: cuando un abogado
+                    dejaba el despacho, sus expedientes se quedaban con su nombre
+                    encima y sin nadie que los vigilara de verdad.
+                  */}
+                  {canModify && (
+                    <button
+                      onClick={() => {
+                        fetchCandidatosResponsable();
+                        setShowCambioRespModal(true);
+                      }}
+                      className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white hover:border-neutral-700 transition-colors cursor-pointer text-xs font-semibold"
+                    >
+                      <UserPlus size={14} />
+                      <span>Cambiar responsable</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -561,6 +584,17 @@ export default function ProcesoDetalle() {
                         <p className="text-xs text-neutral-400">
                           Editó: <span className="text-white bg-neutral-900 px-1.5 py-0.5 rounded text-[10px]">{hist.campo_modificado}</span>
                         </p>
+                        {/* HU-22: cuando la entrada guarda un antes y un
+                            después legibles se muestran. Sin esto, el historial
+                            decía QUÉ se tocó pero no en qué quedó. Los valores
+                            que son JSON se omiten: no aportan nada aquí. */}
+                        {hist.valor_nuevo && !hist.valor_nuevo.startsWith('{') && (
+                          <p className="text-[10px] text-neutral-500 flex items-center gap-1.5 flex-wrap">
+                            <span className="text-neutral-400">{hist.valor_anterior || '—'}</span>
+                            <span className="text-neutral-600">→</span>
+                            <span className="text-white font-semibold">{hist.valor_nuevo}</span>
+                          </p>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -579,13 +613,35 @@ export default function ProcesoDetalle() {
               <h2 className="text-xl font-bold text-white">Gestión Documental</h2>
               <p className="text-xs text-neutral-400">Cargue y gestione contratos, demandas y pruebas con control de versiones físico.</p>
             </div>
-            <button
-              onClick={() => setShowUploadDocModal(true)}
-              className="flex items-center gap-1.5 bg-white text-black hover:bg-neutral-200 font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer text-xs"
-            >
-              <Upload size={14} />
-              <span>Subir Archivo</span>
-            </button>
+            <div className="flex items-center gap-3">
+              {/*
+                RF19.2 / HU-13.3 - filtrar por categoria. El requisito figuraba
+                como cumplido y no existia en ninguna parte: ni parametro en la
+                API ni control en la pantalla.
+              */}
+              <select
+                value={filtroCategoria}
+                onChange={(e) => aplicarFiltroCategoria(e.target.value)}
+                className="bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-3 py-2.5 text-xs text-neutral-300 cursor-pointer"
+                aria-label="Filtrar documentos por categoria"
+              >
+                <option value="">Todas las categorías</option>
+                <option value="DEMANDA">Demanda</option>
+                <option value="PRUEBA">Prueba</option>
+                <option value="CONTRATO">Contrato</option>
+                <option value="ESCRITO">Escrito</option>
+                <option value="NOTIFICACION">Notificación</option>
+                <option value="PROVIDENCIA">Providencia</option>
+                <option value="OTRO">Otro</option>
+              </select>
+              <button
+                onClick={() => setShowUploadDocModal(true)}
+                className="flex items-center gap-1.5 bg-white text-black hover:bg-neutral-200 font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer text-xs"
+              >
+                <Upload size={14} />
+                <span>Subir Archivo</span>
+              </button>
+            </div>
           </div>
 
           {loadingDocs ? (
@@ -595,8 +651,14 @@ export default function ProcesoDetalle() {
           ) : documentos.length === 0 ? (
             <div className="text-center py-16 bg-neutral-950 border border-neutral-800 rounded-3xl">
               <FileText className="mx-auto text-neutral-700 mb-3" size={40} />
-              <h3 className="text-white font-bold text-sm">Sin Documentos</h3>
-              <p className="text-neutral-400 text-xs mt-1">No se han cargado archivos soporte en este expediente.</p>
+              <h3 className="text-white font-bold text-sm">
+                {filtroCategoria ? 'Sin documentos en esta categoría' : 'Sin Documentos'}
+              </h3>
+              <p className="text-neutral-400 text-xs mt-1">
+                {filtroCategoria
+                  ? 'El expediente puede tener documentos de otras categorías. Cambie el filtro para verlos.'
+                  : 'No se han cargado archivos soporte en este expediente.'}
+              </p>
             </div>
           ) : (
             <div className="bg-neutral-950 border border-neutral-800 rounded-3xl overflow-hidden shadow-xl">
@@ -1247,9 +1309,11 @@ export default function ProcesoDetalle() {
                     onChange={(e) => setDocCategoria(e.target.value)}
                     className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300"
                   >
+                    {/* RF19.1 — las siete categorías, en el orden del enunciado. */}
                     <option value="DEMANDA">Demanda</option>
                     <option value="PRUEBA">Prueba</option>
                     <option value="CONTRATO">Contrato</option>
+                    <option value="ESCRITO">Escrito</option>
                     <option value="NOTIFICACION">Notificación</option>
                     <option value="PROVIDENCIA">Providencia</option>
                     <option value="OTRO">Otro</option>
@@ -2150,6 +2214,95 @@ export default function ProcesoDetalle() {
                   >
                     <UserPlus size={16} />
                     <span>Asignar Miembro</span>
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL - CAMBIAR ABOGADO RESPONSABLE (RN04) */}
+      {showCambioRespModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
+          <div className="relative w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-2xl animate-scale-in my-8">
+            <button
+              onClick={() => setShowCambioRespModal(false)}
+              className="absolute top-6 right-6 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <X size={24} />
+            </button>
+
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-neutral-400 bg-clip-text text-transparent mb-2">
+              Cambiar Abogado Responsable
+            </h2>
+            <p className="text-sm text-neutral-400 mb-6">
+              Actualmente responde por este expediente <span className="text-white font-medium">{proceso.abogado_resp?.nombre}</span>.
+              El relevo queda registrado en la bitacora y en el historial del expediente.
+            </p>
+
+            {candidatosResp.length === 0 ? (
+              <div className="text-center py-8 space-y-4">
+                <p className="text-sm text-neutral-400">
+                  No hay otro abogado activo en el consultorio que pueda asumir el expediente.
+                  Un colaborador puede trabajar en el caso, pero no responder por el.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowCambioRespModal(false)}
+                  className="px-6 py-2 bg-neutral-900 border border-neutral-800 text-white rounded-xl cursor-pointer text-xs font-bold"
+                >
+                  Cerrar
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleCambiarResponsable} className="space-y-4 md:space-y-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    Nuevo Abogado Responsable
+                  </label>
+                  <select
+                    value={nuevoResponsableId}
+                    onChange={(e) => setNuevoResponsableId(e.target.value)}
+                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300"
+                  >
+                    {candidatosResp.map((u) => (
+                      <option key={u.id_usuario} value={u.id_usuario}>
+                        {u.nombre} ({nombreRol(u.rol)})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    Justificacion
+                  </label>
+                  <textarea
+                    required
+                    rows={3}
+                    value={respJustificacion}
+                    onChange={(e) => setRespJustificacion(e.target.value)}
+                    placeholder="Motivo del relevo: salida del despacho, redistribucion de carga, conflicto de interes..."
+                    className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300 resize-none"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-4 pt-4 border-t border-neutral-900">
+                  <button
+                    type="button"
+                    onClick={() => setShowCambioRespModal(false)}
+                    className="px-5 py-2.5 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white transition-colors cursor-pointer text-sm font-semibold"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={cambiandoResp}
+                    className="bg-white hover:bg-neutral-200 text-black font-semibold px-6 py-2.5 rounded-xl transition-all cursor-pointer text-sm flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {cambiandoResp ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
+                    <span>Confirmar relevo</span>
                   </button>
                 </div>
               </form>

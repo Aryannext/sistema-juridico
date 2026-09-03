@@ -15,7 +15,7 @@ demostrado, línea por línea, dónde sí coinciden y dónde no.
 
 | RF | HU | Endpoint | Archivo | Prueba | Estado |
 |---|---|---|---|---|:--:|
-| RF01 | HU-01 | `POST /auth/login` | `auth.controller.js: login` | `auth.controller.test.js` | 🟡 |
+| RF01 | HU-01 | `POST /auth/login` · `PATCH /auth/nombre-usuario` | `auth.controller.js: login` · `utils/nombre-usuario.js` | `auth.controller.test.js` · `acceso_por_nombre_usuario.test.js` | ✅ |
 | RF02 | HU-02 | — | `schema.prisma: RolUsuario` | — | ✅ |
 | RF03 | HU-02 | `PUT /admin/permisos/:id` | `admin.controller.js: updatePermisos` · `roles.middleware.js` | — | ✅ |
 | RF04 | HU-02 | `GET /procesos` | `procesos.controller.js: getProcesos` | — | ✅ |
@@ -38,7 +38,7 @@ demostrado, línea por línea, dónde sí coinciden y dónde no.
 | RF16 | HU-11 | — | sin validación bloqueante (correcto) | — | ✅ |
 | RF17 | HU-11 | — | `ProcesoDetalle.jsx:744` | — | 🟡 |
 | RF18 | HU-12 | `POST /documentos` | `documentos.routes.js` (multer, 10 MB) | — | 🟡 |
-| RF19 | HU-13 | `POST /documentos` | `schema.prisma: CategoriaDocumento` | — | 🟡 |
+| RF19 | HU-13 | `POST /documentos` · `GET /documentos/proceso/:id?categoria=` | `schema.prisma: CategoriaDocumento` · `getProcesoDocumentos` | `categorias_documentales.test.js` | ✅ |
 | RF20 | HU-13 | `GET /documentos/proceso/:id` | `getProcesoDocumentos` (`created_at desc`) | — | ✅ |
 | RF21 | HU-13 | `POST /documentos` | `Documento.id_proceso` opcional | — | ✅ |
 | RF22 | HU-14 | `GET /documentos/proceso/:id` | `documentos.controller.js:282-300` | — | ✅ |
@@ -85,9 +85,9 @@ distingue un CRUD de un sistema real, y **cinco de las nueve tienen prueba autom
 | RN | Regla | Dónde se aplica | Prueba | Estado |
 |---|---|---|---|:--:|
 | RN01 | Bitácora inmutable | Ausencia de `update`/`delete` sobre `bitacoraAuditoria` en todo el backend | `auditoria.test.js` | ✅ |
-| RN02 | Límites del Administrador | `notificaciones.controller.js`; `portal.controller.js` exige `rol === 'CLIENTE'` | `notificaciones.test.js` | 🟡 |
+| RN02 | Límites del Administrador | `notificaciones.controller.js`; `portal.controller.js` exige `rol === 'CLIENTE'`; `clientes.controller.js: createPortalAccess` no admite contraseña | `notificaciones.test.js` · `rn02_portal_cliente.test.js` | ✅ |
 | RN03 | Reactivación restringida | `cambiarEstadoProceso`, Regla 2 | — | ✅ |
-| RN04 | Continuidad del abogado responsable | `removeAbogadoProceso` | — | 🟡 |
+| RN04 | Continuidad del abogado responsable | `procesos/responsable.js` · `createProceso` · `cambiarResponsable` · `removeAbogadoProceso` | `rn04_responsable.test.js` | ✅ |
 | RN05 | No archivar con pendientes | `cambiarEstadoProceso`, Regla 1 | `procesos.controller.test.js` | ✅ |
 | RN06 | Documento inactivo no se reactiva | `updateDocumentoEstado` | `eliminacion_documentos.test.js` | ✅ |
 | RN07 | Término tardío automático | `gestionarTermino` | `terminos_audiencias.test.js` | ✅ |

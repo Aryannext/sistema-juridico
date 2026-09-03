@@ -13,6 +13,13 @@ export default function AjustesPage() {
   const [twoFactor, setTwoFactor] = useState(false);
   const [toggling2FA, setToggling2FA] = useState(false);
 
+  // RF01.2 — nombre de usuario como segundo identificador de acceso.
+  // `nombreUsuarioGuardado` conserva el que está vigente en el servidor, para
+  // poder distinguir "aún no lo he escrito" de "ya lo tenía y lo estoy cambiando".
+  const [nombreUsuario, setNombreUsuario] = useState('');
+  const [nombreUsuarioGuardado, setNombreUsuarioGuardado] = useState(null);
+  const [savingNombreUsuario, setSavingNombreUsuario] = useState(false);
+
   // State for Tenant Profile
   const [tenantLoading, setTenantLoading] = useState(isAdmin);
   const [tenantName, setTenantName] = useState('');
@@ -40,6 +47,8 @@ export default function AjustesPage() {
       setProfileLoading(true);
       const res = await api.get('/auth/perfil');
       setTwoFactor(res.data.dos_factores);
+      setNombreUsuario(res.data.nombre_usuario || '');
+      setNombreUsuarioGuardado(res.data.nombre_usuario || null);
       setCanal(res.data.preferencia_canal || 'AMBOS');
       setPrioridadAudiencia(res.data.pref_prioridad_audiencia || 'MEDIA');
       setPrioridadTermino(res.data.pref_prioridad_termino || 'ALTA');
@@ -80,6 +89,27 @@ export default function AjustesPage() {
     fetchUserProfile();
     fetchTenantProfile();
   }, []);
+
+  /**
+   * RF01.2 — fijar, cambiar o retirar el propio nombre de usuario.
+   *
+   * Sin esta pantalla, el nombre de usuario solo alcanzaría a quien se registre
+   * a partir de ahora: las cuentas que ya existen no tendrían dónde reclamarlo.
+   */
+  const handleNombreUsuarioSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setSavingNombreUsuario(true);
+      const res = await api.patch('/auth/nombre-usuario', { nombre_usuario: nombreUsuario });
+      setNombreUsuario(res.data.nombre_usuario || '');
+      setNombreUsuarioGuardado(res.data.nombre_usuario || null);
+      toast.success(res.data.message);
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Error al actualizar el nombre de usuario.');
+    } finally {
+      setSavingNombreUsuario(false);
+    }
+  };
 
   // Handler for 2FA Toggle
   const handle2FAToggle = async () => {
@@ -214,6 +244,44 @@ export default function AjustesPage() {
                   </span>
                 </div>
               </div>
+
+              {/* RF01.2 — segundo identificador de acceso, alternativo al correo. */}
+              <form onSubmit={handleNombreUsuarioSubmit} className="space-y-2">
+                <label htmlFor="nombre_usuario" className="text-[10px] text-neutral-400">
+                  Nombre de usuario
+                </label>
+                <input
+                  id="nombre_usuario"
+                  type="text"
+                  value={nombreUsuario}
+                  onChange={(e) => setNombreUsuario(e.target.value)}
+                  disabled={profileLoading || savingNombreUsuario}
+                  placeholder="Sin definir"
+                  autoComplete="off"
+                  maxLength={30}
+                  className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-lg px-2.5 py-1.5 text-xs text-white transition-colors disabled:opacity-50"
+                />
+                <p className="text-[10px] text-neutral-500 leading-relaxed">
+                  {nombreUsuarioGuardado
+                    ? 'Puedes entrar con él o con tu correo. Déjalo vacío para retirarlo.'
+                    : 'Opcional. Si lo defines, podrás entrar con él en vez de con tu correo.'}
+                  {' '}Entre 3 y 30 caracteres: letras sin tilde, números, punto, guion y guion bajo.
+                </p>
+                <button
+                  type="submit"
+                  disabled={profileLoading || savingNombreUsuario || nombreUsuario.trim() === (nombreUsuarioGuardado || '')}
+                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#C29B4F] to-[#E5C37A] hover:from-[#E5C37A] hover:to-[#C29B4F] text-black shadow-[0_4px_20px_rgba(223,185,113,0.3)] font-semibold px-4 py-2.5 rounded-xl transition-all cursor-pointer text-xs transform hover:scale-[1.02] disabled:opacity-50 disabled:transform-none disabled:cursor-not-allowed"
+                >
+                  {savingNombreUsuario ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      <span>Guardando...</span>
+                    </>
+                  ) : (
+                    <span>{nombreUsuarioGuardado ? 'Actualizar nombre de usuario' : 'Definir nombre de usuario'}</span>
+                  )}
+                </button>
+              </form>
             </div>
           </div>
 

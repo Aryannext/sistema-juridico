@@ -223,26 +223,39 @@ si en cualquier eslabón no hubiera respuesta, el requisito estaría de adorno.
 
 ## Cobertura
 
-| Función | Requisitos | Cumplidos |
-|---|---:|---|
-| F1 · Control de acceso | 9 | 7 |
-| F2 · Expediente digital | 17 | 15 |
-| F3 · Plazos y audiencias | 11 | 10 |
-| F4 · Documentos | 9 | 8 |
-| F5 · Alertas | 8 | 6 |
-| F6 · Rendición de cuentas | 6 | 6 |
+Se cuentan los **requisitos que este mismo diagrama asocia a cada función** —los RF y RNF de las
+cajas verdes de arriba—, con el estado que declaran los documentos 03 y 04. Las reglas de negocio
+tienen su propio cuadro en el [documento 02](../documentos/02-REGLAS-DE-NEGOCIO.md). Contarlo así
+lo hace reproducible: sale del diagrama, no de una lista aparte que pueda desviarse.
 
-> **F6 era la función menos completa** —2 de 6— y era coherente con lo que declaraban los
+| Función | Requisitos | Cumplidos | Qué queda |
+|---|---:|---:|---|
+| F1 · Control de acceso | 9 | 6 | RF52 y RNF11 *(aislamiento por base de datos)* · RNF02 *(limitador en el login)* |
+| F2 · Expediente digital | 14 | 14 | — |
+| F3 · Plazos y audiencias | 7 | 7 | — |
+| F4 · Documentos | 11 | 11 | — |
+| F5 · Alertas | 10 | 10 | — |
+| F6 · Rendición de cuentas | 7 | 6 | RNF03 *(retención a cinco años)* |
+
+> **F6 fue durante mucho tiempo la menos completa**, y era coherente con lo que declaraban los
 > requisitos: faltaban exportar la bitácora, exportar reportes en PDF y registrar el inicio de
-> sesión. Las tres no conformidades de la verificación automática caían justo aquí, lo cual dice
+> sesión. Las tres no conformidades de la verificación automática caían justo ahí, lo cual dice
 > algo sobre la naturaleza del hueco: **el sistema hacía bien su trabajo, pero no sabía
-> contarlo.** Rendición de cuentas es precisamente la función que no se nota mientras nadie
-> pregunta, y por eso fue la última en completarse.
+> contarlo.** Rendición de cuentas es la función que no se nota mientras nadie pregunta, y por eso
+> fue la última en completarse. Los tres puntos se cerraron el 3 de septiembre de 2026; solo sigue
+> abierto **RNF03.5**, la retención a cinco años, que depende de tener copias de seguridad
+> automáticas y no de escribir código.
 >
-> Los tres puntos se cerraron el 3 de septiembre de 2026. F6 queda completa en sus seis
-> requisitos funcionales; lo único que sigue abierto en esta función es un criterio no funcional,
-> **RNF03.5** (política de retención a cinco años), que depende de las copias de seguridad
-> automáticas y no de código.
+> **La menos completa es ahora F1 · Control de acceso, 6 de 9**, y sus tres pendientes son en
+> realidad dos decisiones. RF52 y RNF11 son la misma: que el aislamiento entre consultorios lo
+> sostenga además la base de datos y no solo el código, evaluado y pospuesto en
+> [ADR-003](../../docs/11-DECISIONES-ARQUITECTONICAS.md). RNF02 es el limitador de peticiones
+> dedicado en `/api/auth/login`: hoy protege el bloqueo por usuario, que frena el ataque a una
+> cuenta concreta pero no uno repartido entre muchas.
 >
-> La función menos completa pasa a ser **F5 · Alertas**, 6 de 8, por el umbral de inactividad
-> fijo en 30 días en vez de configurable (RF40.3).
+> **Esta tabla decía otra cosa hasta el 3 de septiembre de 2026**, y merece anotarse porque el
+> error era de los que no se ven. Daba F5 como la más incompleta, 6 de 8, «por el umbral de
+> inactividad fijo en 30 días en vez de configurable». Ese umbral **no era una brecha**: RF40 fija
+> los 30 días de forma literal, así que hacerlo configurable sería una mejora y nunca fue un
+> criterio. La tabla llevaba contabilizada como incumplimiento una exigencia que ningún requisito
+> hace.

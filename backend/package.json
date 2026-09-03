@@ -16,6 +16,7 @@
     "verificar:docs": "node scripts/verificar-docs.js",
     "verificar:referencias": "node scripts/verificar-referencias.js",
     "verificar:plataforma": "node -r dotenv/config scripts/verificar-admin-plataforma.js",
+    "verificar:indices": "node -r dotenv/config scripts/verificar-indices-busqueda.js",
     "crear-admin-plataforma": "node -r dotenv/config scripts/crear-admin-plataforma.js",
     "defectos": "node -r dotenv/config scripts/reproducir-defectos.js",
     "arreglos": "node -r dotenv/config scripts/verificar-arreglos.js",

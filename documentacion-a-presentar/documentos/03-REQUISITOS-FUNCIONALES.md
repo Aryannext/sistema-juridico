@@ -23,12 +23,20 @@ verificables** numerados `RFxx.1`, `RFxx.2`… Cada criterio afirma **una sola c
 | | Criterio verificable | |
 |---|---|:--:|
 | RF01.1 | Se puede iniciar sesión con correo electrónico y contraseña | ✅ |
-| RF01.2 | Se puede iniciar sesión con nombre de usuario y contraseña | 🟥 |
+| RF01.2 | Se puede iniciar sesión con nombre de usuario y contraseña | ✅ |
 | RF01.3 | Las credenciales incorrectas devuelven un mensaje genérico, sin revelar si el correo existe | ✅ |
 
-**Estado 🟡.** `login` busca por correo únicamente; **no existe campo de nombre de usuario** en el
-modelo. Es una divergencia consciente respecto al enunciado original.
-**Implementado en** `POST /api/auth/login` · `auth.controller.js` · **Historia:** HU-01
+**Estado ✅.** RF01.2 se cerró el 3 de septiembre de 2026. Hasta entonces `login` buscaba por
+correo únicamente porque **no existía campo de nombre de usuario** en el modelo; ahora la columna
+`nombre_usuario` existe, es única en todo el sistema —como el correo, y por la misma razón: el
+login resuelve la cuenta antes de saber a qué consultorio pertenece— y es opcional, porque el
+correo sigue siendo el identificador obligatorio.
+
+El sistema distingue un identificador del otro **por la arroba**: un nombre de usuario no puede
+contenerla, así que no hace falta preguntar ni consultar dos veces. RF01.3 se mantiene: un nombre
+de usuario inexistente devuelve el mismo error genérico que un correo inexistente.
+**Implementado en** `POST /api/auth/login` · `auth.controller.js` · `utils/nombre-usuario.js` ·
+`PATCH /api/auth/nombre-usuario` · **Historia:** HU-01
 
 ### RF02 · Cuatro roles
 **Enunciado.** El sistema define cuatro roles: Administrador, Abogado, Colaborador y Cliente.
@@ -104,12 +112,24 @@ comentario `// Todo: Record audit login` sin implementar. Se cerraron el 3 de se
 | | Criterio | |
 |---|---|:--:|
 | RF06.1 | Persona natural exige nombre, tipo y número de documento, teléfono y correo | ✅ |
-| RF06.2 | Persona jurídica exige además razón social, NIT y representante legal | 🟡 |
+| RF06.2 | Persona jurídica exige además razón social, NIT y representante legal | ✅ |
 | RF06.3 | El número de documento es único **dentro del consultorio**, no en todo el sistema | ✅ |
 
-**Estado 🟡.** El modelo tiene todos los campos y la interfaz los muestra según el tipo, pero la
-**obligatoriedad diferenciada no se valida en el servidor**.
-**Implementado en** `POST /api/clientes` · **Historias:** HU-04, HU-05
+**Estado ✅.** RF06.2 se cerró el 3 de septiembre de 2026 con `clientes/validacion.js`.
+
+> **Por qué la base de datos no podía encargarse de esto.** Las columnas `razon_social`, `nit` y
+> `representante` **admiten nulo**, y tienen que admitirlo: la tabla la comparten las personas
+> naturales, que no tienen ninguna de las tres. La base puede exigir que una columna no esté
+> vacía, pero no puede expresar *«si el tipo es jurídica, entonces la razón social es
+> obligatoria»*. Esa regla solo puede vivir en el código, y hasta entonces no vivía en ninguna
+> parte: una petición directa a la API guardaba una empresa sin razón social ni NIT.
+>
+> Antes, además, un cliente sin nombre llegaba hasta Prisma y devolvía un **500 opaco** en lugar
+> de decir qué faltaba. Ahora se enumeran de una vez todos los campos que faltan, para no obligar
+> a reenviar el formulario y descubrirlos de uno en uno.
+
+**Implementado en** `POST /api/clientes` · `clientes/validacion.js`
+**Historias:** HU-04, HU-05 · **Pruebas:** `validacion_cliente.test.js`
 
 > **RF06.3 en detalle.** Una misma persona puede ser cliente de dos despachos distintos. Hasta el
 > 2 de septiembre de 2026 el documento era único en todo el sistema, lo que lo impedía.
@@ -271,9 +291,11 @@ problema: del juzgado sale un auto, del auto nace un plazo, del plazo debe salir
 |---|---|:--:|
 | RF17.1 | Un expediente sin demandante y demandado se marca como incompleto | ✅ |
 | RF17.2 | El aviso aparece en la ficha del expediente | ✅ |
-| RF17.3 | El aviso aparece **también en el panel principal** | 🟥 |
+| RF17.3 | El aviso aparece **también en el panel principal** | ✅ |
 
-**Estado 🟡.** El aviso existe en la ficha; falta en el panel. **HU-11**
+**Estado ✅.** RF17.3 se cerró el 3 de septiembre de 2026 con `GET /api/procesos/atencion`.
+El aviso llevaba tiempo en la ficha del expediente, que es el peor sitio posible para él: nadie
+abre un expediente para enterarse de que está incompleto. **HU-11**
 
 ---
 
@@ -295,10 +317,22 @@ no existía filtro de formatos: se podía adjuntar un ejecutable a un expediente
 ### RF19 · Categorías
 | | Criterio | |
 |---|---|:--:|
-| RF19.1 | Existen siete categorías: demandas, pruebas, contratos, escritos, notificaciones, providencias y otros | 🟥 |
+| RF19.1 | Existen siete categorías: demandas, pruebas, contratos, escritos, notificaciones, providencias y otros | ✅ |
 | RF19.2 | Los documentos se pueden filtrar por categoría | ✅ |
 
-**Estado 🟡.** Falta la categoría **escritos** en el enum. **HU-13**
+**Estado ✅.** Los dos criterios se cerraron el 3 de septiembre de 2026.
+
+**RF19.1**: faltaba **escritos** en el enumerado, y era la categoría del género más frecuente en un
+despacho —memoriales, recursos, alegatos—, que hasta entonces había que archivar como «otros».
+Enviar una categoría inexistente devolvía un `500` desde Prisma; ahora devuelve un `400` que
+enumera las admitidas.
+
+**RF19.2 figuraba como cumplido y no lo estaba.** No había filtro por categoría en ninguna parte:
+ni parámetro en la API ni control en la pantalla. Se dio por bueno sin comprobarlo, y una revisión
+posterior lo llegó a explicar diciendo que «el filtro es en cliente», que tampoco era cierto. Ahora
+existe: `GET /api/documentos/proceso/:id?categoria=`, aplicado en el servidor **después** de las
+reglas de visibilidad de RF22, para que filtrar no pueda ampliar lo que alguien tiene derecho a
+ver. **HU-13**
 
 ### RF20 · Orden cronológico
 | | Criterio | |
@@ -439,9 +473,17 @@ no existía filtro de formatos: se podía adjuntar un ejecutable a un expediente
 | | Criterio | |
 |---|---|:--:|
 | RF36.1 | Se conserva el registro de los recordatorios enviados | ✅ |
-| RF36.2 | Se conserva el historial de cambios de estado del término | 🟥 |
+| RF36.2 | Se conserva el historial de cambios de estado del término | ✅ |
 
-**Estado 🟡.** Los envíos sí se conservan; el cambio de estado **solo guarda el último**. **HU-22**
+**Estado ✅.** RF36.2 se cerró el 3 de septiembre de 2026, junto con HU-22. Hasta entonces la fila
+del término guardaba un único estado y al reclasificarlo se perdía por dónde había pasado: que hoy
+figure como *cumplido tardíamente* no dice si llegó ahí desde *pendiente* o si un Administrador lo
+rebajó desde *incumplido*. Cada cambio se apunta ahora en el historial del expediente
+(`historialProceso`), que es donde ya vivían los demás. **HU-22**
+
+> Este párrafo decía **Estado 🟡** mientras sus dos criterios estaban marcados ✅ en la tabla de
+> arriba: se quedó atrás cuando se cerró HU-22 y contradecía al código. Corregido el 3 de
+> septiembre de 2026 tras comprobarlo en `terminos.controller.js`.
 
 ### RF37 · Recordatorios y criticidad
 | | Criterio | |
@@ -475,9 +517,12 @@ no existía filtro de formatos: se podía adjuntar un ejecutable a un expediente
 |---|---|:--:|
 | RF40.1 | Los términos vencidos se marcan en rojo | ✅ |
 | RF40.2 | Las audiencias en menos de 24 h se marcan en rojo | ✅ |
-| RF40.3 | Los procesos sin movimiento más de 30 días se marcan en rojo | 🟥 |
+| RF40.3 | Los procesos sin movimiento más de 30 días se marcan en rojo | ✅ |
 
-**Estado 🟡.** Falta la detección de inactividad. **HU-24** · **Regla:** RN09
+**Estado ✅.** RF40.3 se cerró el 3 de septiembre de 2026. La detección existía, pero solo la
+veía el Administrador: llegaba por `/reportes/stats`, que abarca todo el consultorio. Ahora cada
+abogado ve los suyos, con el mismo filtro de visibilidad que usa el listado (RF04).
+**HU-24** · **Regla:** RN09
 
 ### RF41 · Ocultar lo gestionado
 | | Criterio | |
@@ -622,24 +667,32 @@ dejaba a la persona bloqueada sin ninguna salida. **HU-35**
 
 | Estado | Requisitos |
 |---|---:|
-| ✅ Cumplidos | 52 |
-| 🟡 Parciales, con el límite declarado | 7 |
+| ✅ Cumplidos | 58 |
+| 🟡 Parciales, con el límite declarado | 1 |
 | 🟥 No cumplidos | 0 |
 
-Ninguno está sin empezar. Los siete parciales declaran **exactamente** qué criterio falta, y los
-criterios pendientes se pueden contar: son **6 sobre un total de 143**. Están todos aquí, en sus
-tablas, marcados 🟥:
+Ninguno está sin empezar. Queda **un criterio pendiente sobre un total de 143**, y está aquí, en
+su tabla, marcado 🟥:
 
-| Criterio | Qué falta |
+| Criterio | Qué falta | Qué exige resolverlo |
+|---|---|---|
+| RF52.4 | El aislamiento entre consultorios lo aplica el código, no la base de datos | Políticas a nivel de fila; ver [ADR-003](../../docs/11-DECISIONES-ARQUITECTONICAS.md) |
+
+**No sigue abierto por falta de tiempo, sino por una decisión registrada.** RF52.1, RF52.2 y
+RF52.3 —que un consultorio no vea, ni toque, los datos de otro— están verificados de extremo a
+extremo y con pruebas. Lo que RF52.4 pide es que esa garantía la sostenga además la base de datos
+y no solo el código, y eso es *Row Level Security*: se evaluó y se pospuso en ADR-003. Cambiarlo
+es una decisión de arquitectura, no una tarea pendiente.
+
+### Los que se cerraron el 3 de septiembre de 2026
+
+| Criterio | Lo que le faltaba |
 |---|---|
-| RF01.2 | Solo se entra con el correo; no se admite nombre de usuario |
-| RF17.3 | El aviso de expediente incompleto está en la ficha, no en el panel principal |
-| RF19.1 | El catálogo de documentos tiene seis categorías, no siete |
-| RF36.2 | No se conserva el historial de cambios de estado del término |
-| RF40.3 | El umbral de inactividad está fijo en 30 días, no es configurable |
-| RF52.4 | El aislamiento entre consultorios lo aplica el código, no la base de datos |
+| RF01.2 | Entrar con nombre de usuario y no solo con correo. Exigía la columna `nombre_usuario`, única en todo el sistema |
+| RF19.1 | La séptima categoría documental, «escritos» |
+| RF36.2 | Conservar el historial de estados del término, no solo el último |
 
 > **No hay ninguna diferencia entre lo que este documento declara y lo que la plataforma hace.**
-> Las tres brechas que la verificación automática señalaba hasta el 2 de septiembre —RF05.5,
-> RF05.6 y RF42.3— estaban recogidas aquí como criterios no cumplidos **antes** de resolverse.
-> Ese rastro es el que hace comprobable el resto del catálogo.
+> Las brechas que la verificación señalaba antes —RF05.5, RF05.6, RF42.3, RF06.2, RF17.3, RF36.2
+> y RF40.3— estaban recogidas aquí como criterios no cumplidos **antes** de resolverse. Ese rastro
+> es el que hace comprobable el resto del catálogo: un catálogo que solo dice ✅ no demuestra nada.

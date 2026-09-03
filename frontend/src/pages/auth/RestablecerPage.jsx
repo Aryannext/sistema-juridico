@@ -17,6 +17,10 @@ const REQUISITOS = [
   { texto: 'Una letra mayúscula', cumple: (v) => /[A-ZÁÉÍÓÚÑ]/.test(v) },
   { texto: 'Una letra minúscula', cumple: (v) => /[a-záéíóúñ]/.test(v) },
   { texto: 'Un número', cumple: (v) => /[0-9]/.test(v) },
+  // HU-01.6. Debe reflejar exactamente las reglas de backend/src/utils/password.js:
+  // esta lista es una guía, y una guía que enseña los cinco puntos en verde
+  // mientras el servidor rechaza la contraseña es peor que no tener guía.
+  { texto: 'Un carácter especial', cumple: (v) => /[^\p{L}\p{N}\s]/u.test(v) },
 ];
 
 export default function RestablecerPage() {

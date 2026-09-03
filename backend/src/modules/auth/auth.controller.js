@@ -3,11 +3,16 @@ const { hashPassword, comparePassword } = require('../../utils/bcrypt');
 const { signToken, generateOTP, generateVerificationToken } = require('../../utils/jwt');
 const { sendEmail } = require('../../config/mailer');
 const { validarPassword } = require('../../utils/password');
+const {
+  validarNombreUsuario,
+  normalizar: normalizarNombreUsuario,
+  pareceCorreo,
+} = require('../../utils/nombre-usuario');
 const sesion = require('./sesion.auditoria');
 
 exports.registro = async (req, res) => {
   try {
-    const { tipo, nombre_tenant, razon_social, nit, telefono, ciudad, email, password, nombre_admin } = req.body;
+    const { tipo, nombre_tenant, razon_social, nit, telefono, ciudad, email, password, nombre_admin, nombre_usuario } = req.body;
 
     // RNF02: la política de contraseñas se comprueba EN EL SERVIDOR. Hasta
     // ahora solo la validaba el formulario del navegador, de modo que una
@@ -21,6 +26,27 @@ exports.registro = async (req, res) => {
     const existingUser = await prisma.usuario.findUnique({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ error: 'El correo ya está registrado' });
+    }
+
+    // RF01.2: el nombre de usuario es OPCIONAL en el registro. El correo sigue
+    // siendo el identificador obligatorio, y quien no elija ninguno entra por
+    // correo como hasta ahora. Quien lo omita puede reclamarlo después desde su
+    // perfil.
+    let nombreUsuario = null;
+    if (nombre_usuario !== undefined && nombre_usuario !== null && String(nombre_usuario).trim() !== '') {
+      const comprobacion = validarNombreUsuario(nombre_usuario);
+      if (!comprobacion.valido) {
+        return res.status(400).json({ error: comprobacion.error });
+      }
+
+      const yaTomado = await prisma.usuario.findUnique({
+        where: { nombre_usuario: comprobacion.valor }
+      });
+      if (yaTomado) {
+        return res.status(400).json({ error: 'Ese nombre de usuario ya está en uso' });
+      }
+
+      nombreUsuario = comprobacion.valor;
     }
 
     const hashedPassword = await hashPassword(password);
@@ -52,6 +78,7 @@ exports.registro = async (req, res) => {
           tenant_id: tenant.id_tenant,
           nombre: nombre_admin,
           email,
+          nombre_usuario: nombreUsuario,
           password_hash: hashedPassword,
           rol: 'ADMINISTRADOR',
           activo: isAutoVerify, // Active if auto-verify is enabled, else inactive until verified
@@ -177,10 +204,33 @@ exports.verificarEmail = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    // RF01.1 y RF01.2: se entra con correo O con nombre de usuario.
+    //
+    // El campo del formulario pasó a llamarse `identificador` porque ya no
+    // contiene siempre un correo. Se sigue aceptando `email` para no romper a
+    // quien llame a la API con el nombre antiguo.
+    const { password } = req.body;
+    // Se fuerza a texto antes de recortar: este endpoint es público y sin
+    // autenticar, y un cuerpo con `{"identificador": {}}` haría estallar el
+    // `.trim()` devolviendo un 500 en vez del 401 que corresponde.
+    const bruto = req.body.identificador ?? req.body.email ?? '';
+    const identificador = typeof bruto === 'string' ? bruto.trim() : '';
+
+    if (!identificador || typeof password !== 'string' || !password) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
+
+    // Una sola búsqueda por clave única, no dos ni un OR: la arroba decide cuál
+    // de los dos identificadores es, y ningún nombre de usuario puede llevarla
+    // (ver utils/nombre-usuario.js). El correo se busca tal cual se escribió,
+    // como siempre; el nombre de usuario se guarda siempre en minúsculas, así
+    // que se normaliza antes de preguntar.
+    const criterio = pareceCorreo(identificador)
+      ? { email: identificador }
+      : { nombre_usuario: normalizarNombreUsuario(identificador) };
 
     const user = await prisma.usuario.findUnique({
-      where: { email },
+      where: criterio,
       include: { tenant: { select: { activo: true } } }
     });
 
@@ -420,6 +470,7 @@ exports.getPerfil = async (req, res) => {
         id_usuario: true,
         nombre: true,
         email: true,
+        nombre_usuario: true,
         rol: true,
         activo: true,
         dos_factores: true,
@@ -472,6 +523,90 @@ exports.updatePreferencias = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error actualizando preferencias de alerta' });
+  }
+};
+
+/**
+ * Fijar o cambiar el propio nombre de usuario — RF01.2.
+ *
+ * Sin esto la funcionalidad solo alcanzaría a quien se registre a partir de
+ * ahora. La migración reparte un nombre a las cuentas existentes a partir de su
+ * correo, pero deja fuera a propósito dos casos —la parte local no vale como
+ * identificador, o dos consultorios la comparten—, y esas cuentas necesitan una
+ * forma de reclamar el suyo. Es también donde se corrige un nombre mal elegido.
+ *
+ * Cada quien cambia el suyo y solo el suyo: el usuario sale del token, nunca
+ * del cuerpo de la petición.
+ */
+exports.actualizarNombreUsuario = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'No autorizado' });
+    }
+
+    const { nombre_usuario } = req.body;
+
+    // Enviar vacío o nulo renuncia al nombre de usuario y libera la reserva.
+    // La cuenta vuelve a entrar solo por correo, que nunca deja de funcionar.
+    if (nombre_usuario === null || String(nombre_usuario ?? '').trim() === '') {
+      await prisma.usuario.update({
+        where: { id_usuario: req.user.id_usuario },
+        data: { nombre_usuario: null }
+      });
+      return res.json({
+        message: 'Se eliminó tu nombre de usuario. Seguirás entrando con tu correo.',
+        nombre_usuario: null
+      });
+    }
+
+    const comprobacion = validarNombreUsuario(nombre_usuario);
+    if (!comprobacion.valido) {
+      return res.status(400).json({ error: comprobacion.error });
+    }
+
+    const yaTomado = await prisma.usuario.findUnique({
+      where: { nombre_usuario: comprobacion.valor },
+      select: { id_usuario: true }
+    });
+
+    // Reasignarse el que ya se tiene no es un choque, es no cambiar nada.
+    if (yaTomado && yaTomado.id_usuario !== req.user.id_usuario) {
+      return res.status(409).json({ error: 'Ese nombre de usuario ya está en uso' });
+    }
+
+    const actualizado = await prisma.usuario.update({
+      where: { id_usuario: req.user.id_usuario },
+      data: { nombre_usuario: comprobacion.valor },
+      select: { nombre_usuario: true }
+    });
+
+    // RF05: cambiar un identificador de acceso es un hecho de seguridad, y la
+    // bitácora tiene que poder explicar por qué alguien empezó a entrar con un
+    // nombre distinto del que tenía.
+    await prisma.bitacoraAuditoria.create({
+      data: {
+        tenant_id: req.tenant_id,
+        id_usuario: req.user.id_usuario,
+        accion: 'CAMBIAR_NOMBRE_USUARIO',
+        modulo: 'CONFIGURACION',
+        detalle: `Nombre de usuario fijado en "${actualizado.nombre_usuario}"`,
+        ip_adress: req.ip || '127.0.0.1'
+      }
+    });
+
+    res.json({
+      message: 'Nombre de usuario actualizado. Ya puedes entrar con él o con tu correo.',
+      nombre_usuario: actualizado.nombre_usuario
+    });
+  } catch (error) {
+    // La comprobación de arriba resuelve el caso normal; esto atrapa la
+    // carrera entre dos peticiones simultáneas que pidan el mismo nombre. El
+    // índice único es lo que decide de verdad, y sin esto devolvería un 500.
+    if (error.code === 'P2002') {
+      return res.status(409).json({ error: 'Ese nombre de usuario ya está en uso' });
+    }
+    console.error('Error en actualizarNombreUsuario:', error);
+    res.status(500).json({ error: 'Error actualizando el nombre de usuario' });
   }
 };
 

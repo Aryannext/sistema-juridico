@@ -18,7 +18,6 @@ export default function ClienteFicha() {
 
   // Portal Access States
   const [showPortalModal, setShowPortalModal] = useState(false);
-  const [portalPassword, setPortalPassword] = useState('');
   const [enablingPortal, setEnablingPortal] = useState(false);
 
   // Form states for creating a Proceso directly for this client
@@ -73,18 +72,30 @@ export default function ClienteFicha() {
     fetchAbogados();
   }, [id]);
 
+  /**
+   * RN02.3 — el despacho ya no fija la contraseña del cliente.
+   *
+   * Antes este formulario pedía una «contraseña temporal» que alguien del
+   * despacho escribía y luego le comunicaba al cliente. Eso significaba que esa
+   * persona podía entrar al portal como el cliente, que es justo lo que RN02
+   * prohíbe. Ahora la petición no lleva contraseña: el servidor crea la cuenta
+   * sin credencial utilizable y envía al cliente un enlace para que elija la
+   * suya.
+   */
   const handleEnablePortalAccess = async (e) => {
     e.preventDefault();
-    if (!portalPassword) {
-      toast.error('La contraseña es obligatoria');
-      return;
-    }
     try {
       setEnablingPortal(true);
-      const res = await api.post(`/clientes/${id}/portal-access`, { password: portalPassword });
-      toast.success(res.data.message || 'Acceso al portal habilitado con éxito.');
+      const res = await api.post(`/clientes/${id}/portal-access`);
+      // El servidor distingue "cuenta creada y correo enviado" de "cuenta
+      // creada pero el correo falló". Lo segundo no es un error —la cuenta
+      // existe y el cliente tiene otra vía— pero tampoco es un éxito limpio.
+      if (res.data.correoEnviado === false) {
+        toast.warning(res.data.message);
+      } else {
+        toast.success(res.data.message || 'Acceso al portal habilitado con éxito.');
+      }
       setShowPortalModal(false);
-      setPortalPassword('');
       fetchCliente();
     } catch (error) {
       console.error(error);
@@ -496,10 +507,7 @@ export default function ClienteFicha() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-sm bg-neutral-950/90 backdrop-blur-2xl border border-[#DFB971]/30 rounded-2xl p-5 shadow-[0_0_40px_rgba(0,0,0,0.8)] animate-scale-in">
             <button
-              onClick={() => {
-                setShowPortalModal(false);
-                setPortalPassword('');
-              }}
+              onClick={() => setShowPortalModal(false)}
               className="absolute top-4 right-4 text-neutral-400 hover:text-white transition-colors cursor-pointer"
             >
               <X size={18} />
@@ -513,20 +521,19 @@ export default function ClienteFicha() {
             </p>
 
             <form onSubmit={handleEnablePortalAccess} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
-                  Contraseña del Cliente
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={portalPassword}
-                  onChange={(e) => setPortalPassword(e.target.value)}
-                  placeholder="Ingrese contraseña temporal"
-                  className="w-full bg-white/5 border border-white/10 focus:border-[#DFB971] focus:outline-none rounded-xl px-4 py-3 text-sm text-white"
-                />
-                <p className="text-[10px] text-neutral-500">
-                  Esta contraseña se le debe proporcionar de forma segura al cliente para su primer inicio de sesión.
+              {/*
+                RN02.3 — aquí había un campo «Contraseña del Cliente». Se retiró:
+                mientras el despacho eligiera esa clave, podía entrar al portal
+                como el cliente, y la regla que lo prohíbe quedaba en el papel.
+              */}
+              <div className="space-y-2 rounded-xl bg-white/5 border border-white/10 p-4">
+                <p className="text-xs text-neutral-300 leading-relaxed">
+                  El cliente recibirá un correo con un enlace para <span className="text-white font-medium">elegir su propia contraseña</span>.
+                </p>
+                <p className="text-[10px] text-neutral-500 leading-relaxed">
+                  Nadie del despacho la conoce ni puede verla. El enlace caduca en 24 horas y solo
+                  sirve una vez; si caduca, el cliente puede pedir otro desde «¿Olvidaste tu
+                  contraseña?» en la pantalla de acceso.
                 </p>
               </div>
 
@@ -535,7 +542,6 @@ export default function ClienteFicha() {
                   type="button"
                   onClick={() => {
                     setShowPortalModal(false);
-                    setPortalPassword('');
                   }}
                   className="px-4 py-2 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white transition-colors cursor-pointer text-xs font-semibold"
                 >

@@ -80,6 +80,11 @@ la de un consultorio sin que se pisen.
 La dirección `/sistema-juridico/plataforma` sigue existiendo como acceso directo, por si alguna
 vez conviene entrar sin pasar por la pantalla general.
 
+**Dónde vive.** El acceso directo es `PlataformaLogin.jsx` y la consola es `PlataformaConsola.jsx`;
+las dos hablan con `plataforma.controller.js` a través de un cliente HTTP propio, separado del que
+usa el resto de la aplicación, para que no compartan ni la cabecera de autorización ni el
+interceptor de sesión caducada.
+
 ---
 
 ## 4. Suspender por impago

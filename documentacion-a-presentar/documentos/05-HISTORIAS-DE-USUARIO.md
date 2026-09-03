@@ -149,7 +149,7 @@ graph TD
 ---
 
 ## HU-01 · Inicio de sesión
-**Actor:** Todos · **Sprint 1** · **5 pts** · 🟡
+**Actor:** Todos · **Sprint 1** · **5 pts** · ✅
 
 **Nace de estos requisitos**
 - **RF01** — Inicio de sesión con correo **o nombre de usuario** y contraseña.
@@ -159,20 +159,60 @@ graph TD
 **Depende de** → HU-35 · **Habilita** → HU-02, HU-03, HU-04, HU-05, HU-29, HU-32, HU-36
 
 **Criterios de aceptación**
-1. El formulario acepta correo o nombre de usuario. → **🟥 solo correo**
+1. El formulario acepta correo o nombre de usuario.
 2. Las credenciales correctas llevan al módulo que corresponde al rol.
 3. Las incorrectas muestran un error genérico, sin decir qué campo falló.
 4. Tras 5 intentos fallidos la cuenta se bloquea temporalmente.
 5. Existe recuperación de contraseña por correo.
 6. La contraseña exige mínimo 8 caracteres, mayúscula, número y carácter especial.
-7. La sesión se cierra tras 30 minutos de inactividad. → **🟥 no implementado**
+7. La sesión se cierra tras 30 minutos de inactividad.
 8. El token vence a las 8 horas.
 
-**Dónde está** `POST /api/auth/login` · `auth.controller.js`
-**Cómo demostrarlo** Fallar la contraseña 5 veces y ver el bloqueo con cuenta atrás
+**Dónde está** `POST /api/auth/login` · `auth.controller.js` · `utils/nombre-usuario.js` ·
+`PATCH /api/auth/nombre-usuario` · `useCierrePorInactividad.js`
+**Pantallas** `LoginPage.jsx` · `RecuperarPage.jsx` (pedir el enlace) · `RestablecerPage.jsx` (elegir la contraseña nueva)
+**Cómo demostrarlo** Ajustes → definir un nombre de usuario, salir y entrar con él en vez de con
+el correo. Y fallar la contraseña 5 veces para ver el bloqueo con cuenta atrás
 
-> El criterio 1 **no se cumple y se declara**: no existe campo de nombre de usuario en el modelo.
+> El criterio 1 se cerró el 3 de septiembre de 2026, y era el último que quedaba abierto de esta
+> historia. Hacía falta una columna nueva en `usuario`, y con ella una decisión que la
+> documentación ya anticipaba: **el nombre de usuario es único en todo el sistema, igual que el
+> correo**. No podía ser único por consultorio, porque el login resuelve la cuenta *antes* de
+> saber a qué consultorio pertenece; dos personas de oficinas distintas con el mismo nombre
+> dejarían la contraseña decidiendo cuál de las dos entra.
+>
+> **Cómo distingue el sistema un identificador del otro:** por la arroba, y nada más. Un nombre
+> de usuario no puede contenerla —se rechaza al registrarlo—, así que el login mira el texto y
+> sabe por qué columna buscar sin preguntar y sin consultar dos veces. Esa regla cierra además el
+> abuso evidente: registrar «socia@bufete.com» como nombre de usuario para capturar a quien
+> teclee ese correo.
+>
+> **Es opcional.** El correo sigue siendo el identificador obligatorio; quien no elija ninguno
+> entra como siempre. La migración repartió uno a las cuentas que ya existían a partir de su
+> correo, y dejó a propósito en blanco dos casos: cuando la parte local no sirve como
+> identificador, y cuando dos consultorios la comparten. Inventar un nombre para salir del paso
+> habría sido peor que no darlo; esas cuentas lo reclaman desde Ajustes.
+>
 > El criterio 5 se implementó el 2 de septiembre de 2026; antes el enlace no funcionaba.
+>
+> **El criterio 6 estaba marcado como cumplido y no lo estaba**, y se descubrió al revisar la
+> historia entera para cerrar el criterio 1. Pedía «mínimo 8 caracteres, mayúscula, número y
+> **carácter especial**», y de las cuatro exigencias el servidor solo comprobaba tres: una
+> contraseña como `Segura2026` pasaba el filtro. Es peor que un criterio en rojo, porque un rojo
+> se ve. La regla que faltaba se añadió el 3 de septiembre de 2026, junto con una prueba que fija
+> las cinco —las cuatro del enunciado más la minúscula, que el código ya exigía de más— para que
+> ninguna vuelva a desaparecer en silencio.
+>
+> No invalida ninguna contraseña existente: la política solo se comprueba al fijar una nueva. Los
+> dos formularios que las fijan —registro y restablecimiento— divergían además del servidor, cada
+> uno a su manera; ahora los tres aplican exactamente la misma regla.
+>
+> El criterio 7 se implementó el 3 de septiembre de 2026. **Conviene saber hasta dónde llega:**
+> cierra la sesión en el navegador —borra el token y devuelve a la pantalla de acceso—, pero el
+> JWT sigue siendo válido en el servidor hasta caducar a las 8 horas, porque un JWT no se revoca
+> sin llevar una lista de tokens anulados. Protege del vistazo ajeno a una pantalla desatendida
+> en una sala de audiencias o una mesa compartida, que es el riesgo real que describe el
+> requisito; no de alguien que hubiera copiado el token antes.
 
 ---
 
@@ -212,7 +252,7 @@ graph TD
 ---
 
 ## HU-02 · Roles y permisos por módulo
-**Actor:** Administrador · **Sprint 1** · **8 pts** · 🟡
+**Actor:** Administrador · **Sprint 1** · **8 pts** · ✅
 
 **Nace de estos requisitos**
 - **RF02** — Cuatro roles: Administrador, Abogado, Colaborador y Cliente.
@@ -232,7 +272,18 @@ alertas críticas ajenas, ni suplantar al cliente en el portal.
 4. El Colaborador accede solo a lo asignado.
 5. El Cliente accede solo a su portal.
 6. Cambiar permisos queda en la bitácora.
-7. El único Administrador no puede quitarse su propio rol. → **🟥 no validado**
+7. El único Administrador no puede quitarse su propio rol.
+
+> **El criterio 7 se cumple porque la operación no existe.** No hay ningún punto del backend que
+> modifique el rol de un usuario: `usuario.update` se usa para contraseñas, tokens, intentos
+> fallidos y preferencias, nunca para el rol. La creación de usuarios solo admite `ABOGADO` y
+> `ASISTENTE`, y el módulo de administración no expone ninguna ruta de edición ni de borrado de
+> usuarios.
+>
+> Estaba marcado *«no validado»* con razón: nadie lo había comprobado. Desde el 3 de septiembre
+> de 2026 lo vigila `garantias_estructurales.test.js`, que falla en cuanto alguien añada un
+> endpoint capaz de romperlo. **Una garantía que depende de que nadie escriba cierto código es
+> frágil mientras nadie la vigile.**
 
 **Dónde está** `PUT /api/admin/permisos/:id` · `roles.middleware.js`
 **Cómo demostrarlo** Control de acceso → seleccionar usuario → ajustar permisos
@@ -292,14 +343,15 @@ Administrador.
 2. Se ajusta la prioridad por tipo de evento.
 3. Las alertas de prioridad alta no se pueden silenciar.
 
-**Dónde está** `PUT /api/auth/preferencias` · **Cómo demostrarlo** Ajustes → Notificaciones
+**Dónde está** `PUT /api/auth/preferencias` · `AjustesPage.jsx` (despacho) · `PortalAjustes.jsx` (cliente)
+**Cómo demostrarlo** Ajustes → Notificaciones
 
 ---
 
 # Módulo 2 · Clientes
 
 ## HU-04 · Registrar cliente persona natural
-**Actor:** Abogado, Colaborador · **Sprint 1** · **3 pts** · 🟡
+**Actor:** Abogado, Colaborador · **Sprint 1** · **3 pts** · ✅
 
 **Nace de**
 - **RF06** — Campos mínimos según persona natural o jurídica.
@@ -312,9 +364,10 @@ Administrador.
 2. El número de documento no se repite **dentro del consultorio**.
 3. **Sí** puede repetirse en otro consultorio distinto.
 4. El registro queda en la bitácora.
-5. Los campos obligatorios se validan en el servidor. → **🟡 parcial**
+5. Los campos obligatorios se validan en el servidor.
 
-**Dónde está** `POST /api/clientes` · **Cómo demostrarlo** Clientes → Nuevo cliente → Natural
+**Dónde está** `POST /api/clientes` · `clientes/validacion.js` · `ClientesList.jsx`
+**Cómo demostrarlo** Clientes → Nuevo cliente → Natural
 
 > El criterio 3 se corrigió el 2 de septiembre de 2026. Antes el documento era único en todo el
 > sistema, así que una persona no podía ser cliente de dos despachos.
@@ -322,7 +375,7 @@ Administrador.
 ---
 
 ## HU-05 · Registrar cliente persona jurídica
-**Actor:** Abogado, Colaborador · **Sprint 1** · **3 pts** · 🟡
+**Actor:** Abogado, Colaborador · **Sprint 1** · **3 pts** · ✅
 
 **Nace de** los mismos **RF06** y **RF05** que HU-04.
 **Depende de** → HU-01 · **Habilita** → HU-06
@@ -330,9 +383,20 @@ Administrador.
 **Criterios**
 1. Se registran razón social, NIT y representante legal, además de los datos de contacto.
 2. La interfaz cambia los campos según el tipo elegido.
-3. Resto igual que HU-04.
+3. El servidor exige razón social, NIT y representante cuando el tipo es jurídica.
+4. Resto igual que HU-04.
 
-**Dónde está** `POST /api/clientes` · **Cómo demostrarlo** Clientes → Nuevo cliente → Jurídica
+**Dónde está** `POST /api/clientes` · `clientes/validacion.js`
+**Cómo demostrarlo** Clientes → Nuevo cliente → Jurídica
+
+> El criterio 3 se añadió el 3 de septiembre de 2026 y es el que más importa aquí. La base de
+> datos **no puede** exigir la razón social: esas columnas admiten nulo porque la tabla la
+> comparten las personas naturales, que no tienen ninguna. La regla *«si es jurídica,
+> entonces…»* solo puede vivir en el código, y hasta entonces no vivía en ninguna parte: una
+> petición directa a la API guardaba una empresa sin razón social ni NIT.
+>
+> Esta historia figuraba como 🟡 **sin declarar qué le faltaba**, que es peor que estar
+> incompleta: heredaba en silencio la brecha de HU-04. Ahora la declara.
 
 ---
 
@@ -354,7 +418,8 @@ Administrador.
 4. Desde la ficha se puede abrir un expediente nuevo.
 5. Se puede habilitar el acceso al portal.
 
-**Dónde está** `GET /api/clientes/:id` · **Cómo demostrarlo** Clientes → seleccionar uno
+**Dónde está** `GET /api/clientes/:id` · `ClienteFicha.jsx`
+**Cómo demostrarlo** Clientes → seleccionar uno
 
 ---
 
@@ -406,7 +471,7 @@ Administrador.
 ---
 
 ## HU-08 · Equipo de trabajo del expediente
-**Actor:** Administrador, Abogado · **Sprint 2** · **5 pts** · 🟡
+**Actor:** Administrador, Abogado · **Sprint 2** · **5 pts** · ✅
 
 **Nace de** **RF12** — Asignar múltiples abogados o colaboradores.
 **Regla que la gobierna** — **RN04**: un proceso siempre debe tener al menos un abogado responsable.
@@ -416,10 +481,26 @@ Administrador.
 **Criterios**
 1. Se asignan varios abogados o colaboradores.
 2. Cada asignación indica su rol en el proceso.
-3. No se puede dejar el expediente sin responsable. → **🟡 garantizado por el modelo, no validado al cambiarlo**
+3. No se puede dejar el expediente sin responsable.
 4. Asignar y retirar queda en el historial.
+5. El responsable se puede relevar, con justificación escrita.
 
-**Dónde está** `POST /api/procesos/:id/abogados` · **Cómo demostrarlo** Expediente → Equipo de trabajo
+**Dónde está** `POST /api/procesos/:id/abogados` · `PUT /api/procesos/:id/responsable` ·
+`procesos/responsable.js`
+**Cómo demostrarlo** Expediente → Abogado Responsable → Cambiar responsable
+
+> El criterio 3 se comprobó el 3 de septiembre de 2026 y se creyó cerrado *porque la operación que
+> lo rompería no existía*. Al revisar RN04 a fondo resultó que esa lectura era demasiado
+> tranquila: el campo nunca quedaba vacío, cierto, pero **no se comprobaba a quién apuntaba**. Se
+> podía nombrar responsable a un usuario de otro consultorio, a uno inactivo o a un cliente. Un
+> expediente así cumple la regla en la columna y no tiene a nadie que responda por él, que es lo
+> que la regla quiere evitar.
+>
+> El criterio 5 se añadió ese mismo día y es la otra mitad. No existía forma de cambiar de
+> responsable: cuando un abogado dejaba el despacho, sus expedientes se quedaban con su nombre
+> encima para siempre. Ahora el relevo existe, valida al que entra y deja constancia de quién lo
+> decidió y por qué. Como corolario, tampoco se puede desasignar del equipo al responsable sin
+> nombrar antes a otro.
 
 ---
 
@@ -464,7 +545,7 @@ Administrador.
 ---
 
 ## HU-31 · Buscar y filtrar expedientes
-**Actor:** Todos los del despacho · **Sprint 2** · **5 pts** · 🟡
+**Actor:** Todos los del despacho · **Sprint 2** · **5 pts** · ✅
 
 **Nace de**
 - **RNF05** — Búsqueda por 6 campos, menos de 2 s, texto parcial desde 3 caracteres, filtros combinables, paginación de 20.
@@ -477,9 +558,31 @@ Administrador.
 2. El texto parcial se aplica desde 3 caracteres.
 3. Los filtros de estado y tipo se combinan con la búsqueda.
 4. Los resultados se paginan de 20 en 20.
-5. Responde en menos de 2 segundos. → **🟡 hoy sí (5–17 ms), sin índices que lo garanticen al crecer**
+5. Responde en menos de 2 segundos.
 
-**Dónde está** `GET /api/procesos` · **Cómo demostrarlo** Expedientes → buscar por radicado parcial
+**Dónde está** `GET /api/procesos` · `procesos.controller.js` · migración `indices_de_busqueda`
+**Cómo demostrarlo** Expedientes → buscar por radicado parcial. Y `npm run verificar:indices`,
+que pide a PostgreSQL el plan de cada consulta
+
+> El criterio 5 se cerró el 3 de septiembre de 2026. Antes decía, con razón, *«hoy sí (5–17 ms),
+> sin índices que lo garanticen al crecer»*: no había un solo índice sobre `procesos` aparte de la
+> clave primaria y el único (consultorio, radicado). Los milisegundos no venían del diseño, venían
+> de que recorrer una tabla casi vacía es barato.
+>
+> Se añadieron once índices. Seis son corrientes —consultorio y fecha para el listado, los dos
+> filtros, y las dos claves por las que se decide qué expedientes ve quien no es Administrador—.
+> Los cinco restantes no podían serlo: la búsqueda parcial es `ILIKE '%texto%'`, con comodín por
+> delante, y **un índice B-tree no sirve para eso**, porque ordena por prefijo y aquí no hay
+> prefijo. Son índices de trigramas (`pg_trgm`), que indexan la búsqueda por dentro de la palabra.
+> El umbral de 3 caracteres del criterio 2 deja de ser un detalle de usabilidad y pasa a ser parte
+> de la garantía: tres es exactamente el tamaño del trigrama.
+>
+> **Cómo se comprobó, ya que un cronómetro aquí no demuestra nada.** Con la tabla pequeña, la
+> consulta tarda lo mismo con índices que sin ellos, que es justo el espejismo que mantenía este
+> criterio abierto. Así que no se midió el tiempo: se apagó el recorrido secuencial y se pidió el
+> plan de las diez consultas que emite el controlador. Ninguna recorre la tabla entera. Eso no
+> promete un número de milisegundos —depende de la máquina—, promete que ninguna consulta tendrá
+> que leer la tabla completa cuando crezca, que es lo único que faltaba.
 
 ---
 
@@ -506,7 +609,7 @@ Administrador.
 ---
 
 ## HU-11 · Partes procesales
-**Actor:** Abogado, Colaborador · **Sprint 2** · **5 pts** · 🟡
+**Actor:** Abogado, Colaborador · **Sprint 2** · **5 pts** · ✅
 
 **Nace de**
 - **RF15** — Registrar demandante, demandado, víctima, tercero, cliente y otros.
@@ -520,9 +623,18 @@ Administrador.
 2. Un expediente puede crearse sin todas las partes.
 3. Sin demandante y demandado se marca como incompleto.
 4. El aviso aparece en la ficha del expediente.
-5. El aviso aparece en el panel principal. → **🟥 no implementado**
+5. El aviso aparece en el panel principal.
 
-**Dónde está** `POST /api/procesos/:id/partes` · **Cómo demostrarlo** Expediente → Partes Procesales
+**Dónde está** `POST /api/procesos/:id/partes` · `GET /api/procesos/atencion`
+**Cómo demostrarlo** Panel principal → bloque «Expedientes Incompletos»
+
+> El criterio 5 se implementó el 3 de septiembre de 2026. El aviso llevaba tiempo en la ficha
+> del expediente, que es el peor sitio posible para él: **nadie abre un expediente para
+> enterarse de que está incompleto.** Ahora aparece en el panel, con el radicado, el cliente y
+> qué parte falta, y lleva directo al expediente.
+>
+> Va en ámbar y no en rojo a propósito: es una conformación pendiente, no un riesgo procesal.
+> Mezclarlo con los plazos vencidos le restaría fuerza a lo que de verdad es urgente.
 
 ---
 
@@ -588,7 +700,7 @@ Administrador.
 ---
 
 ## HU-13 · Clasificar documentos
-**Actor:** Abogado, Colaborador · **Sprint 2** · **3 pts** · 🟡
+**Actor:** Abogado, Colaborador · **Sprint 2** · **3 pts** · ✅
 
 **Nace de**
 - **RF19** — Siete categorías: demandas, pruebas, contratos, escritos, notificaciones, providencias y otros.
@@ -599,11 +711,35 @@ Administrador.
 
 **Criterios**
 1. Cada documento se clasifica en una categoría.
-2. Existen las siete categorías. → **🟥 falta «escritos»**
+2. Existen las siete categorías.
 3. Se filtra por categoría.
 4. Se pueden cargar documentos sin expediente.
 
-**Dónde está** `documentos.controller.js` · **Cómo demostrarlo** Expediente → Documentos → filtrar
+**Dónde está** `documentos.controller.js` · **Cómo demostrarlo** Expediente → Documentos → Subir
+Archivo → elegir «Escrito», y filtrar por esa categoría
+
+> **Los criterios 2 y 3 se cerraron el 3 de septiembre de 2026**, y el segundo de ellos merece
+> contarse porque no estaba declarado como pendiente.
+>
+> El criterio 2 pedía **«escritos»**, y no era la categoría menos importante: el escrito procesal
+> —memoriales, recursos, alegatos— es el género más frecuente en un despacho, y hasta entonces
+> había que archivarlo como «otros», que es tanto como no clasificarlo.
+>
+> **El criterio 3 figuraba como cumplido y no lo estaba.** No existía ningún filtro por categoría:
+> ni parámetro en la API ni control en la pantalla. Se marcó ✅ sin ir a mirar, y esta historia
+> llegó a darse por completa con ese criterio incumplido. Se descubrió después, al repasar el
+> catálogo afirmación por afirmación. El filtro existe ahora, y se aplica en el servidor
+> **después** de las reglas de visibilidad: filtrar por categoría no puede servir para asomarse a
+> un documento privado.
+>
+> Añadir el valor al enumerado fue una línea. Lo que costaba era otra cosa: la lista de categorías
+> vive en **tres sitios a la vez** —el enumerado de la base de datos, una constante del controlador
+> y el desplegable del formulario— y los tres tienen que decir lo mismo. Una prueba los compara
+> entre sí, para que añadir la octava en uno solo falle ahí y no en producción.
+>
+> De paso se corrigió un defecto vecino: enviar una categoría que no existe devolvía un `500`
+> desde las tripas de Prisma. Ahora devuelve un `400` que enumera las admitidas. Es el mismo
+> defecto que RF18 ya había corregido para el tamaño de los archivos.
 
 ---
 
@@ -758,7 +894,7 @@ Administrador.
 ---
 
 ## HU-22 · Recordatorios de término
-**Actor:** Abogado · **Sprint 3** · **5 pts** · 🟡
+**Actor:** Abogado · **Sprint 3** · **5 pts** · ✅
 
 **Nace de**
 - **RF33** — Valores por defecto: 5 días, 1 día y el día del vencimiento.
@@ -772,9 +908,20 @@ Administrador.
 2. Se omiten los que ya habrían pasado.
 3. Se configuran recordatorios propios en minutos, horas o días.
 4. Se conserva el registro de los envíos.
-5. Se conserva el historial de cambios de estado. → **🟥 solo el último**
+5. Se conserva el historial de cambios de estado.
 
 **Dónde está** `terminos.controller.js` · `recordatorios.job.js`
+**Cómo demostrarlo** Gestionar un término → Expediente → pestaña Historial
+
+> El criterio 5 se implementó el 3 de septiembre de 2026. La fila del término guarda **un solo**
+> estado, así que al reclasificarlo se perdía por dónde había pasado. En un plazo procesal eso
+> importa: que hoy figure como `CUMPLIDO_TARDIO` no dice si llegó ahí desde `PENDIENTE` o si un
+> Administrador lo rebajó desde `INCUMPLIDO`.
+>
+> Cada cambio queda ahora en el historial del expediente, con su antes y su después. Se apuntó
+> ahí, y no en una tabla nueva, porque es exactamente lo que ese historial ya hacía y el término
+> siempre pertenece a un expediente: una tabla más habría exigido una migración para no ganar
+> nada.
 
 ---
 
@@ -809,7 +956,7 @@ Administrador.
 # Módulo 7 · Panel, alertas y reportes
 
 ## HU-24 · Panel principal por rol
-**Actor:** Todos los del despacho · **Sprint 4** · **8 pts** · 🟡
+**Actor:** Todos los del despacho · **Sprint 4** · **8 pts** · ✅
 
 **Nace de**
 - **RF38** — Panel diferenciado por rol.
@@ -824,9 +971,23 @@ Administrador.
 2. Prioriza términos por vencer, vencidos y audiencias próximas.
 3. Los términos vencidos se marcan en rojo.
 4. Las audiencias en menos de 24 h se marcan en rojo.
-5. Los procesos sin movimiento más de 30 días se marcan en rojo. → **🟥 no implementado**
+5. Los procesos sin movimiento más de 30 días se marcan en rojo.
 
-**Dónde está** `DashboardIndex.jsx` · **Cómo demostrarlo** Panel principal → semáforo de riesgos
+**Dónde está** `DashboardIndex.jsx` · `procesos/atencion.js`
+**Cómo demostrarlo** Panel principal → semáforo de riesgos
+
+> El criterio 5 se completó el 3 de septiembre de 2026. La detección de inactividad existía,
+> pero **solo la veía el Administrador**: llegaba por `/reportes/stats`, que abarca todo el
+> consultorio. Un abogado no tenía forma de enterarse de que uno de sus propios expedientes
+> llevaba un mes parado, que es justo a quien más le sirve saberlo.
+>
+> El cálculo respeta la misma visibilidad que el listado de expedientes (RF04): el abogado ve
+> los suyos, el Administrador todos. **Se comparte el mismo filtro a propósito**, para que el
+> panel no pueda enseñar expedientes que el listado oculta.
+>
+> Un expediente cuenta como vivo si se tocó él, o si tiene un documento, un cambio de estado o
+> una actuación reciente. Mirar solo la fecha del expediente marcaría como abandonado uno en el
+> que se trabajó ayer.
 
 ---
 
@@ -881,7 +1042,7 @@ Administrador.
 4. El CSV incluye a los clientes **sin** expedientes.
 5. Se exporta en PDF, con el mismo filtro aplicado.
 
-**Dónde está** `GET /api/reportes/stats`, `/export/csv` y `/export/pdf`
+**Dónde está** `GET /api/reportes/stats`, `/export/csv` y `/export/pdf` · `ReportesPage.jsx`
 **Cómo demostrarlo** Reportes → elegir un periodo → Exportar en CSV y en PDF; ambos deben
 mostrar las mismas cifras.
 
@@ -898,7 +1059,7 @@ mostrar las mismas cifras.
 # Módulo 8 · Portal del cliente
 
 ## HU-27 · Acceso al portal
-**Actor:** Cliente · **Sprint 4** · **5 pts** · 🟡
+**Actor:** Cliente · **Sprint 4** · **5 pts** · ✅
 
 **Nace de**
 - **RF43** — El portal muestra procesos, audiencias autorizadas, documentos habilitados y novedades.
@@ -915,8 +1076,24 @@ mostrar las mismas cifras.
 3. Solo ve sus propios procesos.
 4. Nunca ve notas internas ni documentos privados.
 5. Ningún otro rol puede entrar al portal.
+6. La sesión del cliente se cierra sola tras 30 minutos sin actividad.
+7. La contraseña del portal la elige el cliente, no el despacho.
 
-**Dónde está** `portal.controller.js` · **Cómo demostrarlo** Ficha del cliente → Habilitar acceso
+**Dónde está** `portal.controller.js` · `clientes.controller.js: createPortalAccess`
+**Cómo demostrarlo** Ficha del cliente → Habilitar acceso: el cliente recibe el enlace y elige
+su contraseña; nadie del despacho llega a verla
+
+> Esta historia figuraba como 🟡 **sin ningún criterio incumplido**, lo que no significaba
+> nada: el estado contradecía a sus propios criterios. El 🟡 venía de RNF02, que aparece entre
+> sus requisitos de origen y estaba incompleto por el cierre por inactividad. Cerrado ese punto
+> el 3 de septiembre de 2026, se declara como criterio 6 y la historia queda completa.
+>
+> **El criterio 7 se añadió después, el mismo día, al cerrar RN02**, y es el que de verdad
+> sostiene la regla que gobierna esta historia. El criterio 5 —«ningún otro rol puede entrar»— se
+> daba por suficiente, y no lo era: comprobar el rol impide entrar con la sesión del despacho, no
+> con la del cliente. Y era el despacho quien fijaba esa contraseña al habilitar el acceso, así
+> que podía entrar como él cuando quisiera. Ahora la cuenta nace sin contraseña utilizable y solo
+> el titular del correo puede fijar la suya.
 
 ---
 
@@ -945,13 +1122,52 @@ mostrar las mismas cifras.
 | | |
 |---|---:|
 | Historias | 37 |
-| Completas ✅ | 26 |
-| Parciales 🟡, con el criterio pendiente declarado | 11 |
+| Completas ✅ | 37 |
+| Parciales 🟡, con el criterio pendiente declarado | 0 |
 | Sin empezar | 0 |
 | Puntos de historia | 170 |
 
-HU-03 (bitácora) y HU-26 (reportes) pasaron de 🟡 a ✅ el 3 de septiembre de 2026, al cerrarse
-sus criterios de exportación y de registro de sesión.
+### Las tres últimas que se cerraron, y qué les faltaba
+
+| Historia | Criterio que faltaba | Qué exigió cerrarlo |
+|---|---|---|
+| **HU-01** Inicio de sesión | Entrar con nombre de usuario, no solo con correo | Columna `nombre_usuario` en `usuario`, única en todo el sistema, y la regla que separa un identificador del otro: la arroba |
+| **HU-13** Clasificar documentos | La séptima categoría, «escritos» | Un valor nuevo en el enumerado `CategoriaDocumento`, y una prueba que ata las tres listas de categorías entre sí |
+| **HU-31** Buscar y filtrar | Garantizar la respuesta por debajo de 2 s al crecer | Once índices, cinco de ellos de trigramas porque la búsqueda parcial no admite B-tree |
+
+**Las tres necesitaban una migración de base de datos, y esa fue la razón por la que estuvieron
+abiertas más tiempo que el resto.** Se dejaron fuera del lote anterior del 3 de septiembre de 2026
+por una decisión consciente: ese mismo día una migración sin aplicar en producción tumbó el acceso
+a la plataforma, y no era el momento de encadenar tres más.
+
+Se cerraron ese mismo día, después, con esa lección aplicada: **tres migraciones separadas en vez
+de una**, en el orden en que aparecen arriba. La última es la única que necesita una extensión de
+PostgreSQL (`pg_trgm`), que es lo único que podría faltarle a un servidor. Si falla, falla sola y
+las otras dos ya están aplicadas. Una migración grande que falla a la mitad deja la base en un
+estado que nadie eligió.
+
+### Historias que se cerraron el 3 de septiembre de 2026
+
+Las nueve del primer lote, las que no tocaban la base de datos. Las tres de la tabla anterior
+—HU-01, HU-13 y HU-31— se cerraron el mismo día, después, con sus migraciones.
+
+| Historia | Lo que le faltaba |
+|---|---|
+| HU-02 Roles y permisos | Nadie había comprobado que no se pueda cambiar un rol. Se comprobó: no existe la operación |
+| HU-03 Bitácora | Registro de sesión y exportación |
+| HU-04 y HU-05 Clientes | Validación de campos obligatorios en el servidor |
+| HU-08 Equipo del expediente | Nadie había comprobado que no pueda quedarse sin responsable |
+| HU-11 Partes procesales | El aviso de expediente incompleto no estaba en el panel |
+| HU-22 Recordatorios de término | Solo se guardaba el último estado, no el historial |
+| HU-24 Panel por rol | La inactividad solo la veía el Administrador |
+| HU-26 Reportes | Exportación en PDF |
+| HU-27 Portal del cliente | Cierre de sesión por inactividad |
+
+> **Dos de ellas no necesitaron una sola línea de código nuevo.** HU-02.7 y HU-08.3 ya se
+> cumplían *porque la operación que las rompería no existe*: ningún punto del backend cambia el
+> rol de un usuario, y la clave del abogado responsable es obligatoria en el esquema. Lo que les
+> faltaba era una prueba que lo fijara, y ahora la tienen. Una garantía que depende de que nadie
+> escriba cierto código es frágil mientras nadie la vigile.
 
 **Los cuellos de botella del grafo** —las historias de las que más dependen otras— son HU-07
 (catorce dependientes), HU-01 (siete), HU-12 (cuatro) y HU-17 (tres). Son las que conviene
