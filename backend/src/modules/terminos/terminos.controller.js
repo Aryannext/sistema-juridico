@@ -1,4 +1,5 @@
 const prisma = require('../../config/prisma');
+const { validarEnum } = require('../../utils/enumerados');
 
 // 1. Crear un nuevo vencimiento de término judicial (HU-21, HU-22)
 exports.createTermino = async (req, res) => {
@@ -57,7 +58,14 @@ exports.createTermino = async (req, res) => {
           let canal = 'EMAIL';
           if (typeof r === 'object') {
             sendDate = new Date(r.fecha_hora_envio);
-            canal = r.canal || 'EMAIL';
+            // Un canal inventado reventaría contra el enumerado de la base con
+            // un 500. Aquí se cae al valor por defecto en vez de rechazar la
+            // petición entera: el recordatorio se crea igual y llega por
+            // correo, que es lo que el usuario esperaba. Perder el término por
+            // un canal mal escrito sería peor que enviarlo por otro medio.
+            canal = validarEnum('CanalNotificacion', r.canal).valido && r.canal
+              ? r.canal
+              : 'EMAIL';
           } else {
             sendDate = new Date(r);
           }

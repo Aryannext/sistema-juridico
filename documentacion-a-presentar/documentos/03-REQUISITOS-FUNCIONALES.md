@@ -1,6 +1,10 @@
 # 03 — Requisitos funcionales
 
-**59 requisitos**, agrupados por área.
+**60 requisitos**, agrupados por área.
+
+> El sexagésimo, RF60, se añadió el 3 de septiembre de 2026: la administración de la plataforma
+> existía en el sistema y **no tenía requisito que la respaldara**. Se detectó revisando este
+> catálogo contra el código antes de desplegar.
 
 ## Cómo leer este documento
 
@@ -304,13 +308,27 @@ abre un expediente para enterarse de que está incompleto. **HU-11**
 ### RF18 · Formatos y tamaño
 | | Criterio | |
 |---|---|:--:|
-| RF18.1 | Se admiten PDF, DOCX, XLSX, JPG y PNG | ✅ |
+| RF18.1 | Se admiten al menos PDF, DOCX, XLSX, JPG y PNG | ✅ |
 | RF18.2 | El tamaño máximo por archivo es de 10 MB | ✅ |
 | RF18.3 | Un formato no admitido devuelve un error **descriptivo** | ✅ |
 | RF18.4 | Un archivo demasiado grande devuelve un error descriptivo | ✅ |
 
 **Estado ✅.** RF18.3 y RF18.4 se corrigieron el 2 de septiembre de 2026: antes devolvían un
 `500 "Algo salió mal!"` porque la validación ocurre **antes** del controlador. Y hasta esa fecha
+
+> **La plataforma admite más formatos de los que el enunciado enumera, y conviene decirlo antes de
+> que lo pregunten.** El requisito nombra cinco; `documentos.routes.js` acepta **diez**: PDF, DOC,
+> DOCX, XLS, XLSX, JPG, PNG, WebP, TIFF y TXT.
+>
+> No es una desviación: es un superconjunto. Los cinco del enunciado están todos, y los otros
+> cinco responden a lo que llega de verdad a un despacho — un juzgado que remite en `.doc`, una
+> notificación escaneada en TIFF, una constancia en texto plano. Rechazarlos habría obligado a
+> convertir el archivo antes de subirlo, que es exactamente la fricción que este sistema viene a
+> quitar.
+>
+> El criterio se redactó como *«al menos»* el 3 de septiembre de 2026, al detectar el desajuste
+> revisando el catálogo contra el código. Antes decía «se admiten PDF, DOCX, XLSX, JPG y PNG» a
+> secas, y quien lo leyera esperaría que un `.txt` fuera rechazado.
 no existía filtro de formatos: se podía adjuntar un ejecutable a un expediente judicial.
 **HU-12**
 
@@ -661,13 +679,48 @@ evaluó *Row Level Security* y se pospuso ([ADR-003](../../docs/11-DECISIONES-AR
 **Estado ✅.** RF54.2 y RF54.4 se completaron el 2 de septiembre de 2026. Antes, un correo perdido
 dejaba a la persona bloqueada sin ninguna salida. **HU-35**
 
+
+### RF60 · Administración de la plataforma
+
+**Enunciado.** Existe una administración del servicio, separada de los consultorios, que da de
+alta, suspende y da de baja consultorios sin acceder a sus expedientes.
+
+| | Criterio verificable | |
+|---|---|:--:|
+| RF60.1 | La administración de la plataforma es una identidad separada, no un rol de consultorio | ✅ |
+| RF60.2 | Su sesión **no da acceso** a expedientes, clientes ni documentos de ningún consultorio | ✅ |
+| RF60.3 | Puede suspender un consultorio, y la suspensión corta el acceso de todos sus usuarios | ✅ |
+| RF60.4 | La suspensión exige justificación escrita | ✅ |
+| RF60.5 | La baja definitiva exige que el consultorio esté suspendido, el nombre exacto y justificación | ✅ |
+| RF60.6 | Los actos de plataforma quedan en una bitácora aparte que sobrevive a la baja del consultorio | ✅ |
+
+**Estado ✅.** Este requisito **no existía**, y la funcionalidad sí: se añadió el 3 de septiembre
+de 2026 al revisar el catálogo contra el código antes de desplegar.
+
+> **Por qué faltaba, y por qué importa que ya no falte.** La administración de plataforma nació de
+> una necesidad operativa —cortar el acceso a un consultorio que no paga— y se documentó bien, pero
+> en otro sitio: [doc 15](../../docs/15-ADMINISTRACION-DE-PLATAFORMA.md) y
+> [ADR-012](../../docs/11-DECISIONES-ARQUITECTONICAS.md). Nunca se escribió como requisito.
+>
+> El resultado era que **la plataforma hacía algo que su catálogo no pedía**: seis endpoints, una
+> tabla de identidad propia y la capacidad de borrar un despacho entero, sin ningún RF detrás. Al
+> presentar el catálogo, cualquiera podía señalar esa funcionalidad y preguntar de dónde salió.
+>
+> La decisión de fondo —que esa administración **no** puede abrir expedientes— es la parte que más
+> convenía tener escrita como requisito y no solo como decisión técnica: los procesos judiciales
+> están cubiertos por el secreto profesional, y que exista un rol capaz de leerlos todos sería una
+> cuestión legal, no de implementación. RF60.2 lo fija.
+
+**Implementado en** `plataforma.controller.js` · `plataforma.middleware.js` · `AdminPlataforma` ·
+`BitacoraPlataforma` · **Pruebas:** `consultorio_suspendido.test.js`
+
 ---
 
 ## Resumen
 
 | Estado | Requisitos |
 |---|---:|
-| ✅ Cumplidos | 58 |
+| ✅ Cumplidos | 59 |
 | 🟡 Parciales, con el límite declarado | 1 |
 | 🟥 No cumplidos | 0 |
 

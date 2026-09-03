@@ -2,6 +2,7 @@ const prisma = require('../../config/prisma');
 const { triggerWebhook } = require('../../config/webhook');
 const atencion = require('./atencion');
 const { validarResponsable } = require('./responsable');
+const { validarEnum } = require('../../utils/enumerados');
 
 // 1. Crear un expediente jurídico digital
 exports.createProceso = async (req, res) => {
@@ -594,6 +595,13 @@ exports.addParteProcesal = async (req, res) => {
 
     if (!nombre || !tipo) {
       return res.status(400).json({ error: 'El nombre y el tipo de parte procesal son obligatorios.' });
+    }
+
+    // Sin esto, un tipo inventado viajaba hasta Prisma y volvia como un 500
+    // que no explicaba nada. Ver utils/enumerados.js.
+    const tipoParte = validarEnum('TipoParte', tipo);
+    if (!tipoParte.valido) {
+      return res.status(400).json({ error: tipoParte.error });
     }
 
     const proceso = await prisma.proceso.findFirst({

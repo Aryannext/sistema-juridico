@@ -121,3 +121,60 @@ describe('Formato del correo', () => {
     }
   });
 });
+
+describe('RF06 · El nombre es obligatorio en los DOS tipos', () => {
+  /**
+   * Este bloque nace de un fallo encontrado revisando el catálogo criterio a
+   * criterio antes de desplegar.
+   *
+   * `validacion.js` se escribió para cerrar un defecto conocido: un cliente sin
+   * `nombre` llegaba hasta Prisma y volvía como un 500 opaco. Lo cerró **solo
+   * para las personas naturales**: `nombre` quedó en la lista de lo que exige
+   * ese tipo, cuando la columna es obligatoria en la base para los dos. Una
+   * persona jurídica sin nombre pasaba el filtro y reproducía exactamente el
+   * mismo 500 que la validación venía a evitar.
+   *
+   * Se comprobó contra la API real antes de arreglarlo: HTTP 500.
+   */
+  const juridica = {
+    tipo: 'JURIDICA', razon_social: 'ACME S.A.S.', nit: '900123456',
+    representante: 'Ana Rojas', tipo_documento: 'NIT',
+    numero_documento: '900123456', telefono: '3000000000', email: 'acme@correo.com',
+  };
+
+  it('Rechaza una persona jurídica sin nombre', () => {
+    const { nombre, ...sinNombre } = { ...juridica, nombre: 'ACME' };
+    void nombre;
+    const r = validarCliente(sinNombre);
+
+    expect(r.valido).toBe(false);
+    expect(r.error).toContain('el nombre');
+  });
+
+  it('Acepta una persona jurídica completa', () => {
+    expect(validarCliente({ ...juridica, nombre: 'ACME' }).valido).toBe(true);
+  });
+
+  it('Sigue rechazando una persona natural sin nombre', () => {
+    const r = validarCliente({
+      tipo: 'NATURAL', tipo_documento: 'CC', numero_documento: '1075',
+      telefono: '3000000000', email: 'ana@correo.com',
+    });
+
+    expect(r.valido).toBe(false);
+    expect(r.error).toContain('el nombre');
+  });
+
+  it('El nombre se exige desde la lista común, no desde la de un tipo', () => {
+    // Si vuelve a colocarse bajo un tipo concreto, el hueco reaparece para el
+    // otro. La prueba mira dónde está declarado, no solo qué hace hoy.
+    const fs = require('fs');
+    const path = require('path');
+    const fuente = fs.readFileSync(
+      path.join(__dirname, '..', 'modules', 'clientes', 'validacion.js'), 'utf8'
+    );
+    const comunes = fuente.slice(fuente.indexOf('const COMUNES'), fuente.indexOf('const SEGUN_TIPO'));
+
+    expect(comunes).toContain("['nombre'");
+  });
+});

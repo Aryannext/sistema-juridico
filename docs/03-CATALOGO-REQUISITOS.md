@@ -5,7 +5,7 @@ La numeración RF01–RF09 de `investigacion.docx` queda **retirada de circulaci
 de identificadores (hallazgo H-10); ese documento se reclasifica como investigación de dominio
 y su contenido útil se rescata en [07-GLOSARIO-JURIDICO.md](07-GLOSARIO-JURIDICO.md).
 
-**Total:** 59 requisitos funcionales · 10 no funcionales · 9 reglas de negocio.
+**Total:** 60 requisitos funcionales · 10 no funcionales · 9 reglas de negocio.
 RF55–RF59 son **nuevos**: recuperan la entidad *Actuación*, perdida al reescribir los requisitos.
 
 ### Leyenda de estado
@@ -155,6 +155,7 @@ obligatorio habría roto los datos existentes.
 | RF52 | Aislamiento lógico total entre tenants | 🟡 | El filtrado por `tenant_id` es sistemático (118 usos), pero las restricciones `@unique` globales lo perforan (H-19) y no hay *Row Level Security* |
 | RF53 | El Administrador actualiza los datos del consultorio | ✅ | `PUT /api/tenant/perfil` con carga de logo (JPG/PNG, 2 MB) |
 | RF54 | Enlace de verificación único, tokenizado, vigente 24 h, un solo uso, reenviable | ✅ | **Completado el 2-09-2026.** Vigencia de 24 h en `token_verificacion_expira` y reenvío en `POST /api/auth/reenviar-verificacion`, ofrecido en la pantalla del enlace caducado. Un token sin fecha se sigue aceptando: es el de las cuentas anteriores al campo. Ver [doc 17](17-RECUPERACION-DE-ACCESO.md) |
+| RF60 | Administración de la plataforma: alta, suspensión y baja de consultorios, sin acceso a sus expedientes | ✅ | **Requisito añadido el 3-09-2026.** No existía, y la funcionalidad sí: seis endpoints, identidad propia (`AdminPlataforma`) y bitácora aparte, sin ningún RF detrás. Se detectó revisando el catálogo contra el código antes de desplegar. Estaba documentada en [doc 15](15-ADMINISTRACION-DE-PLATAFORMA.md) y [ADR-012](11-DECISIONES-ARQUITECTONICAS.md), pero no como requisito. Lo que más convenía fijar: **esa administración no puede abrir expedientes** —secreto profesional—, y ahora es el criterio RF60.2 |
 
 ---
 

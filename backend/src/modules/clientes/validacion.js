@@ -14,8 +14,22 @@
 
 const TIPOS = ['NATURAL', 'JURIDICA'];
 
-/** Campos que exige la base para cualquier cliente, sea del tipo que sea. */
+/**
+ * Campos que exige la base para cualquier cliente, sea del tipo que sea.
+ *
+ * `nombre` está aquí y no en la lista de las personas naturales, y esa
+ * colocación importa: la columna es **obligatoria en la base para los dos
+ * tipos**. Estuvo mal puesta —solo bajo `NATURAL`— y el hueco era el mismo
+ * defecto que esta validación vino a corregir, con las jurídicas en vez de las
+ * naturales: una empresa sin `nombre` pasaba el filtro, llegaba a Prisma y
+ * volvía como un **500 opaco**.
+ *
+ * En una persona jurídica el nombre es el nombre comercial, el que se usa a
+ * diario; la razón social es el de los papeles. Se piden los dos porque la
+ * plataforma enseña el primero en los listados y las fichas.
+ */
 const COMUNES = [
+  ['nombre', 'el nombre'],
   ['tipo_documento', 'el tipo de documento'],
   ['numero_documento', 'el número de documento'],
   ['telefono', 'el teléfono'],
@@ -24,7 +38,7 @@ const COMUNES = [
 
 /** Lo que distingue a cada tipo de persona (RF06). */
 const SEGUN_TIPO = {
-  NATURAL: [['nombre', 'el nombre']],
+  NATURAL: [],
   JURIDICA: [
     ['razon_social', 'la razón social'],
     ['nit', 'el NIT'],
