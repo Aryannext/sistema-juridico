@@ -38,6 +38,19 @@ describe('Remitente del correo', () => {
     expect(construirRemitente(env)).toBe('"SGPA Notificaciones" <alguien@gmail.com>');
   });
 
+  it('Al caer en Gmail, IGNORA MAIL_FROM del dominio propio', () => {
+    // Gmail solo puede firmar como la cuenta autenticada: reescribe o rechaza
+    // cualquier otra dirección. Si se respetara MAIL_FROM aquí, el respaldo
+    // quedaría inservible justo cuando hace falta —al volver a Gmail porque el
+    // proveedor propio falla, el envío seguiría roto.
+    const env = {
+      MAIL_FROM: 'SGPA <no-responder@proyectosena.online>',
+      GMAIL_USER: 'alguien@gmail.com',
+      // sin SMTP_HOST: se está usando el respaldo
+    };
+    expect(construirRemitente(env)).toBe('"SGPA Notificaciones" <alguien@gmail.com>');
+  });
+
   it('SMTP_HOST sin SMTP_USER no deja el remitente a medias', () => {
     // Configuración incompleta: mejor caer al respaldo conocido que construir
     // una dirección inválida y que fallen todos los envíos.

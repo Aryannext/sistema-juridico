@@ -55,8 +55,16 @@ function crearTransporte() {
  *   MAIL_FROM="SGPA · Sistema Jurídico <no-responder@proyectosena.online>"
  */
 function construirRemitente(env = process.env) {
+  // Con Gmail, el remitente DEBE ser la cuenta autenticada: Gmail reescribe o
+  // rechaza cualquier otra dirección. Por eso MAIL_FROM se ignora aquí.
+  //
+  // Sin esta comprobación, un MAIL_FROM del dominio propio —puesto para el SMTP
+  // propio— dejaba el respaldo inservible justo cuando hace falta: al volver a
+  // Gmail porque el otro proveedor falla, el envío seguiría roto.
+  if (!env.SMTP_HOST) return `"SGPA Notificaciones" <${env.GMAIL_USER}>`;
+
   if (env.MAIL_FROM) return env.MAIL_FROM;
-  if (env.SMTP_HOST && env.SMTP_USER) return `"SGPA" <${env.SMTP_USER}>`;
+  if (env.SMTP_USER) return `"SGPA" <${env.SMTP_USER}>`;
   return `"SGPA Notificaciones" <${env.GMAIL_USER}>`;
 }
 
