@@ -25,7 +25,7 @@ RF55–RF59 son **nuevos**: recuperan la entidad *Actuación*, perdida al reescr
 
 | ID | Requisito | Estado | Evidencia / brecha |
 |---|---|:--:|---|
-| RF01 | Inicio de sesión con correo **o nombre de usuario** y contraseña | 🟡 | `auth.controller.js: login` busca `findUnique({ where: { email } })`. **Solo acepta correo.** No existe campo `username` en el modelo `Usuario` |
+| RF01 | Inicio de sesión con correo **o nombre de usuario** y contraseña | ✅ | Cerrado el 3-09-2026. `Usuario.nombre_usuario` (opcional, único en todo el sistema) + `utils/nombre-usuario.js`. `login` elige la columna por la que busca según lleve arroba o no; un nombre de usuario no puede contenerla. Se gestiona en `PATCH /auth/nombre-usuario` |
 | RF02 | Cuatro roles: Administrador, Abogado, Colaborador, Cliente | ✅ | `enum RolUsuario` — el tercer rol se llama `ASISTENTE` en la BD (H-09) |
 | RF03 | Permisos leer/crear/editar/eliminar por módulo | ✅ | Tabla `permiso_rol`, `roles.middleware.js`, `PUT /api/admin/permisos/:id_usuario` |
 | RF04 | El abogado solo ve sus procesos asignados | ✅ | `procesos.controller.js: getProcesos` — filtra por `id_abogado_resp` o pertenencia a `proceso_abogados` cuando el rol no es `ADMINISTRADOR` |
@@ -35,7 +35,7 @@ RF55–RF59 son **nuevos**: recuperan la entidad *Actuación*, perdida al reescr
 
 | ID | Requisito | Estado | Evidencia / brecha |
 |---|---|:--:|---|
-| RF06 | Campos mínimos según persona natural / jurídica | 🟡 | El modelo `Cliente` tiene todos los campos y la UI valida con `react-hook-form`. **El backend no valida obligatoriedad**: `createCliente` solo comprueba duplicidad de documento |
+| RF06 | Campos mínimos según persona natural / jurídica | ✅ | Cerrado el 3-09-2026 con `clientes/validacion.js`, que `createCliente` aplica antes de tocar la base. La regla *«si es jurídica, entonces razón social y NIT»* solo puede vivir en el código: esas columnas admiten nulo porque la tabla la comparten las personas naturales |
 | RF07 | Un cliente asociado a múltiples procesos | ✅ | Relación 1:N `Cliente → Proceso` |
 | RF08 | Ver todos los procesos del cliente desde su ficha | ✅ | `getClienteById` incluye `procesos: true`; se renderiza en `ClienteFicha.jsx` |
 
@@ -44,7 +44,7 @@ RF55–RF59 son **nuevos**: recuperan la entidad *Actuación*, perdida al reescr
 | ID | Requisito | Estado | Evidencia / brecha |
 |---|---|:--:|---|
 | RF09 | Crear expediente asociado a un radicado | ✅ | `POST /api/procesos` |
-| RF10 | Validar radicado no duplicado | 🟡 | Valida, pero contra **todos los tenants** (H-19). El mensaje de error revela existencia de datos ajenos |
+| RF10 | Validar radicado no duplicado | ✅ | Cerrado el 2-09-2026 (H-19), migración `unicidad_por_consultorio`. `createProceso` busca con `findFirst` acotado al consultorio: la contraparte litiga el mismo proceso con el mismo radicado desde otra oficina, y antes no podía registrarlo. El mensaje ya no revela datos ajenos |
 | RF11 | Registrar juzgado, tipo, clase, área, estado, fecha y abogado | ✅ | Campos completos en `Proceso`; obligatorios mínimos validados en UI |
 | RF12 | Asignar múltiples abogados o colaboradores | ✅ | `POST /api/procesos/:id/abogados`, tabla `proceso_abogados` |
 | RF13 | Modificar estado (activo/archivado/suspendido/finalizado) | ✅ | `PUT /api/procesos/:id/estado`, con las validaciones de RN03 y RN05 |
@@ -82,14 +82,14 @@ obligatorio habría roto los datos existentes.
 |---|---|:--:|---|
 | RF15 | Registrar demandante, demandado, víctima, tercero, cliente, otros | ✅ | `enum TipoParte`, `POST /api/procesos/:id/partes` |
 | RF16 | Permitir crear procesos sin todas las partes | ✅ | Sin validación bloqueante — comportamiento correcto |
-| RF17 | Marcar incompleto el proceso sin demandante y demandado, **con aviso en el dashboard y en la ficha** | 🟡 | El aviso existe en la ficha (`ProcesoDetalle.jsx:744`). **No aparece en el dashboard** |
+| RF17 | Marcar incompleto el proceso sin demandante y demandado, **con aviso en el dashboard y en la ficha** | ✅ | Cerrado el 3-09-2026: `procesos/atencion.js` + `GET /procesos/atencion`, y el aviso ya está en `DashboardIndex.jsx`. Nadie abre un expediente para enterarse de que le faltan partes |
 
 ### 1.5 Gestión documental
 
 | ID | Requisito | Estado | Evidencia / brecha |
 |---|---|:--:|---|
 | RF18 | Formatos PDF/DOCX/XLSX/JPG/PNG, máximo 10 MB, error descriptivo | ✅ | **Corregido el 2-09-2026.** Límite de 10 MB y `fileFilter` con lista explícita (PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, WebP, TIFF, TXT). Antes no había filtro: se podía adjuntar un ejecutable a un expediente. El error también es descriptivo ahora: los fallos de `multer` se traducen en `subida.middleware.js`, porque ocurren ANTES del controlador y acababan en un 500 genérico |
-| RF19 | Siete categorías: demandas, pruebas, contratos, **escritos**, notificaciones, providencias, otros | 🟡 | `enum CategoriaDocumento` tiene **seis**; falta `ESCRITO` (H-18) |
+| RF19 | Siete categorías: demandas, pruebas, contratos, **escritos**, notificaciones, providencias, otros, **y filtrado por categoría** | ✅ | Cerrado el 3-09-2026 (H-18). `enum CategoriaDocumento` tiene las **siete**; migración `20260903160300_categoria_escrito`. Una categoría inexistente devuelve `400`, no `500`. El **filtro** (RF19.2) figuraba como cumplido y no existía en ninguna parte: ahora es `GET /documentos/proceso/:id?categoria=`, aplicado tras las reglas de visibilidad |
 | RF20 | Organización cronológica por fecha y hora de carga | ✅ | `getProcesoDocumentos` ordena por `created_at desc` |
 | RF21 | Documentos generales no vinculados a un proceso | ✅ | `Documento.id_proceso` es opcional |
 | RF22 | Visibilidad: privado / compartido con cliente / visible para colaboradores | ✅ | `enum VisibilidadDocumento`; filtrado por rol en `documentos.controller.js:282-300` |
@@ -116,7 +116,7 @@ obligatorio habría roto los datos existentes.
 | RF33 | Valores por defecto (5 días, 1 día, día del vencimiento) | ✅ | `terminos.controller.js` — omite los que ya quedaron en el pasado |
 | RF34 | Mantener visibles los términos vencidos hasta gestión manual | ✅ | `getAlertasVencimientos` filtra por `estado: 'PENDIENTE'`, sin corte por fecha |
 | RF35 | Registrar cumplido / cumplido tardíamente / incumplido | ✅ | `PUT /api/terminos/:id/gestion` |
-| RF36 | Historial completo de alertas y estados | 🟡 | `RecordatorioTermino` conserva envíos; el cambio de estado del término **no** genera fila en `historial_proceso` |
+| RF36 | Historial completo de alertas y estados | ✅ | Cerrado el 3-09-2026. `RecordatorioTermino` conserva los envíos y `gestionarTermino` escribe cada cambio de estado en `historial_proceso`. Antes solo quedaba el último: que hoy figure como *cumplido tardíamente* no decía si llegó ahí desde *pendiente* o si un Administrador lo rebajó desde *incumplido* |
 | RF37 | Hasta 3 recordatorios; los críticos alertan también al Administrador | ✅ | `createTermino` añade a los administradores activos a la lista de destinatarios |
 
 ### 1.8 Dashboard principal
@@ -125,7 +125,7 @@ obligatorio habría roto los datos existentes.
 |---|---|:--:|---|
 | RF38 | Panel diferenciado por rol | ✅ | `DashboardIndex.jsx` + `App.jsx: RootRedirect` |
 | RF39 | Priorizar términos por vencer, vencidos, audiencias próximas | ✅ | `DashboardIndex.jsx` |
-| RF40 | Marcar en rojo términos vencidos, audiencias < 24 h y procesos sin movimiento > 30 días | 🟡 | Términos y audiencias sí. **El umbral de días no es configurable** por el Administrador, como exige el requisito |
+| RF40 | Marcar en rojo términos vencidos, audiencias < 24 h y procesos sin movimiento > 30 días | ✅ | Cerrado el 3-09-2026. **La brecha que esta fila declaraba no existía**: el enunciado fija los 30 días de forma literal, así que un umbral configurable sería una mejora, no un criterio; la frase «como exige el requisito» no correspondía a nada del enunciado. Lo que sí faltaba es que la inactividad la vieran también los abogados y no solo el Administrador (`procesos/atencion.js`) |
 | RF41 | Ocultar lo gestionado tras X horas (48 por defecto, ajustable) | ✅ | `Tenant.horas_ocultar_notificaciones` + `notificaciones.controller.js` |
 | RF42 | Estadísticas con filtro por rango de fechas | ✅ | `GET /api/reportes/stats` acepta `mes`, `trimestre`, `anio`, `custom`. Exportable en CSV (`GET /api/reportes/export/csv`) y en PDF (`GET /api/reportes/export/pdf`), ambos con los mismos filtros |
 
@@ -163,15 +163,15 @@ obligatorio habría roto los datos existentes.
 | ID | Requisito | Estado | Evidencia / brecha |
 |---|---|:--:|---|
 | RNF01 | Cifrado en reposo AES-256 y en tránsito TLS 1.2+ | 🔵 | En tránsito: TLS de Nginx. En reposo: cifrado por defecto de Cloudflare R2 para los archivos; **la base de datos, al estar en un contenedor propio, hereda el cifrado de disco del VPS y nada más**. No hay cifrado a nivel de aplicación. Debe declararse así en la sustentación |
-| RNF02 | Política de contraseñas, bloqueo, expiración de sesión, JWT 8 h, 2FA 5 min | 🟡 | **Cumple:** JWT de 8 h, 2FA de 5 min, bloqueo escalado (1/5/15/30/60 min) y, desde el 2-09-2026, **política de contraseñas en el servidor** (`utils/password.js`) y **recuperación de contraseña** operativa. Antes la API aceptaba la contraseña `"1"`. **Sigue sin cumplir:** cierre de sesión por 30 min de inactividad, y falta un limitador dedicado en `/api/auth/login` |
-| RNF03 | Bitácora inmutable, 5 años, exportable en CSV o PDF con filtros | ✅ | Inmutable: no existe ningún `update` sobre `bitacoraAuditoria`, y ningún rol del consultorio puede borrar. El único `deleteMany` está en la baja completa de un consultorio (`plataforma.controller.js`), que se anota en `BitacoraPlataforma`. Exportación: `GET /api/admin/auditoria/export` → CSV con los filtros `modulo`, `accion`, `desde`, `hasta` (`exportacion-bitacora.js`). Generación de PDF: `exportacion-pdf.js` para RF42. Retención a 5 años: pendiente de política de purga automática |
+| RNF02 | Política de contraseñas, bloqueo, expiración de sesión, JWT 8 h, 2FA 5 min | ✅ | **Los ocho criterios.** JWT de 8 h, 2FA de 5 min, bloqueo escalado (1/5/15/30/60 min), política de contraseñas en el servidor (`utils/password.js`) y recuperación operativa desde el 2-09-2026 —antes la API aceptaba la contraseña `"1"`—. Desde el 3-09-2026: cierre por 30 min de inactividad, la exigencia de **carácter especial** que HU-01.6 pedía y nadie comprobaba, y el **limitador dedicado en `/api/auth/login`** (20 fallos cada 15 min por IP, solo cuentan los fallidos). El bloqueo por usuario frena el ataque a una cuenta; el limitador frena el repartido entre muchas, que nunca llega a 5 fallos en ninguna |
+| RNF03 | Bitácora inmutable, 5 años, exportable en CSV o PDF con filtros | 🟡 | **Esta fila se contradecía a sí misma**: figuraba como ✅ mientras su propia evidencia terminaba diciendo que la retención estaba pendiente. Corregido el 3-09-2026. Inmutable: no existe ningún `update` sobre `bitacoraAuditoria`, y ningún rol del consultorio puede borrar. El único `deleteMany` está en la baja completa de un consultorio (`plataforma.controller.js`), que se anota en `BitacoraPlataforma`. Exportación: `GET /api/admin/auditoria/export` → CSV con los filtros `modulo`, `accion`, `desde`, `hasta` (`exportacion-bitacora.js`). **Sigue abierto RNF03.5**, la conservación a 5 años: no hay purga, pero tampoco política de retención escrita ni respaldos automáticos (ver RNF10) |
 | RNF04 | Compatibilidad con navegadores modernos y diseño responsivo 360–1440 px | ✅ | Tailwind con puntos de ruptura; el `DashboardLayout` oculta la barra lateral bajo `lg` |
-| RNF05 | Búsqueda por 6 campos, < 2 s, texto parcial ≥ 3 caracteres, filtros combinables, paginación de 20 | 🟡 | Implementado en `getProcesos`. **Sin índices de base de datos**, el criterio de < 2 s no está garantizado a escala (ver doc 02, deuda #2) |
+| RNF05 | Búsqueda por 6 campos, < 2 s, texto parcial ≥ 3 caracteres, filtros combinables, paginación de 20 | ✅ | Cerrado el 3-09-2026. Once índices (migración `20260903160400_indices_de_busqueda`): seis B-tree y cinco GIN de trigramas, porque `ILIKE '%texto%'` no puede usar B-tree. Verificable con `npm run verificar:indices`, que pide el plan de cada consulta |
 | RNF06 | Eliminación definitiva solo por Administrador con confirmación en dos pasos | ✅ | Backend exige rol + justificación escrita; la UI implementa la doble confirmación |
-| RNF07 | Disponibilidad ≥ 99,5 % mensual | 🔵 | Depende enteramente del VPS: base de datos y API corren allí. **Sin monitoreo ni página de estado** |
-| RNF08 | 50 usuarios concurrentes; consultas < 3 s, escrituras < 5 s | ❓ | **Nunca se ha medido.** No hay pruebas de carga en el repositorio |
-| RNF10 | Transacciones atómicas, backups diarios con 30 días de retención, integridad referencial | 🟡 | Transacciones: ✅ (`prisma.$transaction` en registro, términos, audiencias, borrado de expediente). Integridad referencial: ✅ (claves foráneas de Prisma). **Backups: NO HAY.** Al pasar la base a un contenedor propio se perdió el respaldo automático que daba el proveedor gestionado, y no se ha puesto nada en su lugar. Es hoy el mayor riesgo operativo del sistema |
-| RNF11 | Ninguna consulta debe retornar datos de otro tenant; intento → registro + 403 | 🟡 | El filtrado existe, pero **un acceso cruzado devuelve 404, no 403, y no se registra en bitácora** como exige el requisito |
+| RNF07 | Disponibilidad continua con monitoreo | 🟡 | **Monitoreo cerrado el 3-09-2026**: `GET /api/estado` consulta la base y devuelve 200 o **503**, que es lo que un vigilante externo mira. La ruta `GET /` que había devolvía un texto fijo y respondía «vivo» con la base caída. Falta apuntar un vigilante a esa dirección (RNF07.3) y acumular histórico (RNF07.1): ambas cosas son del servidor |
+| RNF08 | 50 usuarios concurrentes; lecturas < 3 s, escrituras < 5 s | ✅ | **Medido el 3-09-2026** con `npm run medir:concurrencia`: 50 simultáneas, 0 errores, lecturas p95 364 ms y escrituras p95 82 ms. Entorno declarado: máquina de desarrollo, PostgreSQL local, sin red ni Nginx |
+| RNF10 | Transacciones atómicas, respaldos diarios con 30 días de retención | 🟡 | Atomicidad e integridad referencial, cumplidas. **El mecanismo de respaldo existe y está probado desde el 3-09-2026** (`npm run respaldo`: vuelca, **verifica** el volcado y aplica la retención; se restauró en una base aparte y las filas coincidían). **Los respaldos no existen hasta que la tarea corra en el VPS**, que es un acto de operación |
+| RNF11 | Ninguna consulta debe retornar datos de otro tenant; intento → registro + 403 | 🟡 | El filtrado existe y está probado. **El registro del intento se cerró el 3-09-2026** (`acceso-cruzado.middleware.js`): se anota solo cuando el identificador existe de verdad en otro consultorio —un 404 corriente es un error de tecleo y ensuciaría la bitácora—, y va a la bitácora de quien lo intentó, no a la del afectado. **Sigue sin cumplirse el 403, y es deliberado**: se responde 404 porque un 403 confirmaría que el expediente ajeno existe |
 
 > No existe RNF09: `sistema.docx` lo fusionó con RNF03. No es una omisión (H-15).
 
@@ -182,9 +182,9 @@ obligatorio habría roto los datos existentes.
 | ID | Regla | Estado | Evidencia |
 |---|---|:--:|---|
 | RN01 | La bitácora es de solo lectura para todos, incluido el Administrador | ✅ | No existe ningún `update` ni `delete` sobre `bitacoraAuditoria` en el backend. `GET /api/admin/auditoria` es el único acceso |
-| RN02 | Límites del acceso administrativo (3 prohibiciones) | 🟡 | **Cumple:** no puede editar la bitácora; no puede cerrar alertas críticas ajenas salvo destinatario inactivo (`notificaciones.controller.js`). **No verificado:** que no pueda suplantar al cliente en el portal — `getPortalDashboard` exige `rol === 'CLIENTE'`, lo que de hecho lo impide ✅ |
+| RN02 | Límites del acceso administrativo (3 prohibiciones) | ✅ | **Cumple las tres.** No edita la bitácora; no cierra alertas críticas ajenas salvo destinatario inactivo (`notificaciones.controller.js`); y desde el 3-09-2026 no puede suplantar al cliente en el portal. Esto último se daba por cumplido «de forma indirecta» y no lo estaba: quien habilitaba el acceso **escribía la contraseña del cliente**, así que podía entrar como él. Ahora la cuenta nace sin contraseña utilizable y el cliente elige la suya por un enlace de un solo uso |
 | RN03 | Un proceso finalizado/archivado no vuelve a activo sin autorización del Administrador y justificación escrita | ✅ | `cambiarEstadoProceso`, Regla 2 |
-| RN04 | Un proceso siempre debe tener al menos un abogado responsable | 🟡 | `removeAbogadoProceso` asume que `id_abogado_resp` lo garantiza, pero **no valida el cambio del responsable principal** ni impide dejarlo apuntando a un usuario inactivo |
+| RN04 | Un proceso siempre debe tener al menos un abogado responsable | ✅ | Cerrada el 3-09-2026. `procesos/responsable.js` exige que el responsable sea del consultorio, esté activo y pueda responder (Abogado o Administrador); antes `createProceso` **no validaba nada** y admitía incluso un usuario de otra oficina. El relevo, que no existía, es ahora `PUT /procesos/:id/responsable` con justificación y doble registro |
 | RN05 | No archivar con términos vencidos sin gestionar ni audiencias en 30 días | ✅ | `cambiarEstadoProceso`, Regla 1, con forzado explícito solo por Administrador |
 | RN06 | Un documento inactivo o reemplazado no puede reactivarse | ✅ | `updateDocumentoEstado` |
 | RN07 | Clasificación automática de término tardío, no sobrescribible salvo por el Administrador | ✅ | `gestionarTermino`: reclasifica `CUMPLIDO` → `CUMPLIDO_TARDIO` si `now > vencimiento` y registra `SOBREESCRITURA_TERMINO_TARDIO` en bitácora |

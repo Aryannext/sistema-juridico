@@ -15,7 +15,7 @@
 | Entidad | Qué guarda | Detalle que importa |
 |---|---|---|
 | **Tenant** | El consultorio o abogado independiente | `activo` **corta el acceso de todos sus usuarios de golpe**. Es la palanca para suspender por impago |
-| **Usuario** | Quien entra al sistema | `email` es único en **todo** el sistema, no por consultorio *(ver más abajo)* |
+| **Usuario** | Quien entra al sistema | `email` y `nombre_usuario` son únicos en **todo** el sistema, no por consultorio. El segundo es opcional y es la credencial alternativa de RF01.2 *(ver más abajo)* |
 | **PermisoRol** | Permisos de un usuario sobre un módulo | Cuatro banderas: leer, crear, editar, eliminar |
 | **Cliente** | La persona o empresa representada | `numero_documento` único **por consultorio** |
 
@@ -68,6 +68,7 @@ Es la decisión de modelado que más se pregunta.
 | Campo | Alcance | Por qué |
 |---|---|---|
 | `Usuario.email` | **Global** | Es la credencial de acceso y **el formulario no tiene selector de consultorio**. Si dos consultorios registraran el mismo correo, el sistema no sabría a qué cuenta autenticar |
+| `Usuario.nombre_usuario` | **Global** | La credencial alternativa de RF01.2, por la misma razón exacta. Es opcional: nulo significa «esta cuenta solo entra por correo». No admite arroba, y eso es lo que permite al login saber por cuál de las dos columnas buscar sin preguntar |
 | `Cliente.numero_documento` | **Por consultorio** | Una misma persona puede ser cliente de dos despachos distintos |
 | `Proceso.numero_radicado` | **Por consultorio** | En un mismo proceso judicial, **la contraparte litiga con el mismo radicado** desde otro despacho |
 

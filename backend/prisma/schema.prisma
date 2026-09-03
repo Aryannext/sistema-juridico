@@ -60,6 +60,21 @@ model Usuario {
   tenant_id          String     @db.Uuid
   nombre             String     @db.VarChar(100)
   email              String     @unique @db.VarChar(150)
+  /// RF01.2: segundo identificador de acceso, alternativo al correo.
+  ///
+  /// Único en TODO el sistema, igual que el correo, y por la misma razón: el
+  /// login resuelve la cuenta antes de saber a qué consultorio pertenece, así
+  /// que dos personas de oficinas distintas con el mismo nombre de usuario
+  /// dejarían la contraseña decidiendo cuál de las dos entra.
+  ///
+  /// Nulo significa "esta cuenta solo entra por correo". Se admite porque las
+  /// cuentas anteriores a esta columna no tenían ninguno, y porque el correo
+  /// sigue siendo el identificador obligatorio.
+  ///
+  /// Nunca contiene "@": es lo que permite al login distinguir un correo de un
+  /// nombre de usuario sin preguntar, y lo que impide registrar un nombre con
+  /// forma de correo ajeno. Ver utils/nombre-usuario.js.
+  nombre_usuario     String?    @unique @db.VarChar(30)
   password_hash      String
   rol                RolUsuario
   activo             Boolean    @default(true)
@@ -102,6 +117,9 @@ model Usuario {
   historial_realizado  HistorialProceso[]
   actuaciones          Actuacion[]
 
+  /// RNF05.5 — la búsqueda de expedientes incluye el nombre del abogado
+  /// responsable, también con ILIKE '%texto%'. Ver los índices de Proceso.
+  @@index([nombre(ops: raw("gin_trgm_ops"))], type: Gin)
   @@map("usuario")
 }
 
@@ -158,6 +176,11 @@ model Cliente {
   procesos        Proceso[]
 
   @@unique([tenant_id, numero_documento])
+  /// RNF05.5 — la búsqueda de expedientes también mira el nombre del cliente y
+  /// la razón social, con el mismo ILIKE '%texto%'. Ver los índices de Proceso.
+  @@index([tenant_id])
+  @@index([nombre(ops: raw("gin_trgm_ops"))], type: Gin)
+  @@index([razon_social(ops: raw("gin_trgm_ops"))], type: Gin)
   @@map("clientes")
 }
 
@@ -199,6 +222,23 @@ model Proceso {
   actuaciones Actuacion[]
 
   @@unique([tenant_id, numero_radicado])
+  /// RNF05.5 / HU-31.5 — sostener la búsqueda por debajo de 2 s al crecer.
+  ///
+  /// El listado siempre arranca filtrando por consultorio y ordena por fecha
+  /// de creación descendente: ese par es el índice que evita releer y reordenar
+  /// la tabla entera en cada página.
+  @@index([tenant_id, create_at(sort: Desc)])
+  /// Los dos filtros combinables de RNF05, cada uno anclado al consultorio.
+  @@index([tenant_id, estado])
+  @@index([tenant_id, tipo_proceso])
+  /// Quien no es Administrador solo ve sus expedientes: esta clave foránea se
+  /// consulta en TODA petición de ese rol y no tenía índice propio.
+  @@index([id_abogado_resp])
+  /// Búsqueda parcial (ILIKE '%texto%'). Un índice B-tree no sirve aquí —no hay
+  /// prefijo por el que ordenar—, así que estos son GIN de trigramas, que es lo
+  /// que convierte el recorrido completo de la tabla en una búsqueda indexada.
+  @@index([numero_radicado(ops: raw("gin_trgm_ops"))], type: Gin)
+  @@index([juzgado(ops: raw("gin_trgm_ops"))], type: Gin)
   @@map("procesos")
 }
 
@@ -218,6 +258,9 @@ model ProcesoAbogado {
   usuario Usuario @relation(fields: [id_usuario], references: [id_usuario])
 
   @@id([id_proceso, id_usuario])
+  /// La clave primaria empieza por id_proceso, así que no sirve para la
+  /// pregunta que hace el listado: "¿en qué expedientes está esta persona?".
+  @@index([id_usuario])
   @@map("proceso_abogados")
 }
 
@@ -288,10 +331,12 @@ model Actuacion {
   @@map("actuaciones")
 }
 
+/// RF19.1: las siete categorías del enunciado, en su orden.
 enum CategoriaDocumento {
   DEMANDA
   PRUEBA
   CONTRATO
+  ESCRITO
   NOTIFICACION
   PROVIDENCIA
   OTRO

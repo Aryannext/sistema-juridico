@@ -1,3 +1,30 @@
+# Integración continua.
+#
+# ── Léase esto antes de fiarse del color de los checks ──────────────────
+#
+# Hoy este flujo **no ejecuta nada**: la cuenta de GitHub está bloqueada por
+# facturación y los trabajos ni siquiera arrancan. Los checks salen en rojo, y
+# ese rojo significa «no se sabe», no «las pruebas fallan». Es la peor clase de
+# señal, porque se parece a la mala y se acaba ignorando.
+#
+# El archivo se conserva —no se borra— para que el día que la cuenta se
+# desbloquee vuelva a funcionar solo. Mientras tanto, **la verificación de
+# verdad ocurre antes de subir**, en la máquina de quien programa:
+#
+#     git config core.hooksPath .githooks     (una sola vez)
+#     npm --prefix backend run verificar:todo (a mano, cuando se quiera)
+#
+# El hook corre lo mismo que este flujo y no deja subir con algo en rojo. Ver
+# `.githooks/pre-push` y `backend/scripts/verificar-todo.js`.
+#
+# ── Lo que ya no está aquí ──────────────────────────────────────────────
+#
+# Había un tercer trabajo, «Frontend E2E Tests (Cypress)», que se retiró el 3
+# de septiembre de 2026: **no existe la carpeta `cypress/`**. Habría fallado
+# igual con la facturación al día, porque no hay pruebas que ejecutar. Un
+# control que no puede pasar nunca no informa de nada y desgasta la atención
+# que merecen los que sí. Cuando se escriban pruebas E2E de verdad, vuelve.
+
 name: CI Testing
 
 on:
@@ -29,8 +56,24 @@ jobs:
         working-directory: ./backend
         run: npm test
 
-  frontend-tests:
-    name: Frontend E2E Tests (Cypress)
+      - name: Run ESLint
+        working-directory: ./backend
+        run: npm run lint
+
+      # Estas dos no necesitan base de datos: comparan los documentos entre sí
+      # y contra el código. Son las que detectan que la documentación y el
+      # sistema han empezado a divergir, que es el problema que originó este
+      # proyecto.
+      - name: Coherencia de la documentación
+        working-directory: ./backend
+        run: npm run verificar:docs
+
+      - name: Referencias al código
+        working-directory: ./backend
+        run: npm run verificar:referencias
+
+  frontend-build:
+    name: Frontend Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -47,16 +90,9 @@ jobs:
         working-directory: ./frontend
         run: npm ci
 
-      - name: Install Backend Dependencies (for API Mocks if needed)
-        working-directory: ./backend
-        run: npm ci
-
-      # In a real environment, you might start the backend server here and seed the database.
-      # For now, we rely on the mocked intercepts in Cypress.
-      - name: Run Cypress Tests
-        uses: cypress-io/github-action@v6
-        with:
-          working-directory: ./frontend
-          start: npm run dev
-          wait-on: 'http://localhost:5173'
-          wait-on-timeout: 60
+      # Compilar es la comprobación que de verdad aporta hoy en el frontend:
+      # detecta el JSX roto y las importaciones que no existen. Es poco, y se
+      # dice: no hay pruebas de interfaz en este proyecto.
+      - name: Build
+        working-directory: ./frontend
+        run: npm run build

@@ -28,6 +28,7 @@ classDiagram
     class Usuario {
         +UUID id_usuario
         +String email
+        +String nombre_usuario
         +RolUsuario rol
         +Boolean activo
         +Int intentos_fallidos
@@ -43,7 +44,7 @@ classDiagram
         +TipoCliente tipo
         +String numero_documento
         +registrar()
-        +habilitarPortal(password)
+        +habilitarPortal() ~envía enlace, no fija clave~
         +listarProcesos() Proceso[]
     }
 
@@ -51,11 +52,32 @@ classDiagram
         +UUID id_proceso
         +String numero_radicado
         +EstadoProceso estado
+        +UUID id_abogado_resp
         +crear()
         +cambiarEstado(nuevo, justificacion, forzar)
+        +cambiarResponsable(abogado, justificacion)
         +asignarIntegrante(usuario, rol)
         +estaIncompleto() Boolean
         +eliminarDefinitivamente(justificacion)
+    }
+
+    class ParteProcesal {
+        +UUID id_parte
+        +TipoParte tipo
+        +String nombre
+        +String documento
+        +registrar()
+        +eliminar()
+    }
+
+    class PermisoRol {
+        +ModuloPermiso modulo
+        +Boolean leer
+        +Boolean crear
+        +Boolean editar
+        +Boolean eliminar
+        +conceder(modulo, acciones)
+        +permite(accion) Boolean
     }
 
     class Actuacion {
@@ -72,19 +94,33 @@ classDiagram
 
     Tenant "1" --> "*" Usuario
     Tenant "1" --> "*" Cliente
+    Usuario "1" --> "*" PermisoRol
     Cliente "1" --> "*" Proceso
     Usuario "1" --> "*" Proceso : responsable
+    Usuario "*" -- "*" Proceso : equipo de trabajo
+    Proceso "1" --> "*" ParteProcesal
     Proceso "1" --> "*" Actuacion
+
+    note for Proceso "El responsable es UNA relación (id_abogado_resp).<br/>El equipo es OTRA (proceso_abogados).<br/>Quitar a alguien del equipo no lo quita de responsable,<br/>y al responsable no se le puede quitar del equipo: RN04."
 ```
+
+> **La relación «equipo de trabajo» es de muchos a muchos y en la base de datos tiene tabla
+> propia,** `proceso_abogados`, con el rol de cada integrante. No aparece aquí como clase a
+> propósito: no tiene comportamiento —ninguna función opera sobre ella salvo crearla y
+> borrarla—, y este diagrama muestra *qué sabe hacer cada entidad*. Se representa como lo que
+> es: una asociación.
 
 **Métodos que encierran una regla de negocio:**
 
 | Método | Regla |
 |---|---|
 | `Proceso.cambiarEstado()` | No archiva con pendientes (RN05); no reabre sin Administrador (RN03) |
+| `Proceso.cambiarResponsable()` | El entrante debe ser del consultorio, estar activo y ser Abogado o Administrador (RN04). Exige justificación |
+| `Cliente.habilitarPortal()` | **No recibe contraseña.** Crea la cuenta sin credencial utilizable y envía al cliente un enlace para que elija la suya (RN02.3) |
 | `Actuacion.eliminar()` | Solo Administrador, y bloqueado si tiene términos (RF59) |
 | `Tenant.suspender()` | Corta el acceso de **todos** sus usuarios de golpe |
 | `Usuario.bloquearPorIntentos()` | Bloqueo escalado: 1, 5, 15, 30 y 60 minutos |
+| `PermisoRol.permite()` | Es lo que `roles.middleware.js` consulta antes de cada operación (RF03) |
 
 ---
 
@@ -208,6 +244,19 @@ classDiagram
 
     note for BitacoraAuditoria "NO tiene actualizar().<br/>Escribe y lee; nunca modifica.<br/>Esa ausencia es RN01."
 
+    class HistorialProceso {
+        +String campo_modificado
+        +String valor_anterior
+        +String valor_nuevo
+        +String accion
+        +UUID realizado_por
+        +DateTime created_at
+        +registrar(campo, antes, despues)
+        +delExpediente(id) Cambio[]
+    }
+
+    note for HistorialProceso "Tampoco tiene actualizar().<br/>Es la bitácora DEL EXPEDIENTE:<br/>qué cambió, de qué valor a cuál y quién."
+
     class BitacoraPlataforma {
         +String accion
         +String tenant_nombre ~texto, no relación~
@@ -216,6 +265,13 @@ classDiagram
     }
 ```
 
+> **Hay tres registros y no uno, y responden a preguntas distintas.**
+> `BitacoraAuditoria` responde *«¿quién hizo qué en el consultorio?»* y abarca todos los módulos.
+> `HistorialProceso` responde *«¿qué le ha pasado a ESTE expediente?»* y por eso guarda el valor
+> anterior y el nuevo, que es lo que permite leer un cambio de estado o un relevo de responsable
+> sin reconstruirlo. `BitacoraPlataforma` responde *«¿qué se hizo con los consultorios?»* y vive
+> aparte porque tiene que sobrevivir a la baja del consultorio del que habla.
+>
 > **La ausencia de métodos es aquí tan significativa como su presencia.** `BitacoraAuditoria`
 > registra, se consulta y se exporta, pero **no se modifica**: no existe ningún `update` sobre
 > ella en todo el backend. Esa ausencia **es** la implementación de RN01, porque una bitácora que

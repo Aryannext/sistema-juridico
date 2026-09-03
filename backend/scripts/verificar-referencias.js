@@ -58,6 +58,18 @@ for (const archivo of recorrer(modulos, (n) => n.endsWith('.routes.js'))) {
   }
 }
 
+// No todas las rutas viven en un módulo. `app.js` monta directamente las que
+// no pertenecen a ningún dominio del negocio —la de salud y la de estado del
+// servicio— y mirarlas solo en `modules/` las daba por inexistentes: la
+// documentación citaba `GET /api/estado`, que existe, y esto lo reportaba como
+// referencia rota.
+const app = fs.readFileSync(path.join(RAIZ, 'backend', 'src', 'app.js'), 'utf8');
+const patronApp = /app\.(get|post|put|patch|delete)\(\s*['"]([^'"]*)/g;
+let ma;
+while ((ma = patronApp.exec(app)) !== null) {
+  rutasReales.add(`${ma[1].toUpperCase()} ${normalizar(ma[2].replace(/\/$/, '') || '/')}`);
+}
+
 /** Los parámetros se escriben `:id` en el código y `{id}` en la documentación. */
 function normalizar(ruta) {
   return ruta.replace(/:[A-Za-z_]+/g, '{id}').replace(/\/$/, '');

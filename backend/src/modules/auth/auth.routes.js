@@ -38,8 +38,39 @@ router.post('/reenviar-verificacion', limitadorCorreo, recuperacion.reenviarVeri
 router.post('/recuperar', limitadorCorreo, recuperacion.solicitarRecuperacion);
 router.post('/restablecer', recuperacion.restablecerPassword);
 
+/**
+ * Limitador dedicado del inicio de sesión — RNF02.8.
+ *
+ * **Qué protege que el bloqueo por usuario no protege.** La cuenta se bloquea
+ * tras 5 intentos fallidos, y eso frena el ataque contra *una* cuenta concreta.
+ * No frena el reparto: probar una contraseña común contra cientos de correos
+ * distintos nunca llega a 5 fallos en ninguna cuenta, así que el bloqueo por
+ * usuario no se dispara jamás. Ese ataque se corta por origen, no por destino.
+ *
+ * **Por qué 20 y por qué solo cuentan los fallos.** `skipSuccessfulRequests`
+ * hace que un acceso correcto no consuma cupo: en un despacho todos comparten
+ * la misma dirección IP, y sin eso una mañana de trabajo normal dejaría a la
+ * oficina entera fuera. Con 20 fallos cada 15 minutos, un despacho torpe cabe
+ * de sobra y un ataque queda en 80 intentos por hora, que no sirve para nada.
+ *
+ * El margen coincide a propósito con el de `/api/plataforma/login`: la pantalla
+ * de acceso es única, y cuando alguien falla la contraseña de su consultorio el
+ * navegador prueba también la otra vía. Dos umbrales distintos harían que el
+ * primero en agotarse dependiera de un detalle de la interfaz.
+ */
+const limitadorLogin = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Demasiados intentos de acceso fallidos desde esta conexión. Espera unos minutos.'
+  },
+});
+
 // Login
-router.post('/login', authController.login);
+router.post('/login', limitadorLogin, authController.login);
 
 // Verificación 2FA
 router.post('/2fa/verificar', authController.verificar2FA);
@@ -52,6 +83,9 @@ router.get('/perfil', authMiddleware, authController.getPerfil);
 
 // Actualizar Preferencias de Alertas
 router.put('/preferencias', authMiddleware, authController.updatePreferencias);
+
+// Fijar, cambiar o retirar el propio nombre de usuario (RF01.2)
+router.patch('/nombre-usuario', authMiddleware, authController.actualizarNombreUsuario);
 
 // Configurar 2FA (Requerirá auth)
 router.post('/2fa/configurar', authMiddleware, authController.configurar2FA);

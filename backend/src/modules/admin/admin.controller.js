@@ -1,11 +1,12 @@
 const prisma = require('../../config/prisma');
 const { construirCSV } = require('./exportacion-bitacora');
 const { hashPassword } = require('../../utils/bcrypt');
+const { resolverNombreUsuarioOpcional } = require('../../utils/nombre-usuario');
 
 // Crear un nuevo colaborador (Abogado o Asistente)
 exports.createUsuario = async (req, res) => {
   try {
-    const { nombre, email, password, rol } = req.body;
+    const { nombre, email, password, rol, nombre_usuario } = req.body;
     const { tenant_id } = req;
 
     if (!nombre || !email || !password || !rol) {
@@ -24,6 +25,12 @@ exports.createUsuario = async (req, res) => {
       return res.status(400).json({ error: 'El correo electrónico ya está en uso' });
     }
 
+    // RF01.2: opcional, igual que en el registro. El colaborador puede fijarlo
+    // o cambiarlo después desde su perfil.
+    const elegido = await resolverNombreUsuarioOpcional(prisma, nombre_usuario);
+    if (!elegido.ok) return res.status(400).json({ error: elegido.error });
+    const nombreUsuario = elegido.valor;
+
     const hashedPassword = await hashPassword(password);
 
     const newUser = await prisma.usuario.create({
@@ -31,6 +38,7 @@ exports.createUsuario = async (req, res) => {
         tenant_id,
         nombre,
         email,
+        nombre_usuario: nombreUsuario,
         password_hash: hashedPassword,
         rol,
         activo: true
@@ -54,6 +62,7 @@ exports.createUsuario = async (req, res) => {
         id_usuario: newUser.id_usuario,
         nombre: newUser.nombre,
         email: newUser.email,
+        nombre_usuario: newUser.nombre_usuario,
         rol: newUser.rol,
         activo: newUser.activo,
         create_at: newUser.create_at

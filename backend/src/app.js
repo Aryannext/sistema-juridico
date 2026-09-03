@@ -31,6 +31,14 @@ const apiLimiter = rateLimit({
 
 app.use('/api/', apiLimiter);
 
+// RNF11.4: deja constancia de los intentos de acceso a datos de otro
+// consultorio. Va aquí, antes de los routers, para envolver `res.json` una
+// sola vez y cubrir los treinta y tantos puntos que devuelven 404 —y los que
+// se añadan—. Lee `req.user` cuando la respuesta ya está formada, así que no
+// importa que authMiddleware se aplique más adelante, dentro de cada router.
+const { registrarAccesoCruzado } = require('./middlewares/acceso-cruzado.middleware');
+app.use('/api/', registrarAccesoCruzado);
+
 // Routes
 const authRoutes = require('./modules/auth/auth.routes');
 const tenantRoutes = require('./modules/tenant/tenant.routes');
@@ -69,6 +77,57 @@ app.use('/api/plataforma', plataformaRoutes);
 // Basic route for testing
 app.get('/', (req, res) => {
   res.json({ message: 'SGPA API is running' });
+});
+
+/**
+ * Estado del servicio — RNF07.2 y RNF07.3.
+ *
+ * La ruta `/` de arriba responde un texto fijo: contesta «vivo» aunque la base
+ * de datos esté caída, porque no comprueba nada. Sirve para saber que el
+ * proceso arrancó y para nada más, y una comprobación de disponibilidad
+ * apoyada en ella diría que todo va bien mientras el sistema no puede atender
+ * a nadie.
+ *
+ * Esta sí mira sus dependencias. Devuelve **200 solo si el servicio puede
+ * trabajar**, y 503 en cuanto no puede, que es lo que un vigilante externo
+ * —UptimeRobot, un `curl` en cron, lo que sea— necesita para avisar.
+ *
+ * No lleva autenticación a propósito: un vigilante no tiene sesión. Por eso
+ * tampoco dice nada que no se pueda contar en público —ni versiones, ni rutas,
+ * ni recuentos de datos—: solo si cada pieza responde y cuánto tardó.
+ */
+app.get('/api/estado', async (req, res) => {
+  const prismaEstado = require('./config/prisma');
+  const comprobaciones = {};
+
+  const cronometrar = async (nombre, tarea) => {
+    const inicio = Date.now();
+    try {
+      await tarea();
+      comprobaciones[nombre] = { ok: true, ms: Date.now() - inicio };
+    } catch (error) {
+      // El motivo se traza en el servidor y NO se devuelve. Los errores de
+      // conexión de PostgreSQL incluyen la dirección y el puerto de la base;
+      // en una ruta pública eso es un mapa de la infraestructura para quien
+      // pase por delante. Quien vigila necesita saber que falla, no por qué.
+      console.error(`[estado] ${nombre} no responde:`, error.message);
+      comprobaciones[nombre] = { ok: false, ms: Date.now() - inicio };
+    }
+  };
+
+  // La base es la única dependencia sin la cual no se puede hacer nada: sin
+  // ella no hay login, ni expedientes, ni bitácora.
+  await cronometrar('base_de_datos', () => prismaEstado.$queryRaw`SELECT 1`);
+
+  const sano = Object.values(comprobaciones).every((c) => c.ok);
+
+  res.status(sano ? 200 : 503).json({
+    estado: sano ? 'operativo' : 'degradado',
+    // Sirve para detectar un reinicio inesperado: si el tiempo en marcha se
+    // reinicia sin que nadie haya desplegado, algo tumbó el proceso.
+    en_marcha_segundos: Math.floor(process.uptime()),
+    comprobaciones,
+  });
 });
 
 // Error handling middleware

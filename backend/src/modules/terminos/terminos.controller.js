@@ -297,6 +297,28 @@ exports.gestionarTermino = async (req, res) => {
         data: { enviado: true, fecha_envio_real: now }
       });
 
+      // 3. HU-22: conservar el HISTORIAL de estados, no solo el último.
+      //
+      // La fila del término guarda un único estado, así que al reclasificarlo
+      // se perdía por dónde había pasado. En un plazo procesal eso importa:
+      // que hoy figure como CUMPLIDO_TARDIO no dice si llegó ahí desde
+      // PENDIENTE o si un Administrador lo rebajó desde INCUMPLIDO.
+      //
+      // Se apunta en el historial del expediente y no en una tabla nueva
+      // porque es exactamente lo que ese historial ya hace, y el término
+      // siempre pertenece a un expediente.
+      await tx.historialProceso.create({
+        data: {
+          tenant_id: req.tenant_id,
+          id_proceso: existingTermino.id_proceso,
+          campo_modificado: `Término: ${existingTermino.nombre}`.slice(0, 100),
+          valor_anterior: existingTermino.estado,
+          valor_nuevo: finalEstado,
+          accion: 'GESTION_TERMINO',
+          realizado_por: req.user.id_usuario
+        }
+      });
+
       // Si es una corrección/edición hecha por el Administrador sobre un estado tardío/incumplido existente, registramos auditoría explícita
       if (existingTermino.estado === 'CUMPLIDO_TARDIO' || existingTermino.estado === 'INCUMPLIDO') {
         await tx.bitacoraAuditoria.create({

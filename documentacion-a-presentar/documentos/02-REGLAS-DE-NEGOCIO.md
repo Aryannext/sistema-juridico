@@ -64,9 +64,30 @@ nadie la atendiera de verdad.
 
 **Cómo se cumple.** `gestionarNotificacion` verifica que quien cierra sea el destinatario, o
 Administrador **con el destinatario inactivo**. El portal exige `rol === 'CLIENTE'`, de modo que
-un administrador no puede entrar por esa vía.
+un administrador no puede entrar con su propia sesión. Y desde el 3 de septiembre de 2026 tampoco
+puede entrar con la del cliente: **el despacho ya no fija la contraseña del portal**.
+
+> **La tercera prohibición se cumplía «de forma indirecta», y esa palabra tapaba una grieta.**
+>
+> Hasta esa fecha, quien habilitaba el acceso al portal *escribía la contraseña del cliente* en un
+> formulario y luego se la comunicaba. La comprobación `rol === 'CLIENTE'` impedía entrar con una
+> sesión de administrador, sí — pero no hacía falta: bastaba abrir el portal e iniciar sesión como
+> el cliente, con la clave que uno mismo acababa de teclear. La prohibición vivía en este documento
+> y no en el sistema.
+>
+> Ahora la cuenta del portal **nace sin contraseña utilizable**: se guarda el hash de un secreto
+> aleatorio que no se muestra, no se devuelve y no queda registrado en ninguna parte. El cliente
+> recibe por correo un enlace de un solo uso, con 24 horas de vigencia, y elige la suya. El
+> sistema no entrega a nadie del despacho una credencial de cliente.
+>
+> **Hasta dónde llega, dicho con precisión.** No impide que alguien con permiso para editar
+> clientes cambie el correo del cliente por el suyo *antes* de habilitar el acceso y reciba así el
+> enlace. Eso no se cierra con una comprobación, sino con rastro: las dos operaciones quedan en la
+> bitácora, que es inmutable (RN01). Lo que sí se cierra —y era lo que faltaba— es que el sistema
+> **entregue** la credencial.
 
 **Requisitos:** RF41, RF43, RF48–RF50 · **Historias:** HU-27, HU-30
+**Verificado por** `rn02_portal_cliente.test.js`
 
 ---
 
@@ -96,16 +117,38 @@ responde **403**. Intentarlo sin justificación: responde **400**.
 **De dónde sale.** Un proceso sin responsable es un proceso cuyos términos no vigila nadie. En
 la práctica del despacho, es el escenario del que nace el problema entero.
 
-**Cómo se cumple hoy — y hasta dónde.** El campo `id_abogado_resp` es obligatorio en la base de
-datos, así que **nunca puede quedar vacío**. Quitar colaboradores adicionales es seguro porque
-el responsable principal es otro campo.
+**Cómo se cumple.** El campo `id_abogado_resp` es obligatorio en la base de datos, así que
+**nunca puede quedar vacío**. Desde el 3 de septiembre de 2026, además, **no puede apuntar a
+cualquiera**: `responsable.js` comprueba en un solo sitio —y los tres que lo necesitan lo usan—
+que quien figure como responsable pertenezca al consultorio, tenga la cuenta activa y sea Abogado
+o Administrador. Un colaborador puede trabajar en el expediente; responder por él, no.
 
-> ⚠️ **Cumplimiento parcial, declarado.** No se valida el cambio del responsable principal ni se
-> impide que apunte a un usuario **inactivo**. Un abogado desvinculado del despacho podría
-> seguir figurando como responsable. Registrado como pendiente en
-> [el plan de remediación](../../docs/10-PLAN-DE-REMEDIACION.md).
+> **Lo que había era peor y mejor a la vez que lo que este documento declaraba.**
+>
+> **Peor:** decía que no se validaba *el cambio* de responsable. En realidad no se validaba
+> **nada**. `createProceso` guardaba el identificador que viniera en la petición, así que cabía
+> nombrar responsable a un usuario **de otro consultorio** —la clave foránea apunta a `usuario`, no
+> a "usuario de este consultorio", de modo que era también una grieta en el aislamiento—, a uno
+> inactivo, o a un cliente con acceso al portal. Los desplegables de la interfaz ya filtraban por
+> rol, pero un filtro en el navegador es comodidad, no una regla: el servidor aceptaba lo que
+> fuera.
+>
+> **Mejor:** el cambio de responsable no es que no se validara, es que **no se podía hacer**.
+> Ningún punto de la API escribía `id_abogado_resp` después de crear el expediente.
+>
+> Eso segundo no cumplía la regla: la esquivaba. Cuando un abogado dejaba el despacho, sus
+> expedientes se quedaban con su nombre encima para siempre —el campo lleno, la regla satisfecha en
+> la forma, y nadie vigilando esos términos, que es literalmente el escenario del que RN04 nace—.
+> La única salida era un `UPDATE` a mano en la base de datos, sin validación y sin rastro.
+>
+> Por eso la operación ahora **existe**: `PUT /api/procesos/:id/responsable`. Exige justificación
+> escrita y deja doble registro —bitácora del consultorio e historial del expediente, de quién a
+> quién—, como los demás cambios que después hay que poder explicar. Y como corolario, tampoco se
+> puede desasignar del equipo al responsable: primero se nombra a otro.
 
 **Requisitos:** RF12 · **Historia:** HU-08
+**Dónde está** `procesos/responsable.js` · `PUT /api/procesos/:id/responsable`
+**Verificado por** `rn04_responsable.test.js`
 
 ---
 
@@ -214,14 +257,26 @@ términos vencidos, ámbar para los que vencen en menos de 48 horas, verde para 
 | Regla | Estado | Nota |
 |---|:--:|---|
 | RN01 · Bitácora inmutable | ✅ | |
-| RN02 · Límites del administrador | 🟡 | Las tres prohibiciones se cumplen; la tercera de forma indirecta |
+| RN02 · Límites del administrador | ✅ | La tercera se cerró el 3-09-2026: el despacho ya no fija la contraseña del portal |
 | RN03 · No reabrir sin autorización | ✅ | |
-| RN04 · Siempre un responsable | 🟡 | No valida el cambio de responsable ni el usuario inactivo |
+| RN04 · Siempre un responsable | ✅ | Cerrada el 3-09-2026: responsable validado, y el relevo existe con justificación |
 | RN05 · No archivar con pendientes | ✅ | |
 | RN06 · No reactivar documentos | ✅ | |
 | RN07 · Cumplimiento tardío | ✅ | Verificada automáticamente |
 | RN08 · Cierre de alertas críticas | ✅ | |
 | RN09 · Semántica del rojo | ✅ | Formalizada a partir del código |
 
-Siete de nueve se cumplen por completo. Las dos parciales están declaradas con el límite exacto,
-no marcadas como terminadas.
+**Las nueve se cumplen por completo**, y las dos últimas se cerraron el 3 de septiembre de 2026.
+
+Conviene decir cómo estaban antes, porque explica para qué sirve este cuadro. Las dos figuraban
+como parciales con el límite declarado, y al ir a cerrarlas **el límite declarado se quedaba
+corto en las dos**:
+
+| Regla | Lo que decía este documento | Lo que había en el código |
+|---|---|---|
+| **RN02** | «La tercera prohibición se cumple de forma indirecta» | El despacho escribía la contraseña del portal del cliente, así que podía entrar como él. La prohibición no se cumplía de ninguna forma |
+| **RN04** | «No valida el cambio de responsable ni el usuario inactivo» | No validaba **nada**: cabía nombrar responsable a alguien de otro consultorio. Y el cambio de responsable no es que no se validara: no se podía hacer |
+
+Ninguna de las dos cosas se habría visto sin ir al código a comprobarlo. Un estado parcial no es
+una etiqueta que se pone una vez: es una afirmación que hay que volver a verificar cada vez que se
+toca lo que describe.

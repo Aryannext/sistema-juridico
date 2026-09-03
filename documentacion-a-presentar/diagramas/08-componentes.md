@@ -55,8 +55,8 @@ Cada uno es una carpeta con dos archivos: sus rutas y su controlador.
 
 | Módulo | Endpoints | De qué responde |
 |---|---:|---|
-| `auth` | 11 | Registro, acceso, 2FA, verificación, recuperación y cierre de sesión |
-| `procesos` | 10 | Expedientes, equipo, estados, partes |
+| `auth` | 12 | Registro, acceso, 2FA, verificación, recuperación, nombre de usuario y cierre de sesión |
+| `procesos` | 12 | Expedientes, equipo, estados, partes, relevo del responsable, panel de atención |
 | `documentos` | 8 | Carga, versiones, visibilidad, descarga |
 | `plataforma` | 6 | **Administración del servicio, aislada** |
 | `admin` | 6 | Usuarios, permisos y bitácora del consultorio (con exportación) |
@@ -69,7 +69,7 @@ Cada uno es una carpeta con dos archivos: sus rutas y su controlador.
 | `portal` | 2 | Vista restringida del cliente |
 | `tenant` | 2 | Perfil del consultorio |
 
-**67 endpoints.** Recuento reproducible:
+**70 endpoints.** Recuento reproducible:
 
 ```bash
 grep -rhoE "router\.(get|post|put|patch|delete)\(" backend/src/modules/*/*.routes.js | wc -l
@@ -174,7 +174,13 @@ graph TB
 ```
 
 **`ProcesoDetalle` concentraba el 36 % del frontend** en un solo archivo: 3 094 líneas y 76
-piezas de estado. Se repartió en cinco *hooks* de dominio, quedando en 2 522 líneas y 8 estados.
+piezas de estado. Se repartió en cinco *hooks* de dominio y quedó, el día del reparto, en 2 522
+líneas y **8 piezas de estado**.
+
+> La cifra de líneas es de aquel momento y ha crecido desde entonces con funcionalidad nueva —el
+> relevo de responsable y el filtro documental—. La que importa no es esa: es que **el estado
+> sigue en 8**. Las líneas crecen cuando el expediente hace más cosas; el estado creciendo sería
+> la señal de que el reparto se deshizo.
 
 La restricción que lo hizo seguro: **cada hook devuelve los mismos nombres de variable** que
 había en el componente, de modo que las 2 300 líneas de interfaz no se tocaron. Se movió estado;

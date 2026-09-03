@@ -170,17 +170,29 @@ export default function RegisterPage() {
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                     <Lock size={18} className="text-neutral-500" />
                   </div>
-                  <input 
-                    type="password" 
+                  {/*
+                    HU-01.6 — las mismas cinco reglas que backend/src/utils/password.js,
+                    una por una y con su mensaje. La comprobación que cuenta es la del
+                    servidor; esto solo evita el viaje de ida y vuelta.
+
+                    Antes era un único patrón que divergía del servidor en las dos
+                    direcciones: rechazaba "Segura2026#" —porque solo admitía los signos
+                    @$!%*?&— y aceptaba "SEGURA2026*", que el servidor rechaza por no
+                    llevar minúscula. Ambas cosas dejaban al usuario adivinando.
+                  */}
+                  <input
+                    type="password"
                     autoComplete="new-password"
                     className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:bg-white/10 focus:border-[#DFB971] transition-all rounded-xl pl-10 pr-4 py-3 outline-none font-mono"
                     placeholder="••••••••"
-                    {...register('password', { 
+                    {...register('password', {
                       required: 'La contraseña es requerida',
                       minLength: { value: 8, message: 'Debe tener al menos 8 caracteres' },
-                      pattern: {
-                        value: /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-                        message: 'Falta mayúscula, número o especial'
+                      validate: {
+                        mayuscula: (v) => /[A-ZÁÉÍÓÚÑ]/.test(v) || 'Debe tener una letra mayúscula',
+                        minuscula: (v) => /[a-záéíóúñ]/.test(v) || 'Debe tener una letra minúscula',
+                        numero: (v) => /[0-9]/.test(v) || 'Debe tener un número',
+                        especial: (v) => /[^\p{L}\p{N}\s]/u.test(v) || 'Debe tener un carácter especial',
                       }
                     })}
                   />

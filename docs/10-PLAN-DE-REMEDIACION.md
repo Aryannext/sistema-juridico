@@ -285,7 +285,22 @@ no lleva selector de consultorio. Decisión razonada en [ADR-003](11-DECISIONES-
 radicado ya existe en el sistema"* incluso cuando pertenece a otro consultorio, revelando
 información ajena.
 
-### 3.2 Índices — **RNF05**
+### 3.2 Índices — **RNF05** · ✅ **la parte de RNF05, hecha el 3-09-2026**
+
+> **Hecho lo que RNF05 exigía**, con la migración `20260903160400_indices_de_busqueda`: los
+> índices de `Proceso` (más `tenant_id + create_at` para el listado paginado y `tenant_id +
+> tipo_proceso` para el segundo filtro), el de `Cliente` y el de `proceso_abogados.id_usuario`,
+> que este plan no había previsto y hacía falta.
+>
+> **Y algo que este plan no contemplaba y era imprescindible:** cinco índices **GIN de
+> trigramas** sobre los campos de texto que recorre la búsqueda. Los `@@index` de aquí abajo son
+> B-tree, y un B-tree **no puede resolver `ILIKE '%texto%'`**: ordena por prefijo y la búsqueda
+> parcial no tiene prefijo. Aplicar solo lo propuesto habría creado índices que nunca se usarían y
+> habría dejado el criterio igual de abierto, con la apariencia de estar cerrado.
+>
+> **Sigue pendiente** lo de `Documento`, `TerminoJudicial`, `Audiencia`, `Notificacion` y
+> `BitacoraAuditoria`: no lo pide RNF05 ni ninguna historia abierta, y se deja como mejora.
+
 
 ```prisma
 model Proceso {
@@ -310,7 +325,9 @@ enum CategoriaDocumento { DEMANDA PRUEBA CONTRATO ESCRITO NOTIFICACION PROVIDENC
 enum TipoParte { DEMANDANTE DEMANDADO VICTIMA TERCEROS CLIENTE APODERADO CURADOR_AD_LITEM OTRO }
 ```
 
-`ESCRITO` cierra el incumplimiento literal de RF19. `APODERADO` y `CURADOR_AD_LITEM` son roles
+`ESCRITO` cierra el incumplimiento literal de RF19. ✅ **Hecho el 3-09-2026** (migración
+`categoria_escrito`), incluido el desplegable del frontend. `APODERADO` y `CURADOR_AD_LITEM`
+siguen pendientes. `APODERADO` y `CURADOR_AD_LITEM` son roles
 procesales cotidianos que hoy no se pueden registrar (doc 07 § 6).
 
 Añadir los valores a los desplegables del frontend.
@@ -393,7 +410,18 @@ RF40 exige que el Administrador defina cuántos días sin movimiento marcan un p
 Hoy está fijo en 30. Añadir `Tenant.dias_inactividad_alerta` y exponerlo en Ajustes,
 igual que ya se hace con `horas_ocultar_notificaciones`.
 
-### 4.6 Reforzar RN04 · 3 h
+### 4.6 Reforzar RN04 · 3 h · ✅ **HECHO el 3-09-2026**
+
+> **Resuelto**, y con más alcance del que este plan preveía. Lo previsto era impedir que el
+> responsable quedara apuntando a un usuario inactivo. Al ir a hacerlo apareció que
+> `createProceso` **no validaba nada**: admitía como responsable a un usuario de otro consultorio
+> —grieta de aislamiento, porque la clave foránea no acota por tenant—, a uno inactivo o a un
+> cliente. Y que el cambio de responsable no estaba sin validar: **no existía**, así que un
+> abogado que dejaba el despacho seguía figurando para siempre.
+>
+> Se añadió `procesos/responsable.js` (una sola regla, tres sitios que la usan) y
+> `PUT /procesos/:id/responsable`, con justificación escrita y doble registro. Fijado por
+> `rn04_responsable.test.js`.
 
 Impedir que el abogado responsable quede sin sustituto o apuntando a un usuario inactivo,
 tanto al desasignar como al cambiar el responsable principal.

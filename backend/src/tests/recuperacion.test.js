@@ -148,7 +148,7 @@ describe('Restablecer la contraseña', () => {
     prisma.usuario.update.mockResolvedValue({});
 
     const res = hacerRes();
-    await recuperacion.restablecerPassword(req({ token: 'tok', password: 'Segura2026' }), res);
+    await recuperacion.restablecerPassword(req({ token: 'tok', password: 'Segura2026*' }), res);
 
     const { data } = prisma.usuario.update.mock.calls[0][0];
     expect(data.password_hash).toBe('hash-nuevo');
@@ -161,7 +161,7 @@ describe('Restablecer la contraseña', () => {
     prisma.usuario.findFirst.mockResolvedValue(conToken);
     prisma.usuario.update.mockResolvedValue({});
 
-    await recuperacion.restablecerPassword(req({ token: 'tok', password: 'Segura2026' }), hacerRes());
+    await recuperacion.restablecerPassword(req({ token: 'tok', password: 'Segura2026*' }), hacerRes());
 
     const { data } = prisma.usuario.update.mock.calls[0][0];
     expect(data.intentos_fallidos).toBe(0);
@@ -172,7 +172,7 @@ describe('Restablecer la contraseña', () => {
     prisma.usuario.findFirst.mockResolvedValue(conToken);
     prisma.usuario.update.mockResolvedValue({});
 
-    await recuperacion.restablecerPassword(req({ token: 'tok', password: 'Segura2026' }), hacerRes());
+    await recuperacion.restablecerPassword(req({ token: 'tok', password: 'Segura2026*' }), hacerRes());
 
     expect(prisma.bitacoraAuditoria.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ accion: 'RESTABLECER_CONTRASENA', tenant_id: 't1' }),
@@ -186,7 +186,7 @@ describe('Restablecer la contraseña', () => {
     });
 
     const res = hacerRes();
-    await recuperacion.restablecerPassword(req({ token: 'viejo', password: 'Segura2026' }), res);
+    await recuperacion.restablecerPassword(req({ token: 'viejo', password: 'Segura2026*' }), res);
 
     expect(res.statusCode).toBe(400);
     expect(prisma.usuario.update).not.toHaveBeenCalled();
@@ -195,14 +195,14 @@ describe('Restablecer la contraseña', () => {
   it('Un token inexistente y uno caducado dan el mismo mensaje', async () => {
     prisma.usuario.findFirst.mockResolvedValue(null);
     const resNoExiste = hacerRes();
-    await recuperacion.restablecerPassword(req({ token: 'x', password: 'Segura2026' }), resNoExiste);
+    await recuperacion.restablecerPassword(req({ token: 'x', password: 'Segura2026*' }), resNoExiste);
 
     jest.clearAllMocks();
     prisma.usuario.findFirst.mockResolvedValue({
       ...USUARIO, token_recuperacion_expira: new Date(Date.now() - 1000),
     });
     const resCaducado = hacerRes();
-    await recuperacion.restablecerPassword(req({ token: 'y', password: 'Segura2026' }), resCaducado);
+    await recuperacion.restablecerPassword(req({ token: 'y', password: 'Segura2026*' }), resCaducado);
 
     expect(resNoExiste.body).toEqual(resCaducado.body);
   });
@@ -220,7 +220,7 @@ describe('Restablecer la contraseña', () => {
 
   it('Sin token, no hace nada', async () => {
     const res = hacerRes();
-    await recuperacion.restablecerPassword(req({ password: 'Segura2026' }), res);
+    await recuperacion.restablecerPassword(req({ password: 'Segura2026*' }), res);
     expect(res.statusCode).toBe(400);
   });
 });

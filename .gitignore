@@ -28,3 +28,7 @@ desktop.ini
 # Registros
 *.log
 npm-debug.log*
+
+# Copias de seguridad de la base (RNF10.3). Contienen datos reales de
+# expedientes: nunca deben viajar al repositorio.
+respaldos/

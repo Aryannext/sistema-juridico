@@ -36,6 +36,7 @@ erDiagram
         uuid id_usuario PK
         uuid tenant_id FK
         varchar email UK "único GLOBAL: es la credencial"
+        varchar nombre_usuario UK "opcional, único GLOBAL: la otra credencial (RF01.2)"
         enum rol "ADMINISTRADOR | ABOGADO | ASISTENTE | CLIENTE"
         boolean activo
         int intentos_fallidos
@@ -290,6 +291,7 @@ recuperar una redacción anterior de una demanda, que es justamente cuando impor
 | Campo | Alcance | Por qué |
 |---|---|---|
 | `USUARIO.email` | **Global** | Es la credencial y el login no tiene selector de consultorio. Si se repitiera, el sistema no sabría a quién autenticar |
+| `USUARIO.nombre_usuario` | **Global** | Por lo mismo, y con más motivo: es la credencial alternativa. Es opcional —nulo significa «esta cuenta solo entra por correo»— y no puede contener arroba, que es lo que permite al login distinguirlo del correo |
 | `CLIENTE.numero_documento` | **Por consultorio** | Una persona puede ser cliente de dos despachos |
 | `PROCESO.numero_radicado` | **Por consultorio** | **La contraparte litiga el mismo proceso con el mismo radicado** desde otro despacho |
 

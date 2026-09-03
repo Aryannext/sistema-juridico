@@ -74,6 +74,7 @@ erDiagram
         uuid tenant_id FK
         varchar nombre
         varchar email UK "unico GLOBAL - ver H-19"
+        varchar nombre_usuario UK "opcional, unico GLOBAL - RF01.2"
         text password_hash "bcrypt salt 10"
         enum rol "ADMINISTRADOR|ABOGADO|ASISTENTE|CLIENTE"
         boolean activo "false hasta verificar correo"
@@ -288,7 +289,7 @@ erDiagram
 | `RolProcesoAbogado` | `ABOGADO`, `ASISTENTE` | RF12 |
 | `TipoParte` | `DEMANDANTE`, `DEMANDADO`, `VICTIMA`, `TERCEROS`, `CLIENTE`, `OTRO` | RF15 |
 | `TipoActuacion` | `AUTO`, `SENTENCIA`, `NOTIFICACION`, `AUDIENCIA`, `MEMORIAL`, `DEMANDA`, `CONTESTACION`, `RECURSO`, `TRASLADO`, `OTRO` | **RF56 (nuevo)** |
-| `CategoriaDocumento` | `DEMANDA`, `PRUEBA`, `CONTRATO`, `NOTIFICACION`, `PROVIDENCIA`, `OTRO` | RF19 — **falta `ESCRITO`** |
+| `CategoriaDocumento` | `DEMANDA`, `PRUEBA`, `CONTRATO`, `ESCRITO`, `NOTIFICACION`, `PROVIDENCIA`, `OTRO` | RF19 — las siete, desde el 3-09-2026 |
 | `VisibilidadDocumento` | `PRIVADO`, `COMPARTIDO_CLIENTE`, `VISIBLE_COLAB` | RF22 |
 | `EstadoDocumento` | `ACTIVO`, `INACTIVO`, `REEMPLAZADO` | RF26, RN06 |
 | `EstadoAudiencia` | `PROGRAMADA`, `REALIZADA`, `CANCELADA` | RF31 |
@@ -382,28 +383,47 @@ Priorizada. El detalle de ejecución está en [10-PLAN-DE-REMEDIACION.md](10-PLA
 | # | Problema | Impacto | Corrección |
 |---|---|---|---|
 | 1 | ~~`numero_documento` y `numero_radicado` únicos globalmente~~ | ~~**Alto** — rompe el aislamiento entre tenants (H-19)~~ | ✅ **CORREGIDO** el 2-09-2026, migración `unicidad_por_consultorio`. Ver [doc 14 § D-04](14-AUDITORIA-DE-DEFECTOS.md) |
-| 2 | Sin índices explícitos en `tenant_id` ni en campos de búsqueda | **Medio** — RNF05 exige respuesta < 2 s; sin índice, cada búsqueda es un recorrido secuencial | `@@index([tenant_id])`, `@@index([tenant_id, estado])` |
-| 3 | Falta el valor `ESCRITO` en `CategoriaDocumento` | Bajo | Añadir al enum + migración |
+| 2 | ~~Sin índices explícitos en `tenant_id` ni en campos de búsqueda~~ | ~~**Medio** — RNF05 exige respuesta < 2 s; sin índice, cada búsqueda es un recorrido secuencial~~ | ✅ **CORREGIDO** el 3-09-2026, migración `indices_de_busqueda`: once índices, cinco de ellos GIN de trigramas. Verificable con `npm run verificar:indices` |
+| 3 | ~~Falta el valor `ESCRITO` en `CategoriaDocumento`~~ | ~~Bajo~~ | ✅ **CORREGIDO** el 3-09-2026, migración `categoria_escrito` |
 | 4 | `ip_adress` está mal escrito (falta la `d`: *address*) | Cosmético | Renombrar con `@map("ip_adress")` para no romper la columna existente |
 | 5 | `create_at` / `created_at` inconsistentes entre tablas | Cosmético | Unificar en `created_at` vía `@map` |
 | 6 | `token_verificacion` sin fecha de emisión | **Medio** — impide cumplir la vigencia de 24 h de RF54 | Añadir `token_verificacion_expira DateTime?` |
 | 7 | Sin *Row Level Security* en PostgreSQL | Medio — el aislamiento depende solo del código | Evaluar RLS; ver [ADR-003](11-DECISIONES-ARQUITECTONICAS.md) |
 | 8 | `PermisoRol` sin restricción única `(id_usuario, modulo)` | Medio — permite filas duplicadas y `findFirst` devolvería una arbitraria | `@@unique([id_usuario, modulo])` |
 
-### Sobre el punto 2 — el índice que más falta
+### Sobre el punto 2 — el índice que más faltaba, y cómo se resolvió
 
 `getProcesos` construye consultas con `contains` sobre `numero_radicado`, `juzgado`,
-`cliente.nombre` y `abogado_resp.nombre`. Con volúmenes pequeños funciona. Con miles de
-expedientes por tenant, RNF05 (< 2 s) dejará de cumplirse. La corrección mínima:
+`cliente.nombre`, `cliente.razon_social` y `abogado_resp.nombre`. Con volúmenes pequeños
+funcionaba —entre 5 y 17 ms— pero por el tamaño de los datos, no por el diseño: cada búsqueda era
+un recorrido secuencial. Con miles de expedientes por tenant, RNF05 (< 2 s) habría dejado de
+cumplirse.
+
+Se resolvió el 3 de septiembre de 2026 con once índices. Los seis corrientes:
 
 ```prisma
 model Proceso {
   // ...
-  @@index([tenant_id])
-  @@index([tenant_id, estado])
-  @@index([tenant_id, id_abogado_resp])
+  @@index([tenant_id, create_at(sort: Desc)])   // listado paginado
+  @@index([tenant_id, estado])                  // filtro de RNF05
+  @@index([tenant_id, tipo_proceso])            // filtro de RNF05
+  @@index([id_abogado_resp])                    // qué ve quien no es Administrador
 }
 ```
 
-Y, para búsqueda de texto real, considerar `pg_trgm` con índices GIN sobre
-`numero_radicado` y `juzgado`.
+**Y los cinco de texto, que no podían ser B-tree.** La búsqueda parcial es `ILIKE '%texto%'`, con
+comodín por delante: un B-tree ordena por prefijo y aquí no hay prefijo, así que el índice
+existiría y no se usaría jamás. Son GIN de trigramas sobre `procesos.numero_radicado`,
+`procesos.juzgado`, `clientes.nombre`, `clientes.razon_social` y `usuario.nombre`:
+
+```prisma
+@@index([numero_radicado(ops: raw("gin_trgm_ops"))], type: Gin)
+```
+
+Requieren la extensión `pg_trgm`, que la migración instala. Es la razón de que esta vaya en un
+archivo aparte y sea la última de las tres: si el usuario de base de datos del despliegue no puede
+crear extensiones, falla sola y las otras dos ya están aplicadas.
+
+> **Por qué el umbral de 3 caracteres deja de ser cosmético.** Tres es el tamaño del trigrama. Con
+> dos, el índice no puede acotar nada y la consulta vuelve a recorrer la tabla. El límite que
+> `getProcesos` ya aplicaba por usabilidad pasa a ser parte de la garantía de rendimiento.

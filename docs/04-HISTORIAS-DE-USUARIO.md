@@ -17,7 +17,7 @@ HU-37 es **nueva**: cubre RF55–RF59 (actuaciones procesales).
 |---|---|
 | **HU-29** | La tabla resumen decía 3 pts y el detalle 4 pts. **Se fija en 4 pts** (prevalece el detalle) — hallazgo H-14 |
 | **HU-24** | Citaba `RN09`, que no existía. Se **formaliza RN09** (semántica del color de riesgo) en el doc 03 — hallazgo H-13 |
-| **HU-01** | El criterio *"correo electrónico o nombre de usuario"* no es implementable: no existe campo `username`. Se marca como brecha (RF01) |
+| **HU-01** | El criterio *"correo electrónico o nombre de usuario"* se marcó en su día como no implementable por falta de campo `username`. **Dejó de serlo el 3-09-2026**: la columna `nombre_usuario` existe y RF01 está cumplido |
 | **Rol "Colaborador"** | En BD y código es `ASISTENTE`. Las historias conservan "Colaborador" como término de negocio — ver [ADR-004](11-DECISIONES-ARQUITECTONICAS.md) |
 
 ---
@@ -30,19 +30,19 @@ Estado: ✅ implementada · 🟡 parcial · ❌ no implementada
 
 | ID | Historia | Sprint | Prio | Pts | RF/RN | Estado | Dónde vive |
 |---|---|:--:|:--:|:--:|---|:--:|---|
-| HU-01 | Inicio de sesión en el sistema | 1 | Alta | 5 | RF01, RNF01, RNF02 | 🟡 | `auth.controller.js: login` · `LoginPage.jsx` — solo correo; sin recuperación de contraseña; sin cierre por inactividad |
-| HU-02 | Gestión de roles y permisos por módulo | 1 | Alta | 8 | RF02–RF05, RN02 | 🟡 | `admin.controller.js` · `UsuariosPage.jsx` — falta impedir que el único Administrador se degrade a sí mismo |
+| HU-01 | Inicio de sesión en el sistema | 1 | Alta | 5 | RF01, RNF01, RNF02 | ✅ | `auth.controller.js: login` · `utils/nombre-usuario.js` · `LoginPage.jsx` · `useCierrePorInactividad.js` — las tres brechas cerradas: correo **o** nombre de usuario (3-09), recuperación (2-09), cierre por inactividad (3-09) |
+| HU-02 | Gestión de roles y permisos por módulo | 1 | Alta | 8 | RF02–RF05, RN02 | ✅ | `admin.controller.js` · `UsuariosPage.jsx` — nadie puede degradarse **porque la operación no existe**: ningún controlador escribe `rol` en una actualización. Fijado por `garantias_estructurales.test.js`, para que deje de depender de que nadie la escriba |
 | HU-03 | Registro de acciones en bitácora de auditoría | 1 | Alta | 5 | RF05, RNF03, RN01 | ✅ | `audit.middleware.js` · `sesion.auditoria.js` · `exportacion-bitacora.js` · `AuditoriaList.jsx` — incluye inicio y cierre de sesión (cierra H-20) y la exportación en CSV con filtros |
 | HU-32 | Habilitar y configurar 2FA | 1 | Alta | 5 | RNF02 | ✅ | `POST /api/auth/2fa/configurar` · `TwoFactorPage.jsx` |
-| HU-35 | Registro en la plataforma | 1 | Alta | 8 | RF51, RF54 | 🟡 | `POST /api/auth/registro` · `RegisterPage.jsx` — el enlace no expira a las 24 h ni se puede reenviar |
+| HU-35 | Registro en la plataforma | 1 | Alta | 8 | RF51, RF54 | ✅ | `POST /api/auth/registro` · `RegisterPage.jsx` — cerrado el 2-09-2026: `token_verificacion_expira` da las 24 h y `POST /auth/reenviar-verificacion` permite pedir otro correo |
 | HU-36 | Configurar perfil del consultorio | 1 | Media | 3 | RF53 | ✅ | `PUT /api/tenant/perfil` · `AjustesPage.jsx` |
 
 ### Módulo 2 — Gestión de clientes
 
 | ID | Historia | Sprint | Prio | Pts | RF/RN | Estado | Dónde vive |
 |---|---|:--:|:--:|:--:|---|:--:|---|
-| HU-04 | Registrar cliente persona natural | 1 | Alta | 3 | RF06, RF05 | 🟡 | `clientes.controller.js` · `ClientesList.jsx` — sin validación de obligatorios en backend |
-| HU-05 | Registrar cliente persona jurídica | 1 | Alta | 3 | RF06, RF05 | 🟡 | igual que HU-04 |
+| HU-04 | Registrar cliente persona natural | 1 | Alta | 3 | RF06, RF05 | ✅ | `clientes/validacion.js` — cerrado el 3-09-2026. Antes un cliente sin nombre llegaba hasta Prisma y volvía como 500 opaco |
+| HU-05 | Registrar cliente persona jurídica | 1 | Alta | 3 | RF06, RF05 | ✅ | igual que HU-04. La regla *«si es jurídica, entonces razón social y NIT»* solo puede vivir en el código: esas columnas admiten nulo porque la tabla la comparten las personas naturales |
 | HU-06 | Consultar y gestionar ficha del cliente | 1 | Alta | 3 | RF07, RF08, RNF06, RNF10 | ✅ | `getClienteById` · `ClienteFicha.jsx` |
 
 ### Módulo 3 — Gestión de procesos jurídicos
@@ -51,10 +51,10 @@ Estado: ✅ implementada · 🟡 parcial · ❌ no implementada
 |---|---|:--:|:--:|:--:|---|:--:|---|
 | HU-07 | Crear expediente jurídico digital | 1 | Alta | 8 | RF09–RF11, RF05 | ✅ | `POST /api/procesos` · `ProcesosList.jsx` |
 | HU-33 | Modificar información general del expediente | 1 | Alta | 3 | RF11, RF05 | ✅ | `updateProceso` — el radicado es inmodificable, como exige la HU |
-| HU-08 | Asignar múltiples abogados y colaboradores | 2 | Alta | 5 | RF12, RN04 | 🟡 | `addAbogadoProceso` / `removeAbogadoProceso` — RN04 solo parcialmente garantizada |
+| HU-08 | Asignar múltiples abogados y colaboradores | 2 | Alta | 5 | RF12, RN04 | ✅ | `addAbogadoProceso` / `removeAbogadoProceso` / `cambiarResponsable` — RN04 cerrada el 3-09-2026: responsable validado y relevo con justificación |
 | HU-09 | Cambiar el estado del proceso | 2 | Alta | 5 | RF13, RF14, RN03, RN05 | ✅ | `cambiarEstadoProceso` — implementa ambas reglas correctamente |
 | HU-10 | Consultar historial de cambios del proceso | 2 | Media | 3 | RF14, RNF03 | ✅ | `getProcesoById` incluye `historial` ordenado desc |
-| HU-31 | Buscar y filtrar procesos/expedientes | 2 | Alta | 5 | RNF05, RNF08 | 🟡 | `getProcesos` — falta índices para garantizar los < 2 s |
+| HU-31 | Buscar y filtrar procesos/expedientes | 2 | Alta | 5 | RNF05, RNF08 | ✅ | `getProcesos` — cerrado el 3-09-2026 con once índices, cinco de ellos GIN de trigramas porque `ILIKE '%texto%'` no puede usar B-tree. Comprobable con `npm run verificar:indices` |
 | HU-34 | Eliminar definitivamente expedientes (Admin) | 2 | Alta | 3 | RNF06, RNF10, RF05 | ✅ | `deleteProcesoDefinitivo` con transacción, validaciones y bitácora |
 
 ### Módulo 3.b — Actuaciones procesales (nuevo)
@@ -70,14 +70,14 @@ Estado: ✅ implementada · 🟡 parcial · ❌ no implementada
 
 | ID | Historia | Sprint | Prio | Pts | RF/RN | Estado | Dónde vive |
 |---|---|:--:|:--:|:--:|---|:--:|---|
-| HU-11 | Registrar partes procesales | 2 | Alta | 5 | RF15–RF17 | 🟡 | `addParteProcesal` · `ProcesoDetalle.jsx:744` — el aviso de proceso incompleto falta en el dashboard |
+| HU-11 | Registrar partes procesales | 2 | Alta | 5 | RF15–RF17 | ✅ | `addParteProcesal` · `procesos/atencion.js` · `DashboardIndex.jsx` — cerrado el 3-09-2026: el aviso de expediente incompleto ya está en el panel, que es donde RF17.3 lo pide |
 
 ### Módulo 5 — Gestión documental
 
 | ID | Historia | Sprint | Prio | Pts | RF/RN | Estado | Dónde vive |
 |---|---|:--:|:--:|:--:|---|:--:|---|
-| HU-12 | Cargar documentos al expediente | 2 | Alta | 5 | RF18, RF20, RF24 | 🟡 | `uploadDocumento` — límite de 10 MB sí; **filtro de formatos no** |
-| HU-13 | Clasificar y organizar documentos por categoría | 2 | Alta | 3 | RF19–RF21 | 🟡 | Falta la categoría `ESCRITO` (H-18); el filtro por categoría es en cliente |
+| HU-12 | Cargar documentos al expediente | 2 | Alta | 5 | RF18, RF20, RF24 | ✅ | `documentos.routes.js` — cerrado el 2-09-2026: `fileFilter` admite diez formatos (PDF, DOC/DOCX, XLS/XLSX, JPG, PNG, WebP, TIFF, TXT). Antes se podía adjuntar un ejecutable a un expediente judicial, y pasarse de 10 MB devolvía un 500 sin explicación |
+| HU-13 | Clasificar y organizar documentos por categoría | 2 | Alta | 3 | RF19–RF21 | ✅ | Cerrado el 3-09-2026. `ESCRITO` añadido al enumerado (H-18). **Y el filtro por categoría, que esta misma fila daba por hecho «en cliente», no existía en ninguna parte**: ahora es `GET /documentos/proceso/:id?categoria=`, aplicado tras las reglas de visibilidad |
 | HU-14 | Controlar la visibilidad de documentos | 2 | Alta | 5 | RF22, RF43, RF44, RF46 | ✅ | `documentos.controller.js:282-300` |
 | HU-15 | Versionar documentos y consultar versiones | 3 | Alta | 5 | RF23, RN06 | ✅ | `uploadNuevaVersion`, `getDocumentoVersiones` |
 | HU-16 | Restringir y gestionar eliminación de documentos | 3 | Alta | 5 | RF25, RF26, RN06, RNF06 | ✅ | `updateDocumentoEstado`, `deleteDocumentoDefinitivo` |
@@ -103,7 +103,7 @@ Estado: ✅ implementada · 🟡 parcial · ❌ no implementada
 
 | ID | Historia | Sprint | Prio | Pts | RF/RN | Estado | Dónde vive |
 |---|---|:--:|:--:|:--:|---|:--:|---|
-| HU-24 | Panel principal personalizado según rol | 4 | Alta | 8 | RF38–RF40, RN09 | 🟡 | `DashboardIndex.jsx` — el umbral de días sin movimiento no es configurable |
+| HU-24 | Panel principal personalizado según rol | 4 | Alta | 8 | RF38–RF40, RN09 | ✅ | `DashboardIndex.jsx` · `procesos/atencion.js` — **la brecha que declaraba no lo era**: RF40 fija los 30 días de forma literal, así que un umbral configurable sería una mejora, no un criterio. Lo que sí faltaba y se cerró el 3-09-2026 es que la inactividad la vieran también los abogados, no solo el Administrador |
 | HU-25 | Gestionar notificaciones del panel | 4 | Alta | 5 | RF41, RF47–RF50 | ✅ | `notificaciones.controller.js` — incluye la agrupación de >5 en 10 min |
 | HU-26 | Consultar estadísticas y reportes generales | 4 | Media | 5 | RF42 | ✅ | `getStats`, `exportCSV`, `exportPDF` — CSV y PDF sobre la misma consulta |
 
@@ -111,7 +111,7 @@ Estado: ✅ implementada · 🟡 parcial · ❌ no implementada
 
 | ID | Historia | Sprint | Prio | Pts | RF/RN | Estado | Dónde vive |
 |---|---|:--:|:--:|:--:|---|:--:|---|
-| HU-27 | Acceder al portal del cliente | 4 | Alta | 5 | RF43, RF46, RN02, RNF02, RNF04 | 🟡 | `getPortalDashboard` · `PortalDashboard.jsx` — la sesión no expira a los 30 min de inactividad |
+| HU-27 | Acceder al portal del cliente | 4 | Alta | 5 | RF43, RF46, RN02, RNF02, RNF04 | ✅ | `getPortalDashboard` · `PortalDashboard.jsx` · `clientes.controller.js: createPortalAccess` — cerrado el 3-09-2026: cierre por inactividad, y **el despacho ya no fija la contraseña del cliente**, que era lo que dejaba abierta RN02.3 |
 | HU-28 | Descargar documentos autorizados desde el portal | 4 | Alta | 3 | RF44–RF46, RF05 | ✅ | `getVersionDownloadUrl` — se audita como `DESCARGAR_DOCUMENTO_CLIENTE` |
 
 ### Módulo 10 — Alertas y notificaciones
@@ -167,15 +167,35 @@ registrar clientes y crear su primer expediente"*. Eso es un producto demostrabl
 
 | Estado | Historias | % |
 |---|:--:|:--:|
-| ✅ Implementada completa | 25 | 68 % |
-| 🟡 Implementada con brechas | 12 | 32 % |
+| ✅ Implementada completa | 37 | 100 % |
+| 🟡 Implementada con brechas | 0 | 0 % |
 | ❌ No implementada | 0 | 0 % |
 
-Ninguna historia está sin empezar. Las parciales comparten pocas causas raíz. De las cinco
-identificadas originalmente —falta de auditoría de sesión, ausencia de recuperación de
-contraseña, ausencia de generación de PDF, el enum documental incompleto y la falta de
-índices— **las tres primeras están cerradas** (2 y 3 de septiembre de 2026). Quedan el enum
-documental y los índices.
+Las cinco causas raíz identificadas originalmente —falta de auditoría de sesión, ausencia de
+recuperación de contraseña, ausencia de generación de PDF, el enumerado documental incompleto y la
+falta de índices— **están todas cerradas**, entre el 2 y el 3 de septiembre de 2026.
+
+> **Cómo se cerró esta tabla, porque importa más que el 100 %.** Las doce filas parciales no se
+> revisaron leyéndolas: se comprobó cada afirmación contra el código, una por una. De esa revisión
+> salieron dos cosas que ninguna lectura habría encontrado:
+>
+> · **HU-24 declaraba una brecha que no existía.** Decía que faltaba hacer configurable el umbral
+>   de días sin movimiento. RF40 fija los 30 días de forma literal, así que eso nunca fue un
+>   criterio: era una mejora anotada como incumplimiento.
+>
+> · **HU-13 daba por hecho algo que no existía.** Decía que «el filtro por categoría es en
+>   cliente». No estaba en el cliente ni en el servidor: no estaba en ninguna parte, y el criterio
+>   figuraba como cumplido. Se implementó al descubrirlo.
+>
+> Un estado en una tabla no es una etiqueta que se pone una vez. Es una afirmación, y caduca en
+> cuanto alguien toca lo que describe.
+
+> **Este documento se quedó atrás durante dos días.** Entre el 2 y el 3 de septiembre de 2026 se
+> cerraron once brechas y esta tabla siguió describiéndolas como abiertas, mientras
+> `documentacion-a-presentar/documentos/05-HISTORIAS-DE-USUARIO.md` sí se mantenía al día. Los dos
+> documentos llegaron a contradecirse en once filas sin que nada lo detectara:
+> `npm run verificar:docs` compara identificadores y recuentos, **no estados**. Es la misma
+> divergencia entre papeles que originó este proyecto, reaparecida dentro de él.
 ---
 
 ## 5. Criterios de aceptación detallados

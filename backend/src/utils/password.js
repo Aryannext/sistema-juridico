@@ -18,6 +18,23 @@ const REGLAS = [
   { prueba: (v) => /[A-ZÁÉÍÓÚÑ]/.test(v), falta: 'una letra mayúscula' },
   { prueba: (v) => /[a-záéíóúñ]/.test(v), falta: 'una letra minúscula' },
   { prueba: (v) => /[0-9]/.test(v), falta: 'un número' },
+  // HU-01.6 pedía "mínimo 8 caracteres, mayúscula, número y carácter especial"
+  // desde el principio, y el criterio figuraba como cumplido. No lo estaba: de
+  // las cuatro exigencias solo se comprobaban tres, y "Segura2026" pasaba.
+  //
+  // Se añadió el 3 de septiembre de 2026, al revisar HU-01 entera. No invalida
+  // ninguna contraseña existente —esta comprobación solo corre al fijar una
+  // nueva: registro, restablecimiento y alta de colaborador—, así que nadie se
+  // queda fuera; solo se aplica de aquí en adelante.
+  //
+  // El conjunto se define por exclusión (ni letra, ni dígito, ni espacio) en vez
+  // de por una lista de signos permitidos: una lista deja fuera lo que no se le
+  // ocurrió a quien la escribió, y rechazar un carácter que el usuario eligió a
+  // conciencia empuja hacia contraseñas más pobres, no más seguras.
+  {
+    prueba: (v) => /[^\p{L}\p{N}\s]/u.test(v),
+    falta: 'un carácter especial',
+  },
 ];
 
 /**

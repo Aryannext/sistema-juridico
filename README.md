@@ -155,6 +155,37 @@ La interfaz web estará disponible en tu navegador en `http://localhost:5173/sis
 cd backend && npm test
 ```
 
+### Paso 6: Activar la verificación antes de subir
+
+**Este paso no es opcional si vas a empujar cambios.** Ejecútalo una sola vez tras clonar:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+A partir de ahí, cada `git push` ejecuta la verificación completa y **se niega a subir si algo
+está en rojo**. También se puede lanzar a mano cuando se quiera:
+
+```bash
+npm --prefix backend run verificar:todo
+```
+
+Corre el lint y las pruebas del backend, la coherencia entre los dos juegos de documentación, las
+referencias al código y la compilación del frontend. La verificación de índices necesita la base
+levantada: si no lo está, se omite **y lo dice**, porque «no se comprobó» no es «salió bien».
+
+> **Por qué en tu máquina y no en un servidor.** El proyecto tiene un flujo en GitHub Actions que
+> hoy no ejecuta nada: la cuenta está bloqueada por facturación y los trabajos ni arrancan. Los
+> checks salen en rojo, y ese rojo significa «no se sabe», no «falla» — que es peor, porque se
+> parece a lo malo y se acaba ignorando.
+>
+> Un proyecto sin presupuesto para minutos de servidor no tiene por qué quedarse sin verificación.
+> Lo que faltaba no era capacidad de cómputo, sino una orden que lo corriera todo y un sitio donde
+> fuera obligatoria. El flujo de Actions se conserva para el día que se desbloquee.
+>
+> **Lo que esto no cubre, y conviene saberlo:** no comprueba que el proyecto compile en una
+> máquina limpia ni que el `package-lock.json` sea coherente. Para eso hace falta un servidor.
+
 ---
 
 ## 🚀 Guía de Despliegue en Producción

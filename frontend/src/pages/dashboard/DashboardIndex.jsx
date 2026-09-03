@@ -28,6 +28,9 @@ export default function DashboardIndex() {
   const [statsAdmin, setStatsAdmin] = useState(null);
   const [loadingAdmin, setLoadingAdmin] = useState(false);
 
+  // Avisos del panel: expedientes incompletos (RF17.3) e inactivos (RF40.3).
+  const [atencion, setAtencion] = useState({ dias_umbral: 30, inactivos: [], incompletos: [] });
+
   const fetchNotificaciones = async () => {
     try {
       setLoadingNotificaciones(true);
@@ -69,14 +72,15 @@ export default function DashboardIndex() {
         // En local no se notaba (el servidor responde en 10 ms), pero contra el
         // VPS cada viaje cuesta unos 350 ms: tres tandas eran ~1 segundo de
         // espera en blanco cada vez que se abría el panel.
-        const [clientesRes, procesosRes, agendaRes, vencimientosRes, logsRes, adminRes] =
+        const [clientesRes, procesosRes, agendaRes, vencimientosRes, logsRes, adminRes, atencionRes] =
           await Promise.all([
             api.get('/clientes'),
             api.get('/procesos'),
             api.get('/audiencias').catch(() => ({ data: [] })),
             api.get('/terminos/vencimientos').catch(() => ({ data: [] })),
             esAdmin ? api.get('/admin/auditoria').catch(() => null) : null,
-            esAdmin ? api.get('/reportes/stats').catch(() => null) : null
+            esAdmin ? api.get('/reportes/stats').catch(() => null) : null,
+            api.get('/procesos/atencion').catch(() => null)
           ]);
 
         const logs = logsRes ? logsRes.data.slice(0, 5) : [];
@@ -90,6 +94,7 @@ export default function DashboardIndex() {
         setAgenda(agendaRes.data);
         setVencimientos(vencimientosRes.data);
         if (adminRes) setStatsAdmin(adminRes.data);
+        if (atencionRes) setAtencion(atencionRes.data);
 
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
@@ -107,9 +112,6 @@ export default function DashboardIndex() {
   const today = new Date();
   const limit24h = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-  // Processes with no movement > 30 days (for lawyers, calculated locally from their processes)
-  // (In full production we rely on the reportes/stats for the whole tenant, but lawyers also get highlighted in their view)
-  const localRiesgosInactivos = []; // will populate if needed
 
   return (
     <div className="space-y-6 md:space-y-10 animate-fade-in pb-12">
@@ -207,7 +209,68 @@ export default function DashboardIndex() {
                 </div>
               </div>
             ))}
+
+            {/* RF40.3 — Inactividad para quien no es Administrador. El
+                Administrador ya la recibe arriba desde /reportes/stats. */}
+            {user?.rol !== 'ADMINISTRADOR' && atencion.inactivos.length > 0 && (
+              <div className="p-4 rounded-2xl bg-neutral-950/80 backdrop-blur-md border border-rose-500/20 flex gap-3 md:col-span-2 shadow-[0_4px_16px_rgba(244,63,94,0.1)]">
+                <div className="w-1.5 bg-rose-500 rounded-full shrink-0" />
+                <div className="w-full">
+                  <h4 className="text-xs font-bold text-rose-400 uppercase">Tus Expedientes Sin Movimiento (&gt; {atencion.dias_umbral} días)</h4>
+                  <p className="text-sm font-bold text-white mt-1">{atencion.inactivos.length} expediente(s) a tu cargo llevan más de {atencion.dias_umbral} días sin actividad.</p>
+                  <div className="mt-2 space-y-1">
+                    {atencion.inactivos.slice(0, 3).map(p => (
+                      <button
+                        key={p.id_proceso}
+                        onClick={() => navigate(`/procesos/${p.id_proceso}`)}
+                        className="w-full flex items-center justify-between text-[11px] py-1.5 px-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer text-left"
+                      >
+                        <span className="font-mono font-bold text-rose-400">{p.numero_radicado}</span>
+                        <span className="text-neutral-400 truncate px-2">{p.cliente}</span>
+                        <span className="font-bold text-white shrink-0">{p.dias_inactivo} días</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
+        </div>
+      )}
+
+      {/* RF17.3 — Expedientes incompletos. El aviso existía en la ficha del
+          expediente, pero no en el panel, que es donde el requisito lo pide:
+          nadie abre un expediente para enterarse de que le faltan partes.
+          Va en ámbar y no en rojo porque es una conformación pendiente, no un
+          riesgo procesal: mezclarlo con lo urgente le restaría fuerza a lo urgente. */}
+      {atencion.incompletos.length > 0 && (
+        <div className="p-6 rounded-3xl bg-amber-950/20 border border-amber-500/30 shadow-[0_8px_32px_0_rgba(245,158,11,0.1)] space-y-4">
+          <h2 className="text-sm uppercase font-extrabold tracking-wider text-amber-500 flex items-center gap-2">
+            <AlertTriangle size={18} />
+            <span>Expedientes Incompletos ({atencion.incompletos.length})</span>
+          </h2>
+          <p className="text-xs text-neutral-400 -mt-2">
+            Les falta registrar las partes procesales obligatorias para completar la conformación básica.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {atencion.incompletos.slice(0, 4).map(p => (
+              <button
+                key={p.id_proceso}
+                onClick={() => navigate(`/procesos/${p.id_proceso}`)}
+                className="p-3 rounded-2xl bg-neutral-950/80 backdrop-blur-md border border-amber-500/20 flex gap-3 text-left hover:border-amber-500/40 transition-colors cursor-pointer"
+              >
+                <div className="w-1.5 bg-amber-500 rounded-full shrink-0" />
+                <div className="min-w-0">
+                  <p className="font-mono text-xs font-bold text-amber-400 truncate">{p.numero_radicado}</p>
+                  <p className="text-[11px] text-neutral-400 truncate">{p.cliente}</p>
+                  <p className="text-[10px] text-neutral-500 mt-1">Falta: {p.falta.join(' y ')}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+          {atencion.incompletos.length > 4 && (
+            <p className="text-[11px] text-neutral-500">y {atencion.incompletos.length - 4} más.</p>
+          )}
         </div>
       )}
 

@@ -1,5 +1,7 @@
 const prisma = require('../../config/prisma');
 const { triggerWebhook } = require('../../config/webhook');
+const atencion = require('./atencion');
+const { validarResponsable } = require('./responsable');
 
 // 1. Crear un expediente jurídico digital
 exports.createProceso = async (req, res) => {
@@ -16,6 +18,15 @@ exports.createProceso = async (req, res) => {
     });
     if (existingProceso) {
       return res.status(400).json({ error: 'Su consultorio ya tiene registrado un expediente con ese número de radicado' });
+    }
+
+    // RN04: el responsable tiene que ser alguien que pueda responder de verdad.
+    // Antes se guardaba lo que viniera en la petición: un usuario de otro
+    // consultorio, uno inactivo o un cliente pasaban sin más, y el expediente
+    // nacía cumpliendo la regla en la forma e incumpliéndola en el fondo.
+    const comprobacion = await validarResponsable(prisma, id_abogado_resp, req.tenant_id);
+    if (!comprobacion.valido) {
+      return res.status(400).json({ error: comprobacion.error });
     }
 
     const proceso = await prisma.proceso.create({
@@ -222,6 +233,102 @@ exports.updateProceso = async (req, res) => {
   }
 };
 
+/**
+ * Cambiar el abogado responsable de un expediente — RN04, HU-08.
+ *
+ * **Por qué hacía falta crear esta operación en vez de limitarse a validarla.**
+ * RN04 figuraba como parcial porque «no se valida el cambio de responsable».
+ * En realidad no se validaba porque **no se podía cambiar**: ningún punto de la
+ * API escribía `id_abogado_resp` después de crear el expediente.
+ *
+ * Eso no cumplía la regla, la esquivaba. Cuando un abogado deja el despacho,
+ * sus expedientes se quedaban con su nombre encima para siempre: el campo
+ * lleno, la regla satisfecha en la forma, y nadie vigilando esos términos —que
+ * es literalmente el escenario del que RN04 nace—. La única salida era un
+ * UPDATE a mano en la base de datos, sin validación y sin rastro.
+ *
+ * Así que la operación existe, y existe validada: mismo filtro que al crear
+ * (consultorio, cuenta activa, rol que pueda responder), justificación escrita
+ * y doble registro —bitácora del consultorio e historial del expediente—,
+ * porque cambiar de responsable es de las decisiones que después hay que poder
+ * explicar.
+ */
+exports.cambiarResponsable = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { id_abogado_resp, justificacion } = req.body;
+
+    if (!justificacion || String(justificacion).trim() === '') {
+      return res.status(400).json({
+        error: 'Debe explicar por escrito por qué cambia el abogado responsable.'
+      });
+    }
+
+    const proceso = await prisma.proceso.findFirst({
+      where: { id_proceso: id, tenant_id: req.tenant_id },
+      include: { abogado_resp: { select: { id_usuario: true, nombre: true } } }
+    });
+    if (!proceso) return res.status(404).json({ error: 'Expediente no encontrado' });
+
+    if (proceso.id_abogado_resp === id_abogado_resp) {
+      return res.status(400).json({
+        error: 'Ese abogado ya es el responsable de este expediente.'
+      });
+    }
+
+    const comprobacion = await validarResponsable(prisma, id_abogado_resp, req.tenant_id);
+    if (!comprobacion.valido) {
+      return res.status(400).json({ error: comprobacion.error });
+    }
+
+    const nuevo = comprobacion.usuario;
+
+    // El cambio y sus dos registros van juntos o no van: un expediente que
+    // cambia de responsable sin que conste quién lo decidió es justo lo que
+    // esta regla trata de impedir.
+    await prisma.$transaction(async (tx) => {
+      await tx.proceso.update({
+        where: { id_proceso: id },
+        data: { id_abogado_resp }
+      });
+
+      await tx.historialProceso.create({
+        data: {
+          tenant_id: req.tenant_id,
+          id_proceso: id,
+          campo_modificado: 'abogado_responsable',
+          valor_anterior: proceso.abogado_resp?.nombre || proceso.id_abogado_resp,
+          valor_nuevo: nuevo.nombre,
+          accion: 'CAMBIO_RESPONSABLE',
+          realizado_por: req.user.id_usuario
+        }
+      });
+
+      await tx.bitacoraAuditoria.create({
+        data: {
+          tenant_id: req.tenant_id,
+          id_usuario: req.user.id_usuario,
+          accion: 'CAMBIAR_RESPONSABLE_EXPEDIENTE',
+          modulo: 'PROCESOS',
+          detalle:
+            `Expediente ${proceso.numero_radicado}: responsable cambiado de ` +
+            `${proceso.abogado_resp?.nombre || 'desconocido'} a ${nuevo.nombre}. ` +
+            `Justificación: ${justificacion}`,
+          ip_adress: req.ip || '127.0.0.1'
+        }
+      });
+    });
+
+    res.json({
+      message: `${nuevo.nombre} es ahora el abogado responsable del expediente.`,
+      responsable: { id_usuario: nuevo.id_usuario, nombre: nuevo.nombre, rol: nuevo.rol }
+    });
+  } catch (error) {
+    console.error('Error en cambiarResponsable:', error);
+    res.status(500).json({ error: 'Error cambiando el abogado responsable' });
+  }
+};
+
 // 5. HU-08: Asignar abogados y colaboradores adicionales
 exports.addAbogadoProceso = async (req, res) => {
   try {
@@ -239,6 +346,23 @@ exports.addAbogadoProceso = async (req, res) => {
     });
 
     if (!user) return res.status(404).json({ error: 'Usuario a asignar no encontrado en el consultorio' });
+
+    // RN04, misma idea que para el responsable: sumar al equipo a alguien que
+    // no puede entrar al sistema es sumar un nombre, no una persona.
+    if (!user.activo) {
+      return res.status(400).json({
+        error: `${user.nombre} tiene la cuenta inactiva y no puede asignarse al expediente.`
+      });
+    }
+
+    // El portal del cliente es una vista restringida sobre SUS expedientes
+    // (RN02.3). Un cliente dentro del equipo de trabajo entraría por la puerta
+    // del despacho, que es la que el portal existe para no abrir.
+    if (user.rol === 'CLIENTE') {
+      return res.status(400).json({
+        error: 'Un cliente no puede formar parte del equipo de trabajo de un expediente.'
+      });
+    }
 
     // Verificar si ya está asignado
     const existingAsign = await prisma.procesoAbogado.findFirst({
@@ -304,8 +428,21 @@ exports.removeAbogadoProceso = async (req, res) => {
 
     if (!existingAsign) return res.status(404).json({ error: 'La asignación no existe' });
 
-    // Regla de negocio: El proceso debe tener al menos un abogado responsable
-    // (id_abogado_resp sigue siendo el responsable principal, así que remover de ProcesoAbogado es seguro).
+    // RN04. Quitar a un colaborador del equipo es seguro —el responsable vive
+    // en otro campo—, pero quitar al RESPONSABLE deja un expediente cuyo
+    // titular ya no figura en su propio equipo: la regla se cumpliría en la
+    // columna y no en lo que cualquiera lee en la pantalla.
+    //
+    // No se le desasigna en silencio ni se le sustituye por nadie: se pide
+    // primero el relevo, que es una decisión con nombre y justificación.
+    if (proceso.id_abogado_resp === id_usuario) {
+      return res.status(400).json({
+        error:
+          'No puede desasignar al abogado responsable del expediente. ' +
+          'Nombre antes a otro responsable y vuelva a intentarlo.'
+      });
+    }
+
     await prisma.procesoAbogado.delete({
       where: {
         id_proceso_id_usuario: {
@@ -645,5 +782,69 @@ exports.deleteProcesoDefinitivo = async (req, res) => {
   } catch (error) {
     console.error('Error deleteProcesoDefinitivo:', error);
     res.status(500).json({ error: 'Error interno del servidor al intentar realizar la eliminación definitiva.' });
+  }
+};
+
+/**
+ * Expedientes que reclaman atención, para el panel principal — RF17.3, RF40.3.
+ *
+ * Los dos avisos existían en la ficha del expediente pero no en el panel, que
+ * es donde los requisitos los piden. La detección de inactividad, además, solo
+ * la veía el Administrador a través de `/reportes/stats`: un abogado no tenía
+ * forma de enterarse de que uno de sus expedientes llevaba un mes parado.
+ *
+ * Respeta la misma visibilidad que el listado (RF04) reutilizando su filtro,
+ * para que el panel no pueda mostrar expedientes que el listado oculta.
+ */
+exports.getProcesosAtencion = async (req, res) => {
+  try {
+    const procesos = await prisma.proceso.findMany({
+      where: {
+        ...atencion.filtroDeVisibilidad(req.user, req.tenant_id),
+        estado: 'ACTIVO',
+      },
+      select: {
+        id_proceso: true,
+        numero_radicado: true,
+        update_at: true,
+        cliente: { select: { nombre: true } },
+        abogado_resp: { select: { nombre: true } },
+        partes: { select: { tipo: true } },
+        historial: { orderBy: { created_at: 'desc' }, take: 1, select: { created_at: true } },
+        documentos: { orderBy: { created_at: 'desc' }, take: 1, select: { created_at: true } },
+        actuaciones: { orderBy: { fecha_registro: 'desc' }, take: 1, select: { fecha_registro: true } },
+      },
+    });
+
+    const dias = atencion.DIAS_INACTIVIDAD_POR_DEFECTO;
+    const limite = new Date(Date.now() - dias * 24 * 60 * 60 * 1000);
+
+    const inactivos = [];
+    const incompletos = [];
+
+    for (const p of procesos) {
+      const resumen = {
+        id_proceso: p.id_proceso,
+        numero_radicado: p.numero_radicado,
+        cliente: p.cliente.nombre,
+        abogado: p.abogado_resp.nombre,
+      };
+
+      const movimiento = atencion.ultimoMovimiento(p);
+      if (movimiento < limite) {
+        inactivos.push({ ...resumen, dias_inactivo: atencion.diasDesde(movimiento) });
+      }
+
+      const falta = atencion.faltanPartes(p);
+      if (falta.length > 0) incompletos.push({ ...resumen, falta });
+    }
+
+    // Lo más abandonado primero: es el orden en que conviene atenderlos.
+    inactivos.sort((a, b) => b.dias_inactivo - a.dias_inactivo);
+
+    res.json({ dias_umbral: dias, inactivos, incompletos });
+  } catch (error) {
+    console.error('Error obteniendo los expedientes que requieren atención:', error);
+    res.status(500).json({ error: 'Error al calcular los avisos del panel' });
   }
 };

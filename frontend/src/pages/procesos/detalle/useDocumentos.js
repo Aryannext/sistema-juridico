@@ -26,16 +26,24 @@ export function useDocumentos(idProceso) {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleteConfirmCheckbox, setDeleteConfirmCheckbox] = useState(false);
 
+  // RF19.2 / HU-13.3 - filtro por categoria. Cadena vacia = todas.
+  // El filtro se aplica en el servidor, no aqui: tiene que componerse con las
+  // reglas de visibilidad del expediente, y filtrar sobre una lista ya recortada
+  // deja el criterio a merced de que nadie pagine nunca esa consulta.
+  const [filtroCategoria, setFiltroCategoria] = useState('');
+
   // Formulario de carga
   const [docNombre, setDocNombre] = useState('');
   const [docCategoria, setDocCategoria] = useState('DEMANDA');
   const [docVisibilidad, setDocVisibilidad] = useState('PRIVADO');
   const [docFile, setDocFile] = useState(null);
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = async (categoria = filtroCategoria) => {
     try {
       setLoadingDocs(true);
-      const res = await api.get(`/documentos/proceso/${idProceso}`);
+      const res = await api.get(`/documentos/proceso/${idProceso}`, {
+        params: categoria ? { categoria } : {},
+      });
       setDocumentos(res.data);
     } catch (error) {
       console.error(error);
@@ -177,6 +185,16 @@ export function useDocumentos(idProceso) {
     }
   };
 
+  /**
+   * Cambia el filtro y recarga. Se pasa la categoria explicitamente porque
+   * `setFiltroCategoria` no actualiza la variable hasta el siguiente render, y
+   * `fetchDocuments` la leeria todavia con el valor anterior.
+   */
+  const aplicarFiltroCategoria = (categoria) => {
+    setFiltroCategoria(categoria);
+    fetchDocuments(categoria);
+  };
+
   return {
     documentos,
     loadingDocs,
@@ -202,6 +220,8 @@ export function useDocumentos(idProceso) {
     setDeleteConfirmText,
     deleteConfirmCheckbox,
     setDeleteConfirmCheckbox,
+    filtroCategoria,
+    aplicarFiltroCategoria,
     docNombre,
     setDocNombre,
     docCategoria,

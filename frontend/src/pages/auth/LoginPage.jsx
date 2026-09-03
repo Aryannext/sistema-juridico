@@ -16,6 +16,17 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
+  // RNF02.7 — Si la sesión anterior se cerró sola por inactividad, se explica
+  // aquí. Un cierre sin explicación parece un fallo del sistema.
+  useEffect(() => {
+    if (sessionStorage.getItem('motivo_cierre') !== 'inactividad') return;
+
+    sessionStorage.removeItem('motivo_cierre');
+    toast.info('Tu sesión se cerró tras 30 minutos sin actividad. Vuelve a iniciar sesión.', {
+      duration: 8000,
+    });
+  }, []);
+
   useEffect(() => {
     let interval;
     if (lockUntilTime) {
@@ -50,8 +61,11 @@ export default function LoginPage() {
    */
   const intentarComoPlataforma = async (data) => {
     try {
+      // La administración de la plataforma se identifica solo por correo: vive
+      // en otra tabla, que no tiene nombre de usuario. Si aquí llega uno, esta
+      // llamada falla y se devuelve false, que es exactamente lo que debe pasar.
       const res = await apiPlataforma.post('/login', {
-        email: data.email,
+        email: data.identificador,
         password: data.password,
       });
       guardarSesionPlataforma(res.data.token, res.data.admin);
@@ -157,23 +171,29 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="space-y-2">
-              <label htmlFor="email" className="text-xs font-medium text-[#DFB971] uppercase tracking-wider">
-                Correo electrónico
+              <label htmlFor="identificador" className="text-xs font-medium text-[#DFB971] uppercase tracking-wider">
+                Correo o nombre de usuario
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                   <Mail size={18} className="text-neutral-500" />
                 </div>
-                <input 
-                  id="email" 
-                  type="email" 
-                  placeholder="Ingresa tu correo"
-                  autoComplete="off"
+                {/*
+                  RF01.2 — el campo admite las dos formas de identificarse, así que
+                  ya no puede ser `type="email"`: el navegador rechazaba cualquier
+                  texto sin arroba antes de llegar a enviarlo. El servidor
+                  distingue cuál de las dos es por la arroba.
+                */}
+                <input
+                  id="identificador"
+                  type="text"
+                  placeholder="Ingresa tu correo o nombre de usuario"
+                  autoComplete="username"
                   className="w-full bg-white/5 border border-white/10 text-white placeholder-neutral-500 focus:bg-white/10 focus:border-[#DFB971] transition-all rounded-xl pl-10 pr-4 py-3 outline-none"
-                  {...register('email', { required: 'El correo es requerido' })}
+                  {...register('identificador', { required: 'El correo o nombre de usuario es requerido' })}
                 />
               </div>
-              {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email.message}</p>}
+              {errors.identificador && <p className="text-red-400 text-xs mt-1">{errors.identificador.message}</p>}
             </div>
 
             <div className="space-y-2">
