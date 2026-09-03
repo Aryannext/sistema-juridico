@@ -19,7 +19,7 @@ demostrado, línea por línea, dónde sí coinciden y dónde no.
 | RF02 | HU-02 | — | `schema.prisma: RolUsuario` | — | ✅ |
 | RF03 | HU-02 | `PUT /admin/permisos/:id` | `admin.controller.js: updatePermisos` · `roles.middleware.js` | — | ✅ |
 | RF04 | HU-02 | `GET /procesos` | `procesos.controller.js: getProcesos` | — | ✅ |
-| RF05 | HU-03 | *(transversal)* | `audit.middleware.js` + escrituras en controladores | `auditoria.test.js` | 🟡 |
+| RF05 | HU-03 | *(transversal)* · `POST /auth/logout` · `GET /admin/auditoria/export` | `audit.middleware.js` + escrituras en controladores + `sesion.auditoria.js` + `exportacion-bitacora.js` | `auditoria.test.js` · `auditoria_sesion.test.js` · `exportacion_bitacora.test.js` | ✅ |
 | RF06 | HU-04, HU-05 | `POST /clientes` | `clientes.controller.js: createCliente` | — | 🟡 |
 | RF07 | HU-06 | — | relación `Cliente → Proceso` | — | ✅ |
 | RF08 | HU-06 | `GET /clientes/:id` | `clientes.controller.js: getClienteById` | — | ✅ |
@@ -61,7 +61,7 @@ demostrado, línea por línea, dónde sí coinciden y dónde no.
 | RF39 | HU-24 | — | `DashboardIndex.jsx` | — | ✅ |
 | RF40 | HU-24 | — | `DashboardIndex.jsx` | — | 🟡 |
 | RF41 | HU-25 | `GET /notificaciones` | `Tenant.horas_ocultar_notificaciones` | — | ✅ |
-| RF42 | HU-26 | `GET /reportes/stats` | `reportes.controller.js: getStats` | — | ✅ |
+| RF42 | HU-26 | `GET /reportes/stats` · `GET /reportes/export/csv` · `GET /reportes/export/pdf` | `reportes.controller.js: getStats` · `exportacion.js` · `exportacion-pdf.js` | `exportacion_pdf.test.js` | ✅ |
 | RF43 | HU-27 | `GET /portal/dashboard` | `getPortalDashboard` | — | ✅ |
 | RF44 | HU-14 | `POST /documentos` | `VisibilidadDocumento` | — | ✅ |
 | RF45 | HU-28 | `GET /documentos/download/:id` | `getVersionDownloadUrl` | — | ✅ |
@@ -112,25 +112,29 @@ npm run verificar:limpiar                    # borra los datos que generó
 El script crea **dos consultorios distintos** para poder probar el aislamiento, y se niega a
 ejecutarse si `DATABASE_URL` no apunta a `localhost`.
 
-### Resultado de la última ejecución — 2 de septiembre de 2026
+### Resultado de la última ejecución — 3 de septiembre de 2026
 
-**34 comprobaciones · 31 conformes · 3 no conformes.**
+**34 comprobaciones · 34 conformes · 0 no conformes.**
 
-Las tres no conformidades son **brechas ya documentadas**, no hallazgos nuevos:
+Las tres que fallaban el 2 de septiembre quedaron cerradas, y el script ya no se conforma con
+el código `200`: exige la evidencia concreta de cada una.
 
-| Ref | Comprobación | Resultado | Dónde está documentada |
-|---|---|---|---|
-| RF05 | El inicio de sesión queda en la bitácora | ❌ no se registra | Hallazgo H-20 · Ola 2.1 |
-| RNF03 | La bitácora se puede exportar | ❌ `404`, no existe el endpoint | Doc 03, RNF03 🟡 · Ola 4.3 |
-| RF42 | Los reportes se exportan en PDF | ❌ `404`, no existe el endpoint | Doc 03, RF42 🟡 · Ola 4.3 |
+| Ref | Comprobación | Evidencia que exige el script |
+|---|---|---|
+| RF05 | El inicio de sesión queda en la bitácora | Un registro con `accion = INICIO_SESION`; imprime su detalle (*«Admin A inició sesión»*) |
+| RNF03 | La bitácora se puede exportar | Cuenta las filas del CSV devuelto; `200` con cero filas se considera fallo |
+| RF42 | Los reportes se exportan en PDF | La firma `%PDF-` en el cuerpo, no solo el estado HTTP |
 
-> **Que las tres coincidan con lo documentado es el resultado deseado:** significa que el
-> catálogo de requisitos describe el sistema con honestidad, sin marcar como ✅ cosas que no
-> funcionan. Un fallo *no* documentado habría sido la mala noticia.
+> **Por qué se endureció el script.** Comprobar solo el estado `200` es engañoso: una ruta que
+> devuelve un error en JSON con estado `200` pasaría igual. Ahora cada comprobación mira el
+> contenido, así que un `[ OK ]` significa que el archivo existe y trae datos.
 
-> **Cambio respecto a la ejecución del 1 de septiembre:** eran cuatro. La cuarta era que la API
-> aceptaba la contraseña `"1"` en el registro (RNF02); quedó corregida el 2 de septiembre al
-> llevar la política de contraseñas al servidor. Ver [doc 17](17-RECUPERACION-DE-ACCESO.md).
+> **Historia de las no conformidades.** El 1 de septiembre eran cuatro; la cuarta era que la API
+> aceptaba la contraseña `"1"` en el registro (RNF02), corregida el 2 de septiembre al llevar la
+> política de contraseñas al servidor ([doc 17](17-RECUPERACION-DE-ACCESO.md)). Las otras tres
+> —RF05, RNF03 y RF42— se cerraron el 3 de septiembre. Se deja constancia de la secuencia porque
+> **el valor de la matriz está en que registró las brechas mientras existían**, no en llegar a
+> 34/34: un catálogo que solo dice ✅ no demuestra nada.
 
 ### Lo que sí quedó verificado en ejecución
 

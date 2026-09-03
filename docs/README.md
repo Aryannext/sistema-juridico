@@ -67,7 +67,7 @@ docs/
 | 03 | [Catálogo de requisitos](03-CATALOGO-REQUISITOS.md) | RF01–RF59, RNF01–RNF11, RN01–RN09 con su estado de implementación |
 | 04 | [Historias de usuario](04-HISTORIAS-DE-USUARIO.md) | HU-01 a HU-37 con sprint, puntos y **criterios de aceptación completos** |
 | 05 | [Matriz de trazabilidad](05-MATRIZ-TRAZABILIDAD.md) | RF → HU → endpoint → archivo → prueba |
-| 06 | [API REST](06-API-REST.md) | Los 64 endpoints reales, con rol y permiso exigido |
+| 06 | [API REST](06-API-REST.md) | Los 67 endpoints reales, con rol y permiso exigido |
 | 07 | [Glosario jurídico](07-GLOSARIO-JURIDICO.md) | Vocabulario del dominio (CGP colombiano) y su mapeo al modelo de datos |
 | 08 | [Plan de españolización](08-PLAN-ESPANOLIZACION.md) | Inventario de textos en inglés y su traducción, sin tocar el diseño |
 | 09 | [Compatibilidad con Node.js](09-COMPATIBILIDAD-NODE.md) | Evidencia de funcionamiento en Node 24, variables de entorno y dependencias |

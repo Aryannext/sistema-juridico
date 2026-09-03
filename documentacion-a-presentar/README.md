@@ -94,12 +94,12 @@ relación es deliberada:
 Toda la documentación afirma cosas sobre un sistema que está funcionando. Se puede verificar:
 
 ```bash
-npm --prefix backend test          # 83 pruebas automatizadas
+npm --prefix backend test          # 110 pruebas automatizadas
 npm --prefix backend run verificar # 34 comprobaciones contra la plataforma en ejecución
 npm --prefix backend run verificar:docs
 ```
 
 La segunda es la relevante aquí: **contrasta el comportamiento real de la plataforma contra lo
-que afirman estos documentos**. Su resultado actual —31 conformes, 3 no conformes— está
-detallado en [06 — Trazabilidad](documentos/06-TRAZABILIDAD.md), incluidas las tres brechas
-reconocidas.
+que afirman estos documentos**. Su resultado actual —34 conformes, 0 no conformes— está
+detallado en [06 — Trazabilidad](documentos/06-TRAZABILIDAD.md), junto con las tres brechas que
+este mismo catálogo declaró como pendientes antes de cerrarlas.

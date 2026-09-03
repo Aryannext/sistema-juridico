@@ -101,7 +101,7 @@ graph TB
     end
 
     subgraph "Proceso Node.js — puerto 3000"
-        API["<b>API REST Express</b><br/>13 módulos · 64 endpoints"]
+        API["<b>API REST Express</b><br/>13 módulos · 67 endpoints"]
         CRON["<b>node-cron</b><br/>recordatorios cada 15 min<br/>en el mismo proceso"]
     end
 
@@ -180,8 +180,12 @@ router.post('/', requirePermission('PROCESOS','CREAR'),      // 2. ¿puedes hace
 
 `auditMiddleware` se registra **antes** del controlador pero **actúa después**: se engancha
 a `res.on('finish')` y solo escribe en bitácora si el método fue mutante y la respuesta fue 2xx
-(`audit.middleware.js:9`). Es decir, no audita intentos fallidos — un matiz con consecuencias
-para RNF03 que se documenta en el doc 03.
+(`audit.middleware.js:9`). Es decir, **el middleware no audita intentos fallidos**.
+
+Esa es la razón de que la auditoría de sesión no pase por él. Los intentos fallidos de acceso
+sí interesan —son la señal de un ataque—, así que `sesion.auditoria.js` escribe directamente,
+sin depender de que la respuesta sea 2xx. El middleware sirve para el rastro de *qué se cambió*;
+la auditoría de sesión, para el de *quién entró y quién lo intentó*.
 
 ### Dos mecanismos de autorización coexistentes
 
@@ -218,6 +222,7 @@ sequenceDiagram
     alt contraseña incorrecta
         A->>D: intentos_fallidos + 1
         Note over A,D: cada 5 intentos escala el bloqueo:<br/>5→1min · 10→5min · 15→15min<br/>20→30min · 25+→60min
+        A->>D: bitácora: INTENTO_FALLIDO_SESION<br/>(y BLOQUEO_POR_INTENTOS al escalar)
         A-->>F: 401 (mensaje genérico, no revela el campo)
     end
 
@@ -234,12 +239,14 @@ sequenceDiagram
         U->>F: código
         F->>A: POST /api/auth/2fa/verificar
         A->>D: validar código y vigencia
+        A->>D: bitácora: INICIO_SESION (con doble factor)
         A-->>F: JWT definitivo (8 h)
     else sin 2FA
+        A->>D: bitácora: INICIO_SESION
         A-->>F: JWT definitivo (8 h)
     end
 
-    Note over A,D: ⚠️ RF05 exige registrar el inicio de sesión<br/>en bitácora. No se hace (hallazgo H-20).
+    Note over A,D: El registro en bitácora nunca interrumpe el acceso:<br/>si falla, se traza el error y el usuario entra igual.
 ```
 
 **Contenido del JWT:** `{ id_usuario, tenant_id, rol }`, firmado con `JWT_SECRET`, vigencia `JWT_EXPIRES_IN` (8 h por defecto).

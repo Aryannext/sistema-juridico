@@ -71,14 +71,21 @@ JWT de 8 horas y código 2FA con vigencia de 5 minutos.
 | RNF03.1 | La bitácora es inmutable: no se puede editar ni borrar | ✅ |
 | RNF03.2 | Cada registro incluye usuario, fecha, IP, módulo y detalle legible | ✅ |
 | RNF03.3 | La bitácora se puede consultar con filtros | ✅ |
-| RNF03.4 | La bitácora se puede **exportar** | 🟥 |
+| RNF03.4 | La bitácora se puede **exportar** | ✅ |
 | RNF03.5 | Los registros se conservan 5 años | 🔵 |
 
-**Estado 🟡. Brecha reconocida:** no existe endpoint de exportación de la bitácora. Es una de las
-tres no conformidades que detecta la verificación automática.
+**Estado 🟡.** RNF03.4 se cerró el 3 de septiembre de 2026: `GET /api/admin/auditoria/export`
+entrega la bitácora en CSV con los mismos filtros de la pantalla —módulo, acción y rango de
+fechas—, de modo que lo exportado coincide con lo que se está viendo. La propia exportación
+queda registrada en la bitácora: sacar el registro del sistema es en sí un acto auditable.
 
-RNF03.5 depende de que la base no se purgue: no hay proceso de borrado, pero **tampoco hay
-política de retención escrita ni respaldos automáticos** *(ver RNF10)*.
+**Se exporta en CSV y no en PDF, a propósito.** El enunciado admite «CSV o PDF». Una bitácora se
+exporta para analizarla —filtrar, ordenar, cruzar fechas—, y eso se hace en una hoja de cálculo.
+El PDF se reservó para el informe de expedientes (RF42), que sí se entrega a terceros.
+
+**Lo que sigue abierto es RNF03.5.** Depende de que la base no se purgue: no hay proceso de
+borrado, pero **tampoco hay política de retención escrita ni respaldos automáticos**
+*(ver RNF10)*. Es la razón de que el requisito siga en 🟡 y no en ✅.
 
 ---
 

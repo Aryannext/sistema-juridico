@@ -55,21 +55,21 @@ Cada uno es una carpeta con dos archivos: sus rutas y su controlador.
 
 | Módulo | Endpoints | De qué responde |
 |---|---:|---|
-| `auth` | 10 | Registro, acceso, 2FA, verificación y recuperación |
+| `auth` | 11 | Registro, acceso, 2FA, verificación, recuperación y cierre de sesión |
 | `procesos` | 10 | Expedientes, equipo, estados, partes |
 | `documentos` | 8 | Carga, versiones, visibilidad, descarga |
 | `plataforma` | 6 | **Administración del servicio, aislada** |
-| `admin` | 5 | Usuarios, permisos y bitácora del consultorio |
+| `admin` | 6 | Usuarios, permisos y bitácora del consultorio (con exportación) |
 | `clientes` | 5 | Clientes y acceso al portal |
 | `actuaciones` | 4 | Actos del juzgado |
 | `audiencias` | 4 | Agenda |
 | `terminos` | 4 | Plazos y su gestión |
+| `reportes` | 3 | Estadísticas y exportación en CSV y PDF |
 | `notificaciones` | 2 | Centro de alertas |
 | `portal` | 2 | Vista restringida del cliente |
-| `reportes` | 2 | Estadísticas y exportación |
 | `tenant` | 2 | Perfil del consultorio |
 
-**64 endpoints.** Recuento reproducible:
+**67 endpoints.** Recuento reproducible:
 
 ```bash
 grep -rhoE "router\.(get|post|put|patch|delete)\(" backend/src/modules/*/*.routes.js | wc -l

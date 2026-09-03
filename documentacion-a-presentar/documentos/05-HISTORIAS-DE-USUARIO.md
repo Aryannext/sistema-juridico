@@ -240,7 +240,7 @@ alertas críticas ajenas, ni suplantar al cliente en el portal.
 ---
 
 ## HU-03 · Bitácora de auditoría
-**Actor:** Administrador · **Sprint 1** · **5 pts** · 🟡
+**Actor:** Administrador · **Sprint 1** · **5 pts** · ✅
 
 **Nace de**
 - **RF05** — Bitácora con usuario, fecha y hora, IP, módulo y detalle.
@@ -257,14 +257,24 @@ Administrador.
 3. La IP es la **real del cliente**, no la del servidor intermedio.
 4. El detalle se lee en lenguaje llano, no como ruta técnica.
 5. Nadie puede editar ni borrar registros.
-6. Se puede exportar. → **🟥 no implementado**
-7. El inicio de sesión queda registrado. → **🟥 no implementado**
+6. Se puede exportar con los mismos filtros de la pantalla.
+7. El inicio y el cierre de sesión quedan registrados.
 
-**Dónde está** `audit.middleware.js` · `GET /api/admin/auditoria`
-**Cómo demostrarlo** Crear un cliente → Bitácora de auditoría → ver *«Registró el cliente…»*
+**Dónde está** `audit.middleware.js` · `sesion.auditoria.js` · `exportacion-bitacora.js`
+`GET /api/admin/auditoria` · `GET /api/admin/auditoria/export` · `POST /api/auth/logout`
+
+**Cómo demostrarlo**
+1. Crear un cliente → Bitácora de auditoría → ver *«Registró el cliente…»*.
+2. Cerrar sesión y volver a entrar → ver *«… inició sesión»* y *«… cerró sesión»*.
+3. Filtrar por módulo y exportar → el CSV descargado contiene exactamente las filas visibles.
 
 > El criterio 4 se corrigió el 2 de septiembre de 2026: antes decía
 > *«Acción CREAR realizada en /api/clientes»*, que no significa nada para un abogado.
+
+> Los criterios 6 y 7 estuvieron marcados **🟥 no implementado** hasta el 2 de septiembre de
+> 2026 y se cerraron el 3 de septiembre. El 7 obligó a crear `POST /api/auth/logout`: el cierre
+> de sesión ocurría solo en el navegador, así que no había ningún momento en el servidor donde
+> registrarlo.
 
 ---
 
@@ -859,7 +869,7 @@ Administrador.
 ---
 
 ## HU-26 · Estadísticas y reportes
-**Actor:** Administrador · **Sprint 4** · **5 pts** · 🟡
+**Actor:** Administrador · **Sprint 4** · **5 pts** · ✅
 
 **Nace de** **RF42** — Estadísticas con filtro por rango de fechas.
 **Depende de** → HU-07
@@ -869,12 +879,19 @@ Administrador.
 2. Se filtra por mes, trimestre, año o rango propio.
 3. Se exporta en CSV.
 4. El CSV incluye a los clientes **sin** expedientes.
-5. Se exporta en PDF. → **🟥 no implementado**
+5. Se exporta en PDF, con el mismo filtro aplicado.
 
-**Dónde está** `GET /api/reportes/stats` y `/export/csv` · **Cómo demostrarlo** Reportes → Exportar
+**Dónde está** `GET /api/reportes/stats`, `/export/csv` y `/export/pdf`
+**Cómo demostrarlo** Reportes → elegir un periodo → Exportar en CSV y en PDF; ambos deben
+mostrar las mismas cifras.
 
 > El criterio 4 nació de un defecto real: exportar con un cliente dado de alta y ningún
 > expediente devolvía un archivo con solo la cabecera.
+
+> El criterio 5 estuvo marcado **🟥 no implementado** hasta el 2 de septiembre de 2026 y se
+> cerró el 3 de septiembre. Los dos formatos parten de la misma consulta a propósito: si cada
+> uno armara la suya, un cambio en el filtro de fechas podría dejar el CSV y el PDF diciendo
+> cifras distintas sobre el mismo periodo.
 
 ---
 
@@ -928,10 +945,13 @@ Administrador.
 | | |
 |---|---:|
 | Historias | 37 |
-| Completas ✅ | 24 |
-| Parciales 🟡, con el criterio pendiente declarado | 13 |
+| Completas ✅ | 26 |
+| Parciales 🟡, con el criterio pendiente declarado | 11 |
 | Sin empezar | 0 |
 | Puntos de historia | 170 |
+
+HU-03 (bitácora) y HU-26 (reportes) pasaron de 🟡 a ✅ el 3 de septiembre de 2026, al cerrarse
+sus criterios de exportación y de registro de sesión.
 
 **Los cuellos de botella del grafo** —las historias de las que más dependen otras— son HU-07
 (catorce dependientes), HU-01 (siete), HU-12 (cuatro) y HU-17 (tres). Son las que conviene

@@ -128,9 +128,9 @@ npm --prefix backend run verificar
 Crea datos de prueba, ejecuta 34 comprobaciones y los borra. Se niega a ejecutarse si la base de
 datos no es local.
 
-### Resultado — 2 de septiembre de 2026
+### Resultado — 3 de septiembre de 2026
 
-**34 comprobaciones · 31 conformes · 3 no conformes**
+**34 comprobaciones · 34 conformes · 0 no conformes**
 
 | Ref | Qué comprueba | Resultado |
 |---|---|:--:|
@@ -149,15 +149,32 @@ datos no es local.
 | RN03 | El cambio de estado exige justificación | ✅ |
 | RN05 | No se archiva con términos pendientes | ✅ |
 | RNF03 | La bitácora es consultable por el Administrador | ✅ |
-| **RF05** | **El inicio de sesión queda en la bitácora** | **🟥** |
-| **RNF03** | **La bitácora se puede exportar** | **🟥** |
-| **RF42** | **Los reportes se exportan en PDF** | **🟥** |
+| RF05 | El inicio de sesión queda en la bitácora | ✅ |
+| RNF03 | La bitácora se puede exportar | ✅ |
+| RF42 | Los reportes se exportan en PDF | ✅ |
 
 *(La tabla recoge las más representativas de las 34.)*
 
-> **Que las tres no conformidades coincidan exactamente con lo que este catálogo declara como
-> pendiente es el resultado buscado.** Significa que la documentación no marca como terminado
-> nada que no funcione. Un fallo **no** documentado habría sido la mala noticia.
+### Las tres últimas: de dónde venían
+
+Las tres filas finales estuvieron en 🟥 hasta el 2 de septiembre, **declaradas como pendientes
+en este mismo catálogo antes de resolverse**. Se cerraron el 3 de septiembre:
+
+| Ref | Qué faltaba | Qué se hizo |
+|---|---|---|
+| RF05 | El código llevaba un `// Todo: Record audit login` sin implementar | `sesion.auditoria.js` registra entrada, doble factor, intento fallido, bloqueo y cierre. Se añadió `POST /api/auth/logout` para tener un cierre que auditar |
+| RNF03 | La bitácora se veía en pantalla pero no salía del sistema | `GET /api/admin/auditoria/export` la entrega en CSV con los mismos filtros de la pantalla |
+| RF42 | No había generación de PDF en ninguna parte | `GET /api/reportes/export/pdf` con `pdfkit`, sobre la misma consulta que el CSV |
+
+> **Que las tres no conformidades coincidieran exactamente con lo que este catálogo declaraba
+> como pendiente era el resultado buscado.** La documentación no marcó como terminado nada que
+> no funcionara. Un fallo **no** documentado habría sido la mala noticia; llegar a 34/34 sin ese
+> rastro previo no habría demostrado nada.
+
+**Cómo comprobarlo ahora mismo:** la verificación ya no se conforma con un `200`. Para RF05
+busca un registro con `accion = INICIO_SESION` e imprime su detalle; para RNF03 cuenta las filas
+del CSV devuelto; para RF42 exige la firma `%PDF-` en el cuerpo de la respuesta. Un endpoint que
+respondiera correctamente pero sin contenido seguiría marcando fallo.
 
 ---
 
@@ -165,10 +182,10 @@ datos no es local.
 
 | Comando | Qué comprueba | Resultado |
 |---|---|---|
-| `npm --prefix backend test` | 83 pruebas unitarias en 14 suites | ✅ |
-| `npm --prefix backend run verificar` | 34 comprobaciones sobre la plataforma en ejecución | 31/34 |
+| `npm --prefix backend test` | 110 pruebas unitarias en 17 suites | ✅ |
+| `npm --prefix backend run verificar` | 34 comprobaciones sobre la plataforma en ejecución | 34/34 |
 | `npm --prefix backend run verificar:plataforma` | 16 comprobaciones de la administración de plataforma | 16/16 |
-| `npm --prefix backend run arreglos` | 8 comprobaciones sobre defectos corregidos | 8/8 |
+| `npm --prefix backend run arreglos` | 12 comprobaciones sobre defectos corregidos | 12/12 |
 | `npm --prefix backend run lint` | Análisis estático del backend | 0 errores |
 
 ### Pruebas que respaldan las reglas de negocio

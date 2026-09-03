@@ -138,13 +138,16 @@ En producción y verificable:
 | Requisitos no funcionales | 10 |
 | Reglas de negocio | 9 |
 | Historias de usuario | 37 |
-| Endpoints de la API | 64 en 13 módulos |
-| Pruebas automatizadas | 83 |
-| Verificación contra la plataforma en ejecución | **31 de 34 conformes** |
+| Endpoints de la API | 67 en 13 módulos |
+| Pruebas automatizadas | 110 |
+| Verificación contra la plataforma en ejecución | **34 de 34 conformes** |
 
-Las tres no conformes son brechas **reconocidas y documentadas**, no fallos ocultos:
-el registro del inicio de sesión en la bitácora (RF05), la exportación de la bitácora (RNF03) y
-la exportación de reportes en PDF (RF42). Detalle en [06 — Trazabilidad](06-TRAZABILIDAD.md).
+Hasta el 2 de septiembre eran **31 de 34**. Las tres que faltaban —el registro del inicio de
+sesión en la bitácora (RF05), la exportación de la bitácora (RNF03) y la exportación de
+reportes en PDF (RF42)— estaban **declaradas como brechas en esta misma documentación** antes
+de resolverse, y se cerraron el 3 de septiembre. La secuencia queda registrada en
+[06 — Trazabilidad](06-TRAZABILIDAD.md).
 
-> Que la documentación declare lo que **no** cumple es deliberado. Un catálogo donde todo
-> aparece como terminado no se puede contrastar con nada.
+> Que la documentación declarara lo que **no** cumplía fue deliberado, y sigue siendo el punto
+> importante: un catálogo donde todo aparece como terminado no se puede contrastar con nada.
+> Llegar a 34 de 34 vale por el rastro de cómo se llegó, no por el número.

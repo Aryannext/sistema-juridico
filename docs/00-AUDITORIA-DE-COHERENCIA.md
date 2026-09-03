@@ -22,7 +22,7 @@ Se identificaron **28 hallazgos**, clasificados así:
 | 🟥 **Defecto de implementación** | 10 | El requisito es correcto y el código no lo cumple. Se corrige el código. |
 | 🟨 **Ambigüedad de especificación** | 3 | Dos documentos se contradicen entre sí. Hace falta una decisión humana. |
 
-Siete son de severidad alta: H-10, ~~H-19~~, H-20, H-21, H-24, **H-27** y **H-28**.
+Siete son de severidad alta: H-10, ~~H-19~~, ~~H-20~~, H-21, H-24, **H-27** y **H-28**.
 
 > **Estado al 2 de septiembre de 2026.** **H-19 queda corregido** (unicidad por consultorio),
 > junto con **H-27** y **H-28**, resueltos en la Ola 1. La auditoría de defectos del 2 de
@@ -33,6 +33,10 @@ Siete son de severidad alta: H-10, ~~H-19~~, H-20, H-21, H-24, **H-27** y **H-28
 Los dos últimos no se encontraron leyendo código, sino **ejecutando el sistema**: H-27 al
 probar la plataforma con datos reales y H-28 al montar el despliegue de producción. Es el
 argumento a favor de verificar ejecutando, no solo revisando.
+
+> **Actualización del 3 de septiembre de 2026.** **H-20 queda corregido**: el inicio y el
+> cierre de sesión ya se registran en la bitácora. Con ello `verificar-plataforma.js` pasa de
+> 31 a **34 comprobaciones conformes sobre 34**.
 
 ---
 
@@ -226,7 +230,15 @@ model Proceso  { numero_radicado  String @unique }
   `Usuario.email` es un caso aparte: al ser la credencial de inicio de sesión y no llevar selector de tenant en el login, debe **permanecer globalmente único**. Se documenta como limitación consciente en [ADR-003](11-DECISIONES-ARQUITECTONICAS.md).
 - **Prioridad:** alta. Requiere migración de datos.
 
-### H-20 🟥 **[SEVERIDAD ALTA]** El inicio de sesión no se registra en la bitácora
+### ~~H-20~~ ✅ **[CORREGIDO]** El inicio de sesión no se registra en la bitácora
+
+> **Corregido el 3 de septiembre de 2026.** `backend/src/modules/auth/sesion.auditoria.js`
+> registra entrada, entrada con doble factor, intento fallido, bloqueo por intentos y cierre
+> de sesión. Se añadió `POST /api/auth/logout` porque antes el cierre ocurría solo en el
+> navegador y no había nada que auditar. El registro **nunca lanza**: un fallo al auditar no
+> puede dejar a nadie fuera del sistema. Verificado por `verificar-plataforma.js` —
+> *«Admin A inició sesión»*— y por `src/tests/auditoria_sesion.test.js` (8 pruebas).
+> El diagnóstico original se conserva íntegro debajo.
 
 - **Exige RF05 y RNF03:** *"Definir explícitamente: **inicio/cierre de sesión**, creación/edición/eliminación…"*. HU-03 lo repite como criterio de aceptación.
 - **Dice el código:** `backend/src/modules/auth/auth.controller.js:227` — `// Todo: Record audit login`. El comentario sigue ahí; nunca se implementó.

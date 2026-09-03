@@ -32,7 +32,7 @@ Estado: ✅ implementada · 🟡 parcial · ❌ no implementada
 |---|---|:--:|:--:|:--:|---|:--:|---|
 | HU-01 | Inicio de sesión en el sistema | 1 | Alta | 5 | RF01, RNF01, RNF02 | 🟡 | `auth.controller.js: login` · `LoginPage.jsx` — solo correo; sin recuperación de contraseña; sin cierre por inactividad |
 | HU-02 | Gestión de roles y permisos por módulo | 1 | Alta | 8 | RF02–RF05, RN02 | 🟡 | `admin.controller.js` · `UsuariosPage.jsx` — falta impedir que el único Administrador se degrade a sí mismo |
-| HU-03 | Registro de acciones en bitácora de auditoría | 1 | Alta | 5 | RF05, RNF03, RN01 | 🟡 | `audit.middleware.js` · `AuditoriaList.jsx` — falta el inicio de sesión (H-20) y la exportación CSV/PDF |
+| HU-03 | Registro de acciones en bitácora de auditoría | 1 | Alta | 5 | RF05, RNF03, RN01 | ✅ | `audit.middleware.js` · `sesion.auditoria.js` · `exportacion-bitacora.js` · `AuditoriaList.jsx` — incluye inicio y cierre de sesión (cierra H-20) y la exportación en CSV con filtros |
 | HU-32 | Habilitar y configurar 2FA | 1 | Alta | 5 | RNF02 | ✅ | `POST /api/auth/2fa/configurar` · `TwoFactorPage.jsx` |
 | HU-35 | Registro en la plataforma | 1 | Alta | 8 | RF51, RF54 | 🟡 | `POST /api/auth/registro` · `RegisterPage.jsx` — el enlace no expira a las 24 h ni se puede reenviar |
 | HU-36 | Configurar perfil del consultorio | 1 | Media | 3 | RF53 | ✅ | `PUT /api/tenant/perfil` · `AjustesPage.jsx` |
@@ -105,7 +105,7 @@ Estado: ✅ implementada · 🟡 parcial · ❌ no implementada
 |---|---|:--:|:--:|:--:|---|:--:|---|
 | HU-24 | Panel principal personalizado según rol | 4 | Alta | 8 | RF38–RF40, RN09 | 🟡 | `DashboardIndex.jsx` — el umbral de días sin movimiento no es configurable |
 | HU-25 | Gestionar notificaciones del panel | 4 | Alta | 5 | RF41, RF47–RF50 | ✅ | `notificaciones.controller.js` — incluye la agrupación de >5 en 10 min |
-| HU-26 | Consultar estadísticas y reportes generales | 4 | Media | 5 | RF42 | 🟡 | `getStats`, `exportCSV` — **falta la exportación en PDF** |
+| HU-26 | Consultar estadísticas y reportes generales | 4 | Media | 5 | RF42 | ✅ | `getStats`, `exportCSV`, `exportPDF` — CSV y PDF sobre la misma consulta |
 
 ### Módulo 9 — Portal del cliente
 
@@ -167,14 +167,15 @@ registrar clientes y crear su primer expediente"*. Eso es un producto demostrabl
 
 | Estado | Historias | % |
 |---|:--:|:--:|
-| ✅ Implementada completa | 23 | 62 % |
-| 🟡 Implementada con brechas | 14 | 38 % |
+| ✅ Implementada completa | 25 | 68 % |
+| 🟡 Implementada con brechas | 12 | 32 % |
 | ❌ No implementada | 0 | 0 % |
 
-Ninguna historia está sin empezar. Las 14 parciales comparten pocas causas raíz —
-principalmente cinco: falta de auditoría de sesión, ausencia de recuperación de contraseña,
-ausencia de generación de PDF, el enum documental incompleto y la falta de índices.
-Cerrar esas cinco causas cierra la mayoría de las brechas.
+Ninguna historia está sin empezar. Las parciales comparten pocas causas raíz. De las cinco
+identificadas originalmente —falta de auditoría de sesión, ausencia de recuperación de
+contraseña, ausencia de generación de PDF, el enum documental incompleto y la falta de
+índices— **las tres primeras están cerradas** (2 y 3 de septiembre de 2026). Quedan el enum
+documental y los índices.
 ---
 
 ## 5. Criterios de aceptación detallados

@@ -11,6 +11,21 @@ Este documento convierte los 28 hallazgos del doc 00 en **trabajo ordenado y eje
 > (RF55–RF59, HU-37, [ADR-010](11-DECISIONES-ARQUITECTONICAS.md)) y se corrigió el
 > **desfase de un día en las fechas** (hallazgo H-27).
 
+> ✅ **Estado a 3 de septiembre de 2026.** De las olas pendientes se han ejecutado, fuera de
+> orden, los puntos que bloqueaban la verificación: **2.1** (sesión en bitácora), **2.3**
+> (política de contraseñas en el servidor), **2.4** (filtro de formatos de documento),
+> **3.4/4.2** (recuperación de acceso y reenvío de verificación) y **4.3** (exportación en PDF
+> y de la bitácora).
+>
+> Se adelantaron porque eran justamente las comprobaciones que fallaban en
+> `npm --prefix backend run verificar`, que ahora pasa **34 de 34**. `npm test` está en 110/110.
+>
+> **Siguen pendientes** los puntos que no bloquean la verificación: el limitador del login
+> (2.2), la restricción de CORS, los índices de base de datos (RNF05.5), el seguimiento en
+> producción (RNF07), las pruebas de carga (RNF08) y las copias de seguridad automáticas
+> (RNF10.3). La actualización de dependencias mayores (Ola 6) queda **aplazada por decisión
+> explícita** hasta después de la presentación.
+
 **Principio que ordena todo el plan:** primero lo que es barato e irreversiblemente bueno
 (higiene del repositorio, correcciones de una línea), después lo que exige cuidado
 (migraciones, funcionalidad nueva). **Nada de lo propuesto toca el diseño visual.**
@@ -140,21 +155,31 @@ Se recomienda A ahora y B después.
 
 Cada punto cierra una brecha concreta identificada en el doc 03.
 
-### 2.1 Registrar el inicio de sesión en la bitácora — **RF05, RNF03** · 1 h
+### 2.1 ~~Registrar el inicio de sesión en la bitácora~~ — ✅ HECHO (3-09-2026) · **RF05, RNF03**
 
-`auth.controller.js:227` conserva el comentario `// Todo: Record audit login`. Hay que escribir
-en `bitacoraAuditoria` en tres momentos:
+`auth.controller.js:227` conservaba el comentario `// Todo: Record audit login`. Ahora
+`backend/src/modules/auth/sesion.auditoria.js` escribe en `bitacoraAuditoria` en cuatro momentos:
 
-| Evento | Acción sugerida |
+| Evento | Acción registrada |
 |---|---|
-| Inicio de sesión exitoso | `INICIO_SESION` |
-| Inicio de sesión fallido | `INTENTO_FALLIDO_SESION` |
+| Inicio de sesión exitoso (con o sin doble factor) | `INICIO_SESION` |
+| Contraseña incorrecta | `INTENTO_FALLIDO_SESION` |
+| Bloqueo por acumulación de intentos | `BLOQUEO_POR_INTENTOS` |
 | Cierre de sesión | `CIERRE_SESION` |
 
-El cierre de sesión es hoy puramente del lado del cliente (`AuthContext` borra el token). Para
-registrarlo hace falta añadir `POST /api/auth/logout`.
+El cierre de sesión era puramente del lado del cliente (`AuthContext` borraba el token), así
+que se añadió `POST /api/auth/logout` para tener algo que auditar.
 
-**Por qué importa:** sin esto el sistema no puede responder *"¿quién entró y cuándo?"*, que es
+**Dos decisiones que conviene explicar:**
+
+- **El registro nunca lanza.** Si la bitácora falla, se traza el error y el acceso continúa.
+  Lo contrario dejaría a todo el mundo fuera del sistema por un problema de auditoría, que es
+  peor que no auditar.
+- **Solo se registra el intento fallido cuando el usuario existe.** Un intento contra un correo
+  no registrado no tiene consultorio al que atribuirse, y además llenaría la bitácora de un
+  consultorio con ruido ajeno.
+
+**Por qué importaba:** sin esto el sistema no podía responder *"¿quién entró y cuándo?"*, que es
 la pregunta más básica de cualquier auditoría de seguridad y un requisito explícito para
 software jurídico.
 
@@ -332,14 +357,30 @@ olvida su contraseña **no tiene forma de entrar**.
 `POST /api/auth/reenviar-verificacion`. El nuevo enlace invalida el anterior. Junto con 3.4
 cierra RF54 por completo.
 
-### 4.3 Exportación en PDF — RF42, RNF03, HU-03, HU-26 · 1 día
+### 4.3 ~~Exportación en PDF~~ — ✅ HECHO (3-09-2026) · RF42, RNF03, HU-03, HU-26
 
-Es la única brecha que aparece en **tres** requisitos distintos. Hace falta:
-- `GET /api/reportes/export/pdf`
-- `GET /api/admin/auditoria/export` (CSV **y** PDF, con filtros por usuario, módulo y rango)
+Era la única brecha que aparecía en **tres** requisitos distintos. Se implementaron:
 
-Sugerencia de librería: `pdfkit` (ligera, sin navegador) o `puppeteer` (mejor maquetación,
-mucho más pesada). Para tablas de reportes, `pdfkit` es suficiente.
+- `GET /api/reportes/export/pdf` — informe de expedientes con `pdfkit`
+  (`modules/reportes/exportacion-pdf.js`).
+- `GET /api/admin/auditoria/export` — bitácora en **CSV**, con filtros por módulo, acción y
+  rango de fechas (`modules/admin/exportacion-bitacora.js`).
+
+**Se eligió `pdfkit` sobre `puppeteer`**: maqueta peor, pero no arrastra un navegador completo
+—que en este VPS compartido significaría cientos de megas y un proceso extra por cada informe—
+y no tiene vulnerabilidades conocidas. Para tablas de reportes es suficiente.
+
+**La bitácora se exporta en CSV y no en PDF, a propósito.** RNF03 admite «CSV o PDF». Una
+bitácora se exporta para *analizarla* —filtrar, ordenar, cruzar fechas—, y eso se hace en una
+hoja de cálculo, no en un PDF. El PDF se reservó para el informe de expedientes, que sí se
+entrega a terceros.
+
+**Dos detalles que costaron encontrar:**
+
+- El pie de página escrito dentro del margen inferior hacía que pdfkit lo interpretara como
+  desbordamiento y **añadiera una hoja en blanco**. Se anula el margen mientras se dibuja.
+- `bufferedPageRange()` se recalcula al vuelo: leerlo dentro del bucle de numeración daba un
+  total que crecía mientras se escribía, y salía *«Página 1 de 1»* habiendo dos. Se captura antes.
 
 ### 4.4 Aviso de proceso incompleto en el dashboard — RF17 · 2 h
 

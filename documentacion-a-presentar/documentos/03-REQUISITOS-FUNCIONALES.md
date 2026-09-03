@@ -74,13 +74,25 @@ modelo. Es una divergencia consciente respecto al enunciado original.
 | RF05.2 | Registra fecha y hora | ✅ |
 | RF05.3 | Registra la **dirección IP real del cliente**, no la del proxy | ✅ |
 | RF05.4 | Registra el módulo y un detalle legible para el usuario | ✅ |
-| RF05.5 | **El inicio de sesión queda registrado** | 🟥 |
-| RF05.6 | El cierre de sesión queda registrado | 🟥 |
+| RF05.5 | **El inicio de sesión queda registrado** | ✅ |
+| RF05.6 | El cierre de sesión queda registrado | ✅ |
+| RF05.7 | La bitácora se puede exportar con filtros | ✅ |
 
-**Estado 🟡. Brecha reconocida:** las acciones sobre expedientes, clientes y documentos sí se
-registran; **el inicio y el cierre de sesión no**. El detalle se escribe en lenguaje llano
-(*«Registró el cliente María Fernanda Rojas»*), no como ruta técnica.
-**Implementado en** `audit.middleware.js` · **Historia:** HU-03
+**Estado ✅.** El detalle se escribe en lenguaje llano (*«Registró el cliente María Fernanda
+Rojas»*), no como ruta técnica. Además del inicio y el cierre, se registran el intento fallido
+y el bloqueo por acumulación de intentos.
+
+RF05.5 y RF05.6 estuvieron en 🟥 hasta el 2 de septiembre de 2026: el código conservaba un
+comentario `// Todo: Record audit login` sin implementar. Se cerraron el 3 de septiembre.
+
+> **Dos decisiones que un evaluador puede querer preguntar.** El registro **nunca interrumpe el
+> acceso**: si la bitácora falla, se traza el error y el usuario entra igual, porque lo contrario
+> dejaría a todo el mundo fuera por un problema de auditoría. Y el cierre de sesión necesitó una
+> ruta nueva (`POST /api/auth/logout`), porque antes ocurría solo en el navegador y no había nada
+> que registrar.
+
+**Implementado en** `audit.middleware.js` · `sesion.auditoria.js` · `exportacion-bitacora.js`
+**Historia:** HU-03 · **Pruebas:** `auditoria_sesion.test.js`, `exportacion_bitacora.test.js`
 
 ---
 
@@ -480,9 +492,18 @@ no existía filtro de formatos: se podía adjuntar un ejecutable a un expediente
 |---|---|:--:|
 | RF42.1 | Las estadísticas se filtran por rango de fechas | ✅ |
 | RF42.2 | Los datos se exportan en CSV | ✅ |
-| RF42.3 | Los datos se exportan en **PDF** | 🟥 |
+| RF42.3 | Los datos se exportan en **PDF** | ✅ |
 
-**Estado 🟡. Brecha reconocida:** no hay exportación en PDF. **HU-26**
+**Estado ✅.** RF42.3 estuvo en 🟥 hasta el 2 de septiembre de 2026; se cerró el 3 de septiembre
+con `GET /api/reportes/export/pdf`.
+
+> **Por qué los dos formatos y no uno.** El CSV sirve para **procesar** —abrirlo en Excel,
+> filtrar, sumar—; el PDF sirve para **entregar**: a un socio, a un cliente o como soporte de
+> una reunión. Ambos parten de la misma consulta, para que no puedan mostrar cifras distintas
+> sobre el mismo periodo.
+
+**Implementado en** `exportacion.js` (CSV) · `exportacion-pdf.js` (PDF, con `pdfkit`)
+**HU-26** · **Pruebas:** `exportacion_pdf.test.js`
 
 ### RF47 · Canal y agrupación
 | | Criterio | |
@@ -601,13 +622,24 @@ dejaba a la persona bloqueada sin ninguna salida. **HU-35**
 
 | Estado | Requisitos |
 |---|---:|
-| ✅ Cumplidos | 48 |
-| 🟡 Parciales, con el límite declarado | 11 |
+| ✅ Cumplidos | 52 |
+| 🟡 Parciales, con el límite declarado | 7 |
 | 🟥 No cumplidos | 0 |
 
-Ninguno está sin empezar. Los once parciales declaran **exactamente** qué criterio falta, y los
-criterios pendientes se pueden contar: son 10 sobre un total de 143.
+Ninguno está sin empezar. Los siete parciales declaran **exactamente** qué criterio falta, y los
+criterios pendientes se pueden contar: son **6 sobre un total de 143**. Están todos aquí, en sus
+tablas, marcados 🟥:
 
-> Las tres brechas que aparecen en la verificación automática —RF05.5, RF42.3 y la exportación de
-> la bitácora— están recogidas aquí como criterios no cumplidos. No hay ninguna diferencia entre
-> lo que este documento declara y lo que la plataforma hace.
+| Criterio | Qué falta |
+|---|---|
+| RF01.2 | Solo se entra con el correo; no se admite nombre de usuario |
+| RF17.3 | El aviso de expediente incompleto está en la ficha, no en el panel principal |
+| RF19.1 | El catálogo de documentos tiene seis categorías, no siete |
+| RF36.2 | No se conserva el historial de cambios de estado del término |
+| RF40.3 | El umbral de inactividad está fijo en 30 días, no es configurable |
+| RF52.4 | El aislamiento entre consultorios lo aplica el código, no la base de datos |
+
+> **No hay ninguna diferencia entre lo que este documento declara y lo que la plataforma hace.**
+> Las tres brechas que la verificación automática señalaba hasta el 2 de septiembre —RF05.5,
+> RF05.6 y RF42.3— estaban recogidas aquí como criterios no cumplidos **antes** de resolverse.
+> Ese rastro es el que hace comprobable el resto del catálogo.

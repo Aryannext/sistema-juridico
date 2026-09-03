@@ -1,7 +1,7 @@
 # 06 — Catálogo de la API REST
 
 **Base:** `/api` · **Formato:** JSON · **Autenticación:** `Authorization: Bearer <JWT>`
-**Total:** 64 endpoints en 13 módulos (+ 1 de salud).
+**Total:** 67 endpoints en 13 módulos (+ 1 de salud).
 Extraído directamente de los archivos `*.routes.js`. Recuento reproducible:
 
 ```bash
@@ -35,8 +35,18 @@ grep -rhoE "router\.(get|post|put|patch|delete)\(" backend/src/modules/*/*.route
 | GET | `/perfil` | ✔ | — | — | Datos del usuario en sesión + preferencias | HU-01 |
 | PUT | `/preferencias` | ✔ | — | — | Canal y prioridades por tipo de evento | HU-29 |
 | POST | `/2fa/configurar` | ✔ | — | — | Activa o desactiva el segundo factor | HU-32 |
+| POST | `/logout` | ✔ | — | — | Registra el cierre de sesión en la bitácora. El JWT sigue siendo válido hasta caducar: la sesión se descarta en el navegador (ver nota) | HU-01 |
 
-> ⚠️ **Ninguna ruta de este módulo audita.** RF05 exige registrar inicio y cierre de sesión (hallazgo H-20).
+> **Auditoría de sesión (RF05).** `login`, `2fa/verificar` y `logout` escriben en la bitácora a
+> través de `sesion.auditoria.js`: entrada, entrada con doble factor, intento fallido, bloqueo
+> por intentos y cierre. El registro nunca interrumpe la petición —si la bitácora falla, se
+> traza el error y el usuario entra igual—, porque un problema de auditoría no puede dejar a
+> nadie fuera del sistema.
+
+> **Por qué existe `POST /logout` si el JWT no se invalida.** Un JWT es autocontenido y no se
+> revoca sin mantener una lista de tokens anulados, que este sistema no lleva. La ruta no
+> pretende invalidar nada: existe para que el cierre de sesión **deje rastro**. Sin ella, la
+> bitácora podría decir quién entró pero nunca quién salió.
 
 **Cuerpo de `POST /login`:** `{ email, password }`
 **Respuesta sin 2FA:** `{ token, user: { id, nombre, rol, tenant_id } }`
@@ -227,30 +237,51 @@ que un Administrador suplante a un cliente**, cumpliendo la segunda prohibición
 
 ---
 
-## 10. Reportes — `/api/reportes` (2)
+## 10. Reportes — `/api/reportes` (3)
 
 | Método | Ruta | Permiso | Qué hace | HU |
 |---|---|---|---|---|
 | GET | `/stats` | `REPORTES:LEER` | Procesos por estado y carga por abogado. Query: `filter` (`mes`/`trimestre`/`anio`/`custom`), `start_date`, `end_date` | HU-26 |
 | GET | `/export/csv` | `REPORTES:LEER` | CSV con BOM UTF-8, separador `;` (compatible con Excel en español). Se audita como `EXPORTAR_REPORTES_CSV` | HU-26 |
+| GET | `/export/pdf` | `REPORTES:LEER` | Informe de expedientes en PDF: portada, resumen por estado, carga por abogado y tabla de detalle. Mismos filtros que `/stats` | HU-26 |
 
-> ❌ **Falta `GET /export/pdf`**, exigido por RF42/HU-26 y por RNF03 para la bitácora.
+> **Dos formatos porque son dos usos distintos.** El CSV sirve para **procesar** —abrirlo en
+> Excel, filtrar, sumar—; el PDF sirve para **entregar**: a un socio, a un cliente o como
+> soporte de una reunión. Por eso RF42 pide los dos y no uno.
+
+> **Los dos formatos parten de la misma consulta**, en `reportes.controller.js`. Si cada uno
+> armara la suya, un cambio en el filtro de fechas podría dejar el CSV y el PDF diciendo cifras
+> distintas sobre el mismo periodo, que es la peor forma de fallar en un informe.
+
+El PDF se construye en memoria y se envía como flujo, sin escribir en disco: un informe es
+efímero y guardarlo en el servidor solo dejaría archivos que limpiar.
 
 ---
 
-## 11. Administración — `/api/admin` (5)
+## 11. Administración — `/api/admin` (6)
 
 Todo el módulo aplica `requireRole(['ADMINISTRADOR'])` a nivel de router.
 
 | Método | Ruta | Qué hace | HU |
 |---|---|---|---|
 | GET | `/auditoria` | Bitácora del tenant, más reciente primero | HU-03 |
+| GET | `/auditoria/export` | La misma bitácora en CSV. Filtros: `modulo`, `accion`, `desde`, `hasta` | HU-03 |
 | GET | `/usuarios` | Usuarios del tenant | HU-02 |
 | POST | `/usuarios` | Crea abogado o colaborador | HU-02 |
 | GET | `/permisos/:id_usuario` | Permisos por módulo de un usuario | HU-02 |
 | PUT | `/permisos/:id_usuario` | Actualiza la matriz de permisos | HU-02 |
 
-> ❌ **Falta `GET /auditoria/export`** (CSV o PDF con filtros por usuario, módulo y rango), exigido por RNF03 y HU-03.
+**`GET /auditoria/export`** — RNF03. Devuelve `text/csv` con las columnas
+`# · Fecha y hora · Usuario · Correo · Rol · Módulo · Acción · Detalle · Dirección IP`,
+separadas por `;` y con marca de orden de bytes para que Excel muestre bien las tildes.
+Acepta los mismos filtros que la pantalla, de modo que **lo exportado coincide con lo que se
+está viendo**.
+
+> **La exportación se audita a sí misma.** Sacar la bitácora del sistema es en sí un acto
+> auditable: la petición deja su propio registro, con cuántas filas se llevó quien la pidió.
+
+> **Si el usuario fue eliminado**, la fila no desaparece: sale como `(usuario eliminado)`
+> conservando módulo, acción, detalle e IP. Borrar a alguien no puede borrar su rastro.
 
 ---
 
@@ -332,8 +363,8 @@ a `FRONTEND_URL`, como afirma `docs/historico/arquitectura.md` que ya ocurre (no
 |---|---|
 | ~~`POST /api/auth/recuperar` y `/restablecer`~~ | ✅ Implementadas el 2-09-2026 ([doc 17](17-RECUPERACION-DE-ACCESO.md)) |
 | ~~`POST /api/auth/reenviar-verificacion`~~ | ✅ Implementada el 2-09-2026 ([doc 17](17-RECUPERACION-DE-ACCESO.md)) |
-| `POST /api/auth/logout` | RF05 (cierre de sesión en bitácora) |
-| `GET /api/admin/auditoria/export` | RNF03, HU-03 |
-| `GET /api/reportes/export/pdf` | RF42, HU-26 |
+| ~~`POST /api/auth/logout`~~ | ✅ Implementada el 3-09-2026 — RF05 (cierre de sesión en bitácora) |
+| ~~`GET /api/admin/auditoria/export`~~ | ✅ Implementada el 3-09-2026 — RNF03, HU-03 |
+| ~~`GET /api/reportes/export/pdf`~~ | ✅ Implementada el 3-09-2026 — RF42, HU-26 |
 | `DELETE /api/clientes/:id` | RNF06 (eliminación de cliente por Administrador) |
 | `GET /api/audiencias/:id` | — (no exigido; el detalle llega con el proceso) |

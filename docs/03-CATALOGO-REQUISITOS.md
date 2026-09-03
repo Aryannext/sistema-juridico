@@ -29,7 +29,7 @@ RF55–RF59 son **nuevos**: recuperan la entidad *Actuación*, perdida al reescr
 | RF02 | Cuatro roles: Administrador, Abogado, Colaborador, Cliente | ✅ | `enum RolUsuario` — el tercer rol se llama `ASISTENTE` en la BD (H-09) |
 | RF03 | Permisos leer/crear/editar/eliminar por módulo | ✅ | Tabla `permiso_rol`, `roles.middleware.js`, `PUT /api/admin/permisos/:id_usuario` |
 | RF04 | El abogado solo ve sus procesos asignados | ✅ | `procesos.controller.js: getProcesos` — filtra por `id_abogado_resp` o pertenencia a `proceso_abogados` cuando el rol no es `ADMINISTRADOR` |
-| RF05 | Bitácora con usuario, fecha/hora, IP, módulo y detalle | 🟡 | `audit.middleware.js` + escrituras explícitas cubren procesos, clientes, documentos, términos, audiencias y descargas. **Falta inicio y cierre de sesión** — `auth.controller.js:227` conserva el comentario `// Todo: Record audit login` (H-20) |
+| RF05 | Bitácora con usuario, fecha/hora, IP, módulo y detalle | ✅ | `audit.middleware.js` + escrituras explícitas cubren procesos, clientes, documentos, términos, audiencias y descargas; `sesion.auditoria.js` cubre entrada, doble factor, intento fallido, bloqueo y cierre de sesión (cierra H-20) |
 
 ### 1.2 Gestión de clientes
 
@@ -127,7 +127,7 @@ obligatorio habría roto los datos existentes.
 | RF39 | Priorizar términos por vencer, vencidos, audiencias próximas | ✅ | `DashboardIndex.jsx` |
 | RF40 | Marcar en rojo términos vencidos, audiencias < 24 h y procesos sin movimiento > 30 días | 🟡 | Términos y audiencias sí. **El umbral de días no es configurable** por el Administrador, como exige el requisito |
 | RF41 | Ocultar lo gestionado tras X horas (48 por defecto, ajustable) | ✅ | `Tenant.horas_ocultar_notificaciones` + `notificaciones.controller.js` |
-| RF42 | Estadísticas con filtro por rango de fechas | ✅ | `GET /api/reportes/stats` acepta `mes`, `trimestre`, `anio`, `custom` |
+| RF42 | Estadísticas con filtro por rango de fechas | ✅ | `GET /api/reportes/stats` acepta `mes`, `trimestre`, `anio`, `custom`. Exportable en CSV (`GET /api/reportes/export/csv`) y en PDF (`GET /api/reportes/export/pdf`), ambos con los mismos filtros |
 
 ### 1.9 Portal del cliente
 
@@ -164,7 +164,7 @@ obligatorio habría roto los datos existentes.
 |---|---|:--:|---|
 | RNF01 | Cifrado en reposo AES-256 y en tránsito TLS 1.2+ | 🔵 | En tránsito: TLS de Nginx. En reposo: cifrado por defecto de Cloudflare R2 para los archivos; **la base de datos, al estar en un contenedor propio, hereda el cifrado de disco del VPS y nada más**. No hay cifrado a nivel de aplicación. Debe declararse así en la sustentación |
 | RNF02 | Política de contraseñas, bloqueo, expiración de sesión, JWT 8 h, 2FA 5 min | 🟡 | **Cumple:** JWT de 8 h, 2FA de 5 min, bloqueo escalado (1/5/15/30/60 min) y, desde el 2-09-2026, **política de contraseñas en el servidor** (`utils/password.js`) y **recuperación de contraseña** operativa. Antes la API aceptaba la contraseña `"1"`. **Sigue sin cumplir:** cierre de sesión por 30 min de inactividad, y falta un limitador dedicado en `/api/auth/login` |
-| RNF03 | Bitácora inmutable, 5 años, exportable en CSV o PDF con filtros | 🟡 | Inmutable: ✅ (no existe ningún `update`/`delete` sobre `bitacoraAuditoria`). Exportación: **la bitácora no tiene endpoint de exportación**; el único export es de expedientes en CSV. **No hay generación de PDF en ninguna parte** |
+| RNF03 | Bitácora inmutable, 5 años, exportable en CSV o PDF con filtros | ✅ | Inmutable: no existe ningún `update`/`delete` sobre `bitacoraAuditoria`. Exportación: `GET /api/admin/auditoria/export` → CSV con los filtros `modulo`, `accion`, `desde`, `hasta` (`exportacion-bitacora.js`). Generación de PDF: `exportacion-pdf.js` para RF42. Retención a 5 años: pendiente de política de purga automática |
 | RNF04 | Compatibilidad con navegadores modernos y diseño responsivo 360–1440 px | ✅ | Tailwind con puntos de ruptura; el `DashboardLayout` oculta la barra lateral bajo `lg` |
 | RNF05 | Búsqueda por 6 campos, < 2 s, texto parcial ≥ 3 caracteres, filtros combinables, paginación de 20 | 🟡 | Implementado en `getProcesos`. **Sin índices de base de datos**, el criterio de < 2 s no está garantizado a escala (ver doc 02, deuda #2) |
 | RNF06 | Eliminación definitiva solo por Administrador con confirmación en dos pasos | ✅ | Backend exige rol + justificación escrita; la UI implementa la doble confirmación |
@@ -218,3 +218,16 @@ Priorizados en [10-PLAN-DE-REMEDIACION.md](10-PLAN-DE-REMEDIACION.md).
 >
 > Siguen abiertos **RF05** (inicio de sesión en bitácora) y **RNF03/RF42** (exportación en PDF).
 > Son exactamente las 3 comprobaciones que fallan de las 34 de `npm --prefix backend run verificar`.
+
+> **Actualización del 3 de septiembre de 2026.** Los tres quedan cerrados:
+>
+> - **RF05** — `sesion.auditoria.js` registra entrada, entrada con doble factor, intento
+>   fallido, bloqueo y cierre de sesión. Se añadió `POST /api/auth/logout` para tener un
+>   cierre que auditar.
+> - **RNF03** — `GET /api/admin/auditoria/export` entrega la bitácora en CSV con los mismos
+>   filtros de la pantalla (`modulo`, `accion`, `desde`, `hasta`). La propia exportación se audita.
+> - **RF42** — `GET /api/reportes/export/pdf` genera el informe de expedientes con pdfkit,
+>   reutilizando la misma consulta que el CSV para que ambos formatos no puedan divergir.
+>
+> `npm --prefix backend run verificar` pasa a **34 de 34**. Cubierto por 27 pruebas nuevas
+> (`auditoria_sesion`, `exportacion_bitacora`, `exportacion_pdf`).

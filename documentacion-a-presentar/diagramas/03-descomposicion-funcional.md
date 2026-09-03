@@ -230,8 +230,19 @@ si en cualquier eslabón no hubiera respuesta, el requisito estaría de adorno.
 | F3 · Plazos y audiencias | 11 | 10 |
 | F4 · Documentos | 9 | 8 |
 | F5 · Alertas | 8 | 6 |
-| F6 · Rendición de cuentas | 5 | 2 |
+| F6 · Rendición de cuentas | 6 | 6 |
 
-> **F6 es la función menos completa**, y es coherente con lo que declaran los requisitos no
-> funcionales: falta exportar la bitácora, exportar reportes en PDF y registrar el inicio de
-> sesión. Las tres no conformidades de la verificación automática caen justo aquí.
+> **F6 era la función menos completa** —2 de 6— y era coherente con lo que declaraban los
+> requisitos: faltaban exportar la bitácora, exportar reportes en PDF y registrar el inicio de
+> sesión. Las tres no conformidades de la verificación automática caían justo aquí, lo cual dice
+> algo sobre la naturaleza del hueco: **el sistema hacía bien su trabajo, pero no sabía
+> contarlo.** Rendición de cuentas es precisamente la función que no se nota mientras nadie
+> pregunta, y por eso fue la última en completarse.
+>
+> Los tres puntos se cerraron el 3 de septiembre de 2026. F6 queda completa en sus seis
+> requisitos funcionales; lo único que sigue abierto en esta función es un criterio no funcional,
+> **RNF03.5** (política de retención a cinco años), que depende de las copias de seguridad
+> automáticas y no de código.
+>
+> La función menos completa pasa a ser **F5 · Alertas**, 6 de 8, por el umbral de inactividad
+> fijo en 30 días en vez de configurable (RF40.3).

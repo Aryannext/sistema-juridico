@@ -169,7 +169,7 @@ Procedimiento completo, incluida la configuración de Nginx, en
 ## 5. Comprobar que funciona
 
 ```bash
-npm --prefix backend test                    # 83 pruebas
+npm --prefix backend test                    # 110 pruebas
 npm --prefix backend run verificar           # 34 comprobaciones sobre la plataforma
 npm --prefix backend run verificar:plataforma # 16 de la administración del servicio
 npm --prefix backend run lint                # 0 errores
