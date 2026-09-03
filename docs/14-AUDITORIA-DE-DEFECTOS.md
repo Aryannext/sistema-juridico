@@ -440,8 +440,8 @@ npm --prefix backend run lint
 
 | | Antes | Ahora |
 |---|---:|---:|
-| Suites | 8 | **12** |
-| Casos | 21 | **61** |
+| Suites | 8 | **14** |
+| Casos | 21 | **83** |
 
 La suite nueva, `src/tests/aislamiento_consultorio.test.js`, fija como prueba unitaria lo que
 antes solo se comprobaba de extremo a extremo con la base levantada: que el radicado y el

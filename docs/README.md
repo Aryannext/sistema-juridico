@@ -1,7 +1,7 @@
 # Documentación del SGPA — Índice maestro
 
 **Sistema de Gestión de Procesos de Abogados (SGPA)**
-Última revisión: **1 de septiembre de 2026**
+Última revisión: **2 de septiembre de 2026**
 
 ---
 
@@ -49,7 +49,7 @@ por escrito qué corregir y en qué orden.
 ```
 docs/
 ├── README.md                      ← estás aquí
-├── 00 … 13                        documentación vigente
+├── 00 … 17                        documentación vigente
 ├── MANUAL_USUARIO.md              manual para el usuario final
 ├── fuentes/                       material de origen (no es especificación)
 └── historico/                     documentos superados, se conservan como registro
@@ -67,12 +67,12 @@ docs/
 | 03 | [Catálogo de requisitos](03-CATALOGO-REQUISITOS.md) | RF01–RF59, RNF01–RNF11, RN01–RN09 con su estado de implementación |
 | 04 | [Historias de usuario](04-HISTORIAS-DE-USUARIO.md) | HU-01 a HU-37 con sprint, puntos y **criterios de aceptación completos** |
 | 05 | [Matriz de trazabilidad](05-MATRIZ-TRAZABILIDAD.md) | RF → HU → endpoint → archivo → prueba |
-| 06 | [API REST](06-API-REST.md) | Los 55 endpoints reales, con rol y permiso exigido |
+| 06 | [API REST](06-API-REST.md) | Los 64 endpoints reales, con rol y permiso exigido |
 | 07 | [Glosario jurídico](07-GLOSARIO-JURIDICO.md) | Vocabulario del dominio (CGP colombiano) y su mapeo al modelo de datos |
 | 08 | [Plan de españolización](08-PLAN-ESPANOLIZACION.md) | Inventario de textos en inglés y su traducción, sin tocar el diseño |
 | 09 | [Compatibilidad con Node.js](09-COMPATIBILIDAD-NODE.md) | Evidencia de funcionamiento en Node 24, variables de entorno y dependencias |
 | 10 | [Plan de remediación](10-PLAN-DE-REMEDIACION.md) | Qué hacer, en qué orden, con qué esfuerzo y riesgo |
-| 11 | [Decisiones de arquitectura (ADR)](11-DECISIONES-ARQUITECTONICAS.md) | Las 11 decisiones estructurales, con contexto y consecuencias |
+| 11 | [Decisiones de arquitectura (ADR)](11-DECISIONES-ARQUITECTONICAS.md) | Las 12 decisiones estructurales, con contexto y consecuencias |
 | 12 | [Despliegue en VPS compartido](12-DESPLIEGUE-VPS-COMPARTIDO.md) | Cómo actualizar Node y desplegar sin romper la aplicación del otro usuario |
 | 13 | [Calidad de código](13-CALIDAD-DE-CODIGO.md) | Revisión SOLID y de código limpio, con métricas reales y un plan de refactor por pasos |
 | 14 | [Auditoría de defectos](14-AUDITORIA-DE-DEFECTOS.md) | 16 defectos reproducidos contra la base de datos y corregidos; reparto de `ProcesoDetalle.jsx` |
@@ -85,7 +85,7 @@ docs/
 
 ## `fuentes/` — material de origen
 
-No son especificación vigente. Se conservan porque de ahí salió el contenido de los documentos 00–13.
+No son especificación vigente. Se conservan porque de ahí salió el contenido de los documentos 00–13. Los documentos 14 a 17 son posteriores y nacen del trabajo sobre el código, no de estas fuentes.
 
 | Archivo | Naturaleza |
 |---|---|

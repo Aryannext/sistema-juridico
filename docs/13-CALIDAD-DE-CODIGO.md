@@ -14,7 +14,7 @@ lleva el número que la respalda y el comando que lo reproduce.
 > |---|---:|---:|
 > | `ProcesoDetalle.jsx` | 3 094 líneas, 76 `useState` | **2 522 líneas, 8 `useState`** |
 > | Linter del backend | no existe | **0 errores** |
-> | Pruebas | 21 en 8 suites | **27 en 9 suites** |
+> | Pruebas | 21 en 8 suites | **83 en 14 suites** |
 >
 > El resto del análisis —los principios SOLID, la duplicación del backend, los Pasos 0, 1 y 3—
 > **sigue vigente sin cambios**. Detalle en [14-AUDITORIA-DE-DEFECTOS.md](14-AUDITORIA-DE-DEFECTOS.md).

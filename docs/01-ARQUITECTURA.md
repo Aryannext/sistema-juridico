@@ -101,7 +101,7 @@ graph TB
     end
 
     subgraph "Proceso Node.js — puerto 3000"
-        API["<b>API REST Express</b><br/>11 módulos · 51 endpoints"]
+        API["<b>API REST Express</b><br/>13 módulos · 64 endpoints"]
         CRON["<b>node-cron</b><br/>recordatorios cada 15 min<br/>en el mismo proceso"]
     end
 
@@ -332,7 +332,7 @@ frontend/src/
 ├── components/
 │   ├── layout/                DashboardLayout · PortalLayout
 │   └── ui/                    primitivas shadcn: button, card, input, label, sonner
-├── pages/                     17 páginas agrupadas por dominio
+├── pages/                     20 páginas agrupadas por dominio
 └── index.css                  tema, variables y utilidades
 ```
 

@@ -1,8 +1,12 @@
 # 06 — Catálogo de la API REST
 
 **Base:** `/api` · **Formato:** JSON · **Autenticación:** `Authorization: Bearer <JWT>`
-**Total:** 55 endpoints en 12 módulos (+ 1 de salud).
-Extraído directamente de los archivos `*.routes.js` del commit `7ebf5c4`.
+**Total:** 64 endpoints en 13 módulos (+ 1 de salud).
+Extraído directamente de los archivos `*.routes.js`. Recuento reproducible:
+
+```bash
+grep -rhoE "router\.(get|post|put|patch|delete)\(" backend/src/modules/*/*.routes.js | wc -l
+```
 
 ---
 
@@ -17,7 +21,7 @@ Extraído directamente de los archivos `*.routes.js` del commit `7ebf5c4`.
 
 ---
 
-## 1. Autenticación — `/api/auth` (7)
+## 1. Autenticación — `/api/auth` (10)
 
 | Método | Ruta | Auth | Permiso | Audit | Qué hace | HU |
 |---|---|:--:|---|:--:|---|---|
@@ -250,6 +254,27 @@ Todo el módulo aplica `requireRole(['ADMINISTRADOR'])` a nivel de router.
 
 ---
 
+## 12.b Administración de la PLATAFORMA — `/api/plataforma` (6)
+
+Gestión de los consultorios que usan el sistema, **no de sus expedientes**. Estas rutas usan un
+middleware distinto (`plataforma.middleware.js`) y un token de otro tipo: un JWT de consultorio
+NO sirve aquí, y el de plataforma no sirve en el resto de la API. Ver
+[ADR-012](11-DECISIONES-ARQUITECTONICAS.md) y [doc 15](15-ADMINISTRACION-DE-PLATAFORMA.md).
+
+| Método | Ruta | Auth | Qué hace |
+|---|---|:--:|---|
+| POST | `/login` | — | Sesión de plataforma. Máx. 20 intentos fallidos cada 15 min |
+| GET | `/resumen` | Plataforma | Totales de consultorios, usuarios y expedientes |
+| GET | `/consultorios` | Plataforma | Lista con datos administrativos y recuentos. **No expone contenido jurídico** |
+| PATCH | `/consultorios/:id/estado` | Plataforma | Suspende o reactiva. La suspensión exige justificación |
+| DELETE | `/consultorios/:id` | Plataforma | Baja definitiva. Exige estar suspendido, el nombre exacto y justificación |
+| GET | `/bitacora` | Plataforma | Acciones de plataforma. Tabla aparte: sobrevive al consultorio borrado |
+
+> No existe ruta de registro a propósito. Los administradores de plataforma se crean solo con
+> `npm run crear-admin-plataforma` en el servidor.
+
+---
+
 ## 12. Salud
 
 | Método | Ruta | Respuesta |
@@ -280,13 +305,21 @@ Todo el módulo aplica `requireRole(['ADMINISTRADOR'])` a nivel de router.
 
 ### Limitación de peticiones
 
-`app.js` aplica un único limitador global sobre `/api/`: **1000 peticiones por IP cada 15 minutos**.
-El comentario del código lo reconoce como valor relajado para desarrollo.
+`app.js` aplica un limitador global sobre `/api/`: **1000 peticiones por IP cada 15 minutos**.
+Es un valor relajado, pensado para no estorbar el uso normal.
 
-> ⚠️ **RNF02 pide protección de fuerza bruta en el login.** El límite de 1000/15 min es
-> demasiado alto para esa función. Lo que sí protege el login es el bloqueo progresivo por
-> usuario. Recomendación: añadir un limitador dedicado a `/api/auth/login` (por ejemplo,
-> 10 intentos cada 15 minutos por IP).
+Además hay limitadores propios donde el global no sirve de nada:
+
+| Ruta | Límite | Por qué |
+|---|---|---|
+| `/api/auth/reenviar-verificacion` | 5 / 15 min | Envía correo a una dirección que indica quien llama: sin límite es una herramienta para inundar el buzón de otra persona con mensajes firmados por nosotros |
+| `/api/auth/recuperar` | 5 / 15 min | Igual que la anterior |
+| `/api/plataforma/login` | 20 fallos / 15 min | Es la credencial de mayor privilegio del sistema |
+
+> ⚠️ **Sigue faltando un limitador en `/api/auth/login`.** Lo que hoy protege ese acceso es el
+> bloqueo progresivo por usuario (1, 5, 15, 30 y 60 minutos), que frena el ataque a una cuenta
+> concreta pero no uno distribuido contra muchas. Punto 2.2 del
+> [plan de remediación](10-PLAN-DE-REMEDIACION.md).
 
 ### CORS
 
@@ -297,9 +330,9 @@ a `FRONTEND_URL`, como afirma `docs/historico/arquitectura.md` que ya ocurre (no
 
 | Ruta ausente | Requisito que la pediría |
 |---|---|
-| `POST /api/auth/recuperar` y `POST /api/auth/restablecer` | RNF02, HU-01 |
+| ~~`POST /api/auth/recuperar` y `/restablecer`~~ | ✅ Implementadas el 2-09-2026 ([doc 17](17-RECUPERACION-DE-ACCESO.md)) |
+| ~~`POST /api/auth/reenviar-verificacion`~~ | ✅ Implementada el 2-09-2026 ([doc 17](17-RECUPERACION-DE-ACCESO.md)) |
 | `POST /api/auth/logout` | RF05 (cierre de sesión en bitácora) |
-| `POST /api/auth/reenviar-verificacion` | RF54 |
 | `GET /api/admin/auditoria/export` | RNF03, HU-03 |
 | `GET /api/reportes/export/pdf` | RF42, HU-26 |
 | `DELETE /api/clientes/:id` | RNF06 (eliminación de cliente por Administrador) |

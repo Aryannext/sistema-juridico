@@ -88,7 +88,7 @@ obligatorio habría roto los datos existentes.
 
 | ID | Requisito | Estado | Evidencia / brecha |
 |---|---|:--:|---|
-| RF18 | Formatos PDF/DOCX/XLSX/JPG/PNG, máximo 10 MB, error descriptivo | 🟡 | El límite de 10 MB está en `multer` (`documentos.routes.js`). **No hay `fileFilter` que restrinja formatos** — comparar con `tenant.routes.js`, que sí lo hace para el logo |
+| RF18 | Formatos PDF/DOCX/XLSX/JPG/PNG, máximo 10 MB, error descriptivo | ✅ | **Corregido el 2-09-2026.** Límite de 10 MB y `fileFilter` con lista explícita (PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, WebP, TIFF, TXT). Antes no había filtro: se podía adjuntar un ejecutable a un expediente. El error también es descriptivo ahora: los fallos de `multer` se traducen en `subida.middleware.js`, porque ocurren ANTES del controlador y acababan en un 500 genérico |
 | RF19 | Siete categorías: demandas, pruebas, contratos, **escritos**, notificaciones, providencias, otros | 🟡 | `enum CategoriaDocumento` tiene **seis**; falta `ESCRITO` (H-18) |
 | RF20 | Organización cronológica por fecha y hora de carga | ✅ | `getProcesoDocumentos` ordena por `created_at desc` |
 | RF21 | Documentos generales no vinculados a un proceso | ✅ | `Documento.id_proceso` es opcional |
@@ -154,7 +154,7 @@ obligatorio habría roto los datos existentes.
 | RF51 | Registro público de nuevos tenants, inactivo hasta verificar correo | ✅ | `POST /api/auth/registro`; `activo: false` salvo `DEV_AUTO_VERIFY` en desarrollo |
 | RF52 | Aislamiento lógico total entre tenants | 🟡 | El filtrado por `tenant_id` es sistemático (118 usos), pero las restricciones `@unique` globales lo perforan (H-19) y no hay *Row Level Security* |
 | RF53 | El Administrador actualiza los datos del consultorio | ✅ | `PUT /api/tenant/perfil` con carga de logo (JPG/PNG, 2 MB) |
-| RF54 | Enlace de verificación único, tokenizado, vigente 24 h, un solo uso, reenviable | 🟡 | Es único y de un solo uso (se anula al usarse). **No tiene vigencia de 24 h** — `token_verificacion` no guarda fecha de emisión — y **no existe endpoint de reenvío** |
+| RF54 | Enlace de verificación único, tokenizado, vigente 24 h, un solo uso, reenviable | ✅ | **Completado el 2-09-2026.** Vigencia de 24 h en `token_verificacion_expira` y reenvío en `POST /api/auth/reenviar-verificacion`, ofrecido en la pantalla del enlace caducado. Un token sin fecha se sigue aceptando: es el de las cuentas anteriores al campo. Ver [doc 17](17-RECUPERACION-DE-ACCESO.md) |
 
 ---
 
@@ -163,7 +163,7 @@ obligatorio habría roto los datos existentes.
 | ID | Requisito | Estado | Evidencia / brecha |
 |---|---|:--:|---|
 | RNF01 | Cifrado en reposo AES-256 y en tránsito TLS 1.2+ | 🔵 | En tránsito: TLS de Nginx y de Supabase. En reposo: cifrado por defecto de Cloudflare R2 y de Supabase. **No hay cifrado a nivel de aplicación**; se depende del proveedor. Debe declararse así en la sustentación |
-| RNF02 | Política de contraseñas, bloqueo, expiración de sesión, JWT 8 h, 2FA 5 min | 🟡 | **Cumple:** JWT de 8 h (`utils/jwt.js`), 2FA con vigencia de 5 min, bloqueo tras 5 intentos (además escalado: 1/5/15/30/60 min). **No cumple:** validación del patrón de contraseña en backend; cierre de sesión por 30 min de inactividad; recuperación de contraseña (el enlace *"Forgot Password?"* es `<Link to="#">`) |
+| RNF02 | Política de contraseñas, bloqueo, expiración de sesión, JWT 8 h, 2FA 5 min | 🟡 | **Cumple:** JWT de 8 h, 2FA de 5 min, bloqueo escalado (1/5/15/30/60 min) y, desde el 2-09-2026, **política de contraseñas en el servidor** (`utils/password.js`) y **recuperación de contraseña** operativa. Antes la API aceptaba la contraseña `"1"`. **Sigue sin cumplir:** cierre de sesión por 30 min de inactividad, y falta un limitador dedicado en `/api/auth/login` |
 | RNF03 | Bitácora inmutable, 5 años, exportable en CSV o PDF con filtros | 🟡 | Inmutable: ✅ (no existe ningún `update`/`delete` sobre `bitacoraAuditoria`). Exportación: **la bitácora no tiene endpoint de exportación**; el único export es de expedientes en CSV. **No hay generación de PDF en ninguna parte** |
 | RNF04 | Compatibilidad con navegadores modernos y diseño responsivo 360–1440 px | ✅ | Tailwind con puntos de ruptura; el `DashboardLayout` oculta la barra lateral bajo `lg` |
 | RNF05 | Búsqueda por 6 campos, < 2 s, texto parcial ≥ 3 caracteres, filtros combinables, paginación de 20 | 🟡 | Implementado en `getProcesos`. **Sin índices de base de datos**, el criterio de < 2 s no está garantizado a escala (ver doc 02, deuda #2) |
@@ -211,3 +211,10 @@ no en semanas.
 La excepción son los tres puntos que exigen trabajo real: **el registro de inicio de sesión
 en bitácora (RF05), la recuperación de contraseña (RNF02) y la exportación en PDF (RNF03)**.
 Priorizados en [10-PLAN-DE-REMEDIACION.md](10-PLAN-DE-REMEDIACION.md).
+
+> **Actualización del 2 de septiembre de 2026.** De esos tres, **la recuperación de contraseña
+> ya está hecha** ([doc 17](17-RECUPERACION-DE-ACCESO.md)), junto con el reenvío de verificación
+> (RF54), la política de contraseñas en el servidor y el filtro de formatos de documento (RF18).
+>
+> Siguen abiertos **RF05** (inicio de sesión en bitácora) y **RNF03/RF42** (exportación en PDF).
+> Son exactamente las 3 comprobaciones que fallan de las 34 de `npm --prefix backend run verificar`.

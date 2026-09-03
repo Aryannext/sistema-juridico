@@ -3,7 +3,7 @@
 Un **ADR** (*Architecture Decision Record*) deja por escrito una decisión estructural: qué se
 decidió, en qué contexto, qué alternativas se descartaron y qué consecuencias tiene.
 
-Estos once ADR **documentan decisiones que ya están tomadas y materializadas en el código**.
+Estos doce ADR **documentan decisiones que ya están tomadas y materializadas en el código**.
 No son propuestas: son la reconstrucción explícita del razonamiento que la documentación
 anterior nunca escribió. Ese vacío es, precisamente, la causa de que hoy nadie sepa si el
 sistema es MVC o monolítico.
@@ -79,6 +79,10 @@ consulta lo incluye en su `where`.
 **Decisión complementaria:** `Usuario.email` se mantiene **único globalmente**, mientras que
 `Cliente.numero_documento` y `Proceso.numero_radicado` deben pasar a ser únicos **por tenant**
 (corrección pendiente, Ola 3 del doc 10).
+
+> **Aplicado el 2 de septiembre de 2026** — migración `unicidad_por_consultorio`. El texto de
+> arriba se conserva tal cual porque un ADR no se reescribe; esta nota registra que la
+> corrección que anticipaba ya está hecha. Ver [doc 14, D-04](14-AUDITORIA-DE-DEFECTOS.md).
 
 ### Justificación de la asimetría
 El correo es la credencial de inicio de sesión y el formulario de login **no tiene selector de
@@ -436,28 +440,6 @@ que permite que el servidor **no necesite Node en absoluto**.
 
 ---
 
-## Cómo añadir un ADR nuevo
-
-Cuando se tome una decisión estructural —cambiar de proveedor de almacenamiento, introducir una
-capa de servicios, activar Row Level Security, adoptar TypeScript— se añade una sección con
-este formato:
-
-```markdown
-## ADR-0NN — Título en una línea
-
-### Contexto
-Qué problema o presión obliga a decidir.
-
-### Decisión
-Qué se decidió, en una o dos frases.
-
-### Alternativas descartadas
-Qué más se consideró y por qué no.
-
-### Consecuencias
-Lo bueno, lo malo y lo que habrá que vigilar.
-```
-
 ## ADR-012 — El administrador de plataforma es una identidad separada, no un rol más
 
 **Fecha:** 2 de septiembre de 2026
@@ -518,6 +500,28 @@ leerse y no hay campos de vencimiento ni de pago. Suspender por impago sigue sie
 manual.
 
 ---
+
+## Cómo añadir un ADR nuevo
+
+Cuando se tome una decisión estructural —cambiar de proveedor de almacenamiento, introducir una
+capa de servicios, activar Row Level Security, adoptar TypeScript— se añade una sección con
+este formato:
+
+```markdown
+## ADR-0NN — Título en una línea
+
+### Contexto
+Qué problema o presión obliga a decidir.
+
+### Decisión
+Qué se decidió, en una o dos frases.
+
+### Alternativas descartadas
+Qué más se consideró y por qué no.
+
+### Consecuencias
+Lo bueno, lo malo y lo que habrá que vigilar.
+```
 
 Un ADR **nunca se borra ni se reescribe**. Si una decisión se revierte, se añade un ADR nuevo
 que la supere y se marca el anterior como `Superado por ADR-0NN`. El valor de un registro de

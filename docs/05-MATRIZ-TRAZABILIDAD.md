@@ -112,22 +112,25 @@ npm run verificar:limpiar                    # borra los datos que generó
 El script crea **dos consultorios distintos** para poder probar el aislamiento, y se niega a
 ejecutarse si `DATABASE_URL` no apunta a `localhost`.
 
-### Resultado de la última ejecución — 1 de septiembre de 2026
+### Resultado de la última ejecución — 2 de septiembre de 2026
 
-**34 comprobaciones · 30 conformes · 4 no conformes.**
+**34 comprobaciones · 31 conformes · 3 no conformes.**
 
-Las cuatro no conformidades son **brechas ya documentadas**, no hallazgos nuevos:
+Las tres no conformidades son **brechas ya documentadas**, no hallazgos nuevos:
 
 | Ref | Comprobación | Resultado | Dónde está documentada |
 |---|---|---|---|
-| RNF02 | La contraseña débil `"1"` se rechaza en el backend | ❌ devuelve `201` | Doc 03, RNF02 🟡 · Ola 2.3 del doc 10 |
 | RF05 | El inicio de sesión queda en la bitácora | ❌ no se registra | Hallazgo H-20 · Ola 2.1 |
 | RNF03 | La bitácora se puede exportar | ❌ `404`, no existe el endpoint | Doc 03, RNF03 🟡 · Ola 4.3 |
 | RF42 | Los reportes se exportan en PDF | ❌ `404`, no existe el endpoint | Doc 03, RF42 🟡 · Ola 4.3 |
 
-> **Que las cuatro coincidan con lo documentado es el resultado deseado:** significa que el
+> **Que las tres coincidan con lo documentado es el resultado deseado:** significa que el
 > catálogo de requisitos describe el sistema con honestidad, sin marcar como ✅ cosas que no
 > funcionan. Un fallo *no* documentado habría sido la mala noticia.
+
+> **Cambio respecto a la ejecución del 1 de septiembre:** eran cuatro. La cuarta era que la API
+> aceptaba la contraseña `"1"` en el registro (RNF02); quedó corregida el 2 de septiembre al
+> llevar la política de contraseñas al servidor. Ver [doc 17](17-RECUPERACION-DE-ACCESO.md).
 
 ### Lo que sí quedó verificado en ejecución
 
