@@ -224,8 +224,14 @@ de conexión de PostgreSQL incluyen la dirección y el puerto de la base, y en u
 es un mapa de la infraestructura. El motivo se traza en el servidor.
 
 **RNF07.3 queda a medias, y es honesto decirlo.** La señal existe y es consumible; lo que no hay
-es **nadie escuchándola**. Falta apuntar un vigilante externo —UptimeRobot, o un `curl` en `cron`
-que avise por correo— a esa dirección. Es configuración del servidor, no código.
+es **nadie escuchándola**. Falta dar de alta un vigilante externo que apunte a esa dirección: el
+procedimiento está escrito en [doc 12 § 7 ter](../../docs/12-DESPLIEGUE-VPS-COMPARTIDO.md), con
+planes gratuitos que no requieren presupuesto. No es código; es una configuración de diez minutos
+que solo puede hacerse **después de desplegar**, porque la ruta aún no existe en producción.
+
+> **El vigilante tiene que estar fuera del servidor**, y no debe apuntar a la dirección de la
+> aplicación: esa la sirve Nginx desde un archivo estático y **devuelve 200 aunque la base esté
+> caída**. Un monitor así estaría en verde para siempre sin significar nada.
 
 **RNF07.1 no puede cerrarse desde el repositorio.** «Disponible de forma continua» es una medida
 que se acumula con el tiempo sobre un sistema en marcha; hasta que RNF07.3 esté conectado y haya

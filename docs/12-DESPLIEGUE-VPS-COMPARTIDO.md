@@ -525,6 +525,70 @@ respaldo cubre la base de datos, que es lo que hoy no tiene ninguna red.
 
 ---
 
+## 7 ter. Vigilancia externa — RNF07.2 y RNF07.3
+
+El sistema ya expone lo que hace falta vigilar. Lo que falta es alguien mirándolo, y **tiene que
+estar fuera de este servidor**: un vigilante que corra en el VPS no puede avisar de que el VPS se
+cayó.
+
+### Qué vigilar, y qué NO
+
+```
+https://proyectosena.online/sistema-juridico/api/estado
+```
+
+Esa ruta consulta la base de datos y responde **200 si el servicio puede trabajar** o **503 en
+cuanto no puede**. Es lo único que un vigilante necesita, porque no lee el mensaje: mira el código.
+
+> ### ⚠️ No vigiles la dirección de la aplicación
+>
+> `https://proyectosena.online/sistema-juridico/` es un archivo estático que sirve Nginx.
+> **Devuelve 200 aunque la API esté muerta y la base caída.** Un monitor apuntado ahí estaría en
+> verde permanente sin significar nada, que es peor que no tener monitor: da tranquilidad falsa y
+> nadie vuelve a mirar lo que ya figura en verde.
+>
+> Es el mismo defecto que tenía la ruta `GET /` de la API, y la razón de que exista `/api/estado`.
+
+### Cómo se configura
+
+Cualquier vigilante externo con plan gratuito sirve —UptimeRobot, BetterStack, Cron-job.org—.
+Los límites de esos planes cambian, así que conviene mirarlos al registrarse. La configuración es
+la misma en todos:
+
+| Campo | Valor |
+|---|---|
+| Tipo | HTTP(s) |
+| URL | `https://proyectosena.online/sistema-juridico/api/estado` |
+| Intervalo | 5 minutos basta |
+| Alerta | Correo |
+
+No hay que tocar nada más: el criterio de «caído» por defecto —cualquier respuesta que no sea
+2xx— es exactamente el que queremos, porque el 503 lo emitimos a propósito.
+
+**La ruta no lleva autenticación**, porque un vigilante no tiene sesión. Por eso tampoco devuelve
+el motivo del fallo: los errores de conexión de PostgreSQL incluyen dirección y puerto, y en una
+ruta abierta a internet eso sería un mapa de la infraestructura. El motivo se traza en el
+servidor.
+
+### Antes de configurarlo hay que desplegar
+
+`/api/estado` **devuelve 404 hasta que se despliegue** la versión que lo incluye. Configurar el
+vigilante antes haría que avisara de una caída que no existe, y a los dos días se ignoran sus
+correos. Primero desplegar, comprobar a mano que responde 200, y entonces darlo de alta.
+
+### Lo que esto cierra y lo que no
+
+Cierra **RNF07.2** —existe algo que mide la disponibilidad— y **RNF07.3** —hay alerta ante caída—.
+**RNF07.1**, la disponibilidad continua, no se cierra configurando nada: es una medida que se
+acumula con el tiempo. Con el vigilante en marcha empieza a existir el histórico que hoy no hay.
+
+> **Y lo que más falta vigilar no es esto.** Si el sitio se cae, alguien llama. Si el respaldo deja
+> de ejecutarse no lo nota nadie, hasta el día que hace falta restaurar. Para eso sirve un
+> *interruptor de hombre muerto* —Healthchecks.io y similares, también gratuitos—: el respaldo
+> avisa al terminar, y si el aviso no llega a su hora, escriben. Ver § 7 bis.
+
+---
+
 ## 8. Limitaciones que conviene conocer
 
 | Limitación | Detalle |
