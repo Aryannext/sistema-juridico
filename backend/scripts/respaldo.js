@@ -49,11 +49,11 @@ const ES_RESPALDO = /^sgpa-\d{4}-\d{2}-\d{2}T[\d-]+\.sql\.gz$/;
  * `DATABASE_URL` está escrita para Prisma, no para `pg_dump`.
  *
  * Prisma admite parámetros propios que libpq desconoce y que hacen fallar al
- * volcado con un error poco evidente (*«parámetro de URI no válido: schema»*).
- * El más habitual es `?schema=public`, que además **no se descarta: se traduce**
- * a la opción `-n` de pg_dump, porque decirle qué esquema volcar es
- * precisamente lo que ese parámetro significa. Perderlo respaldaría la base
- * entera o la equivocada.
+ * volcado con un error poco evidente: *«parámetro de URI no válido: schema»*.
+ * El más habitual es `?schema=public`, y **se descarta, no se traduce**: le
+ * dice a Prisma dónde trabajar, no qué respaldar. Convertirlo en la opción
+ * `--schema` de pg_dump fue un error que costó los índices de trigramas en la
+ * restauración; ver el comentario de `volcar`.
  */
 function traducirUrl(bruta) {
   const url = new URL(bruta);
@@ -64,40 +64,43 @@ function traducirUrl(bruta) {
     'application_name', 'options',
   ]);
 
-  const esquema = url.searchParams.get('schema');
   for (const clave of Array.from(url.searchParams.keys())) {
     if (!ADMITIDOS.has(clave)) url.searchParams.delete(clave);
   }
 
-  return { url: url.toString(), esquema };
-}
-
-/**
- * La misma URL que usa `psql`, con la contraseña sustituida.
- *
- * Sirve para enseñarla por pantalla y en los registros sin filtrarla. El resto
- * —usuario, servidor, puerto y base— se conserva porque es lo que hace falta
- * para reconocer *qué* base se está restaurando, y no es secreto para quien ya
- * está dentro del servidor.
- */
-function urlSinClave() {
-  const { url } = traducirUrl(process.env.DATABASE_URL);
-  const objetivo = new URL(url);
-  if (objetivo.password) objetivo.password = 'LA_CLAVE_DEL_ENV';
-  return decodeURIComponent(objetivo.toString());
+  return url.toString();
 }
 
 async function volcar(destino) {
   const bruta = process.env.DATABASE_URL;
   if (!bruta) throw new Error('Falta DATABASE_URL: no hay base que respaldar.');
-  const { url, esquema } = traducirUrl(bruta);
+  const url = traducirUrl(bruta);
 
   // `--no-owner` y `--no-privileges`: el volcado tiene que poder restaurarse en
   // un servidor donde los roles no se llamen igual. En una urgencia, el destino
   // puede ser una máquina recién levantada.
-  const opciones = ['--no-owner', '--no-privileges', '--clean', '--if-exists'];
-  if (esquema) opciones.push('--schema', esquema);
-  opciones.push(url);
+  //
+  // **Sin `--clean`, y es una decisión, no un olvido.** Esa opción antepone los
+  // `DROP` de todo lo que va a recrear, y trae dos problemas. El técnico:
+  // intenta borrar el esquema `public`, del que depende la extensión
+  // `pg_trgm` —la de los índices de búsqueda—, y PostgreSQL lo rechaza; se vio
+  // al probar la restauración de verdad. El grave: un volcado que empieza
+  // borrando es un arma apuntando a la base de destino. Si la restauración
+  // falla a mitad, lo que queda no es la base vieja ni la nueva.
+  //
+  // Se restaura sobre una base **vacía**, que además es la maniobra correcta:
+  // crear una al lado, restaurar, comprobar, y solo entonces apuntar la
+  // aplicación. Nunca encima de la que está en producción.
+  // **Se vuelca la base entera, no un esquema.** Aquí hubo un error que solo
+  // apareció al restaurar de verdad: acotar con `--schema public` —traduciendo
+  // el `?schema=` de Prisma— deja fuera las **extensiones**, porque pertenecen
+  // a la base y no al esquema. El volcado se restauraba «bien» y sin `pg_trgm`
+  // los cinco índices de trigramas fallaban uno a uno: los datos volvían y la
+  // búsqueda indexada de HU-31 desaparecía en silencio.
+  //
+  // Para un respaldo, acotar nunca fue lo correcto. `?schema=` le dice a Prisma
+  // dónde trabajar; una copia de seguridad tiene que traerlo todo.
+  const opciones = ['--no-owner', '--no-privileges', url];
 
   const dump = spawn(PG_DUMP, opciones, { stdio: ['ignore', 'pipe', 'pipe'] });
 
@@ -192,18 +195,25 @@ async function main() {
   const quedan = fs.readdirSync(DIRECTORIO).filter((f) => ES_RESPALDO.test(f));
   console.log(`  ✓ Copias disponibles: ${quedan.length}\n`);
 
-  // La orden se imprime con la URL ya traducida, no con DATABASE_URL tal cual:
-  // `psql` falla igual que `pg_dump` ante el `?schema=` de Prisma, y una
-  // instrucción de restauración que no funciona, el día que hace falta
-  // restaurar, es peor que no dar ninguna.
+  // La orden de restauración **no lleva la URL dentro**, ni siquiera con la
+  // contraseña tapada.
   //
-  // **Pero la contraseña se oculta.** Este guion está pensado para correr en
-  // `cron` con la salida redirigida a un registro, así que imprimirla entera
-  // escribiría la clave de la base en un archivo del servidor todas las
-  // noches. Quien vaya a restaurar tiene acceso al `.env`; el registro del
-  // respaldo no tiene por qué ser otro sitio donde vive la contraseña.
-  console.log('  Para restaurar:');
-  console.log(`    gunzip -c ${path.basename(destino)} | psql "${urlSinClave()}"\n`);
+  // Este guion corre en `cron` con la salida redirigida a un registro.
+  // Imprimir la URL entera escribiría la clave de la base en un archivo del
+  // servidor todas las noches —así estaba escrito al principio, y era un
+  // fallo—. Enmascararla lo arreglaba a medias: el valor del entorno seguiría
+  // pasando por la salida, y basta que alguien «mejore» el mensaje para
+  // destaparlo otra vez.
+  //
+  // La expansión de la shell resuelve las dos cosas. `%%\?*` recorta desde la
+  // primera interrogación —el `?schema=` de Prisma, que hace fallar a `psql`
+  // con «parámetro de URI no válido»— y la orden queda copiable tal cual sin
+  // que el secreto haya pasado nunca por este código.
+  console.log('  Para restaurar, sobre una base VACÍA y con DATABASE_URL en el entorno:');
+  console.log(`    createdb sgpa_restaurada`);
+  console.log(`    gunzip -c ${path.basename(destino)} | psql "\${DATABASE_URL%%\\?*}"\n`);
+  console.log('  Nunca encima de la base en uso: se restaura al lado, se comprueba,');
+  console.log('  y solo entonces se apunta la aplicación.\n');
 }
 
 main().catch((error) => {

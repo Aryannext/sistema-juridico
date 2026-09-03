@@ -481,20 +481,36 @@ Variables que admite: `RESPALDO_DIR` (destino, por defecto `respaldos/`), `RESPA
 
 ### Restaurar
 
-El guion imprime la orden exacta al terminar. Es, en esencia:
+El guion imprime la orden exacta al terminar. **Se restaura sobre una base vacía, nunca encima de
+la que está en uso:**
 
 ```bash
-gunzip -c respaldos/sgpa-FECHA.sql.gz | psql "postgresql://USUARIO:CLAVE@HOST:5432/sgpa"
+createdb sgpa_restaurada
+gunzip -c respaldos/sgpa-FECHA.sql.gz | psql "${DATABASE_URL%%\?*}"
 ```
 
-> **Ojo con la URL.** `DATABASE_URL` lleva `?schema=public`, que es un parámetro de Prisma:
-> `psql` y `pg_dump` lo rechazan con *«parámetro de URI no válido»*. El guion la traduce solo, y
-> por eso imprime la orden ya lista en vez de decir «usa `$DATABASE_URL`».
+> **El `%%\?*` no es adorno.** Recorta desde la primera interrogación, que es el `?schema=` de
+> Prisma: `psql` lo rechaza con *«parámetro de URI no válido»*, igual que `pg_dump`. Se resuelve en
+> la shell a propósito, para que la contraseña no tenga que pasar por la salida del guion —que en
+> `cron` va a parar a un registro—.
 
-**La restauración se probó de verdad el 3 de septiembre de 2026**, no se supone: se volcó la base
-de desarrollo, se restauró en una base aparte y se compararon las tablas y las filas. Coincidían.
-Conviene repetirlo en este servidor al menos una vez: un respaldo que nunca se ha restaurado no
-es un respaldo, es un archivo del que se supone algo.
+**Por qué a una base nueva y no encima.** Un volcado con `--clean` empieza borrando lo que va a
+recrear, y si la restauración falla a mitad lo que queda no es la base vieja ni la nueva. Se
+restaura al lado, se comprueba, y solo entonces se apunta la aplicación. Por eso el volcado **no**
+lleva esa opción.
+
+**La restauración se probó de verdad el 3 de septiembre de 2026**, y probarla encontró dos fallos
+que ninguna lectura habría visto:
+
+1. El volcado se acotaba con `--schema public`, y **las extensiones no pertenecen al esquema sino
+   a la base**. Restauraba «bien» y sin `pg_trgm` los cinco índices de trigramas fallaban uno a
+   uno: los datos volvían y la búsqueda indexada desaparecía en silencio.
+2. `--clean` intentaba borrar el esquema `public`, del que depende esa misma extensión, y
+   PostgreSQL lo rechazaba.
+
+Corregidos los dos, la base restaurada quedó **idéntica**: 20 tablas, 39 índices, la extensión y
+las mismas filas. Conviene repetirlo en este servidor al menos una vez: un respaldo que nunca se
+ha restaurado no es un respaldo, es un archivo del que se supone algo.
 
 ### Lo que sigue pendiente, y hay que decirlo
 

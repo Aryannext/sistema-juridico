@@ -107,17 +107,54 @@ describe('RNF10.3 · La URL de Prisma se traduce antes de usarla', () => {
     expect(fuente).toMatch(/searchParams\.delete/);
   });
 
-  it('El esquema no se descarta: se traduce a la opción de pg_dump', () => {
-    // Perderlo respaldaría la base entera o la equivocada.
-    expect(fuente).toMatch(/opciones\.push\('--schema', esquema\)/);
+  it('NO acota el volcado a un esquema: se perderían las extensiones', () => {
+    // Este es el fallo que más caro habría salido, y solo apareció al
+    // restaurar de verdad. Acotar con `--schema public` deja fuera las
+    // extensiones, porque pertenecen a la base y no al esquema: el volcado
+    // parecía correcto, y al restaurarlo los cinco índices de trigramas
+    // fallaban uno a uno. Los datos volvían; la búsqueda indexada de HU-31
+    // desaparecía en silencio.
+    expect(fuente).not.toMatch(/'--schema'/);
+    expect(fuente).toMatch(/las \*\*extensiones\*\*/);
   });
 
-  it('La orden de restauración se imprime con la URL ya traducida', () => {
-    // Una instrucción de restauración que no funciona, en una urgencia, es
-    // peor que no dar ninguna.
+  it('NO arrastra los DROP de `--clean`', () => {
+    // Un volcado que empieza borrando es un arma apuntando a la base de
+    // destino: si falla a mitad, lo que queda no es la vieja ni la nueva. Y
+    // además fallaba, porque `pg_trgm` depende del esquema que intenta borrar.
+    expect(fuente).not.toMatch(/'--clean'/);
+    expect(fuente).not.toMatch(/'--if-exists'/);
+  });
+
+  it('La orden de restauración no hace pasar la URL por la salida', () => {
+    // La primera versión imprimía la URL entera —usuario, contraseña,
+    // servidor— y este guion corre en cron con la salida a un registro: habría
+    // escrito la clave de la base en un archivo del servidor todas las noches.
+    //
+    // Enmascararla lo arreglaba a medias: el valor del entorno seguiría
+    // pasando por la salida, y basta que alguien «mejore» el mensaje para
+    // destaparlo. Se resuelve con expansión de la shell, así que el secreto no
+    // llega a tocar este código.
     const bloque = fuente.slice(fuente.indexOf('Para restaurar'));
-    expect(bloque).not.toMatch(/\$DATABASE_URL/);
-    expect(fuente).toMatch(/const \{ url \} = traducirUrl\(process\.env\.DATABASE_URL\)/);
+
+    expect(bloque).not.toMatch(/traducirUrl\(/);
+    expect(bloque).not.toMatch(/urlSinClave/);
+    expect(bloque).toContain('DATABASE_URL%%');
+  });
+
+  it('La orden sigue recortando el parámetro de Prisma', () => {
+    // Sin recortarlo `psql` falla igual que `pg_dump`. Una instrucción de
+    // restauración que no funciona, en una urgencia, es peor que ninguna.
+    // En el fuente va escrito `%%\\?*`: la barra escapa la interrogación en la
+    // plantilla de JavaScript para que llegue literal a la shell.
+    const bloque = fuente.slice(fuente.indexOf('Para restaurar'));
+    expect(bloque).toContain('%%\\\\?*');
+  });
+
+  it('Dice que se restaura sobre una base vacía', () => {
+    const bloque = fuente.slice(fuente.indexOf('Para restaurar'));
+    expect(bloque).toMatch(/VACÍA/);
+    expect(bloque).toMatch(/createdb/);
   });
 });
 
