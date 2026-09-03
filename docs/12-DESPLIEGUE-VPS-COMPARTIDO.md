@@ -399,6 +399,59 @@ revierte la etiqueta y reconstruye: vuelves al estado anterior en un minuto.
 
 ---
 
+## 7 bis. Respaldos — ⚠️ hoy NO existen
+
+**Este es el mayor riesgo operativo del sistema.**
+
+Cuando la base de datos vivía en un proveedor gestionado, los respaldos venían incluidos y nadie
+tenía que ocuparse. Al pasarla a un contenedor propio ([ADR-011](11-DECISIONES-ARQUITECTONICAS.md))
+**se ganó el aislamiento y se perdió el respaldo automático**, y no se puso nada en su lugar.
+
+Se detectó el 2 de septiembre de 2026 al revisar RNF10, que exige *«backups diarios con 30 días
+de retención»*. Ahora mismo, si el volumen del contenedor se corrompe, **se pierden todos los
+expedientes de todos los consultorios**. En un sistema jurídico eso no es una molestia: es la
+pérdida de documentación procesal de terceros.
+
+### Respaldo manual, ahora mismo
+
+```bash
+cd ~/proyectos/proyectosena.online/sistema-juridico
+mkdir -p respaldos
+docker compose exec -T postgres pg_dump -U sgpa sgpa | gzip > respaldos/sgpa-$(date +%F-%H%M).sql.gz
+ls -lh respaldos/
+```
+
+**Guarda ese archivo fuera del VPS.** Un respaldo en el mismo servidor no protege del fallo más
+probable, que es perder el servidor.
+
+### Restaurar
+
+```bash
+gunzip -c respaldos/sgpa-FECHA.sql.gz | docker compose exec -T postgres psql -U sgpa -d sgpa
+```
+
+> Conviene **probar la restauración al menos una vez**. Un respaldo que nunca se ha restaurado no
+> es un respaldo: es un archivo del que se supone algo.
+
+### Automatizarlo
+
+Una tarea programada diaria en el host, con rotación a 30 días para cumplir RNF10:
+
+```bash
+crontab -e
+```
+
+```cron
+0 3 * * * cd ~/proyectos/proyectosena.online/sistema-juridico && docker compose exec -T postgres pg_dump -U sgpa sgpa | gzip > respaldos/sgpa-$(date +\%F).sql.gz && find respaldos/ -name 'sgpa-*.sql.gz' -mtime +30 -delete
+```
+
+Sigue sin salir del servidor. Copiarlos a otro sitio queda pendiente.
+
+**Los documentos subidos no entran aquí:** viven en Cloudflare R2 y tienen su propia durabilidad.
+Este respaldo cubre la base de datos, que es lo que hoy no tiene ninguna red.
+
+---
+
 ## 8. Limitaciones que conviene conocer
 
 | Limitación | Detalle |

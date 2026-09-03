@@ -354,6 +354,10 @@ Formalizado como **RF55–RF59** y **HU-37**.
 - ⚠️ **La base de producción (Supabase) NO está migrada.** Además, como esa base se gestionó
   con `prisma db push`, `migrate deploy` fallaría allí con *relation already exists*: la
   migración generada crea el esquema completo. Ver la sección de despliegue del doc 10.
+  > **Resuelto el 2 de septiembre de 2026, y de otra manera.** Supabase quedó fuera: la base de
+  > producción es ahora un contenedor propio y vacío (ADR-011), de modo que `migrate deploy`
+  > funcionó sin conflicto. El aviso se conserva porque describe correctamente el riesgo que
+  > existía mientras la base siguió en el proveedor gestionado.
 - ⚠️ El catálogo de 10 tipos proviene de una muestra de la investigación, no de un catálogo
   oficial exhaustivo del Consejo Superior de la Judicatura. Puede quedarse corto; por eso
   incluye `OTRO`. Conviene validarlo con un abogado en ejercicio (supuesto SUP-10).

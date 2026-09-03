@@ -106,7 +106,7 @@ sustentación. Cada uno lleva un aviso al inicio remitiendo al documento que lo 
 | Archivo | Por qué está aquí |
 |---|---|
 | [`arquitectura.md`](historico/arquitectura.md) | Describía "microservicios lógicos" y un `tenant.middleware.js` inexistente |
-| [`especificaciones_tecnicas.md`](historico/especificaciones_tecnicas.md) | Versiones del stack desfasadas y almacenamiento en Supabase |
+| [`especificaciones_tecnicas.md`](historico/especificaciones_tecnicas.md) | Versiones del stack desfasadas, y **base de datos y almacenamiento en Supabase**: hoy la base está en un contenedor propio y los archivos en Cloudflare R2 |
 | [`Reporte_Coherencia_SGPA.md`](historico/Reporte_Coherencia_SGPA.md) | Analiza archivos que ya no existen y reporta como pendientes cosas resueltas |
 | [`Combined_Sprint_Stories.md`](historico/Combined_Sprint_Stories.md) | Lista 34 HU; faltan HU-35 y HU-36 |
 | [`Jira_Import_Stories.csv`](historico/Jira_Import_Stories.csv) | Backlog de 34 HU para importar a Jira |

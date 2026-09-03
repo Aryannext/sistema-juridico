@@ -28,7 +28,7 @@ Implementa además una arquitectura **Multi-Tenant**, donde cada Consultorio Jur
 ### Stack Tecnológico
 - **Frontend**: React 19, Vite 8, Tailwind CSS v4, React Router v7, Axios, React Hook Form, Sonner, Lucide React.
 - **Backend**: Node.js (v22+, probado en v24), Express.js 4, Prisma ORM v5, JWT (Autenticación), Bcrypt (Hashing), Helmet y Rate-Limiting.
-- **Base de Datos**: PostgreSQL (v15+) alojado en Supabase con Connection Pooling (PgBouncer).
+- **Base de Datos**: PostgreSQL 16 en **contenedor propio**, con su propio volumen y sin puertos expuestos a internet (ver [ADR-011](./docs/11-DECISIONES-ARQUITECTONICAS.md)).
 - **Almacenamiento de archivos**: Cloudflare R2 (compatible con S3), con URLs firmadas temporales.
 - **Tareas programadas**: `node-cron` dentro del propio proceso de la API (recordatorios cada 15 minutos).
 
@@ -74,7 +74,7 @@ Si deseas descargar este repositorio y ejecutarlo en tu máquina local, sigue es
 
 ### Requisitos Previos
 - Instalar **Node.js versión 22 o superior** (el proyecto está probado en v24; ver `.nvmrc`).
-- Tener una cuenta gratuita en [Supabase](https://supabase.com/) (o una instancia local de PostgreSQL).
+- Tener **PostgreSQL** disponible: una instancia local, o Docker para levantar el contenedor que ya define `docker-compose.yml`.
 - Tener un bucket de **Cloudflare R2** para el almacenamiento de documentos. Sin credenciales de R2 el sistema arranca, pero no se pueden subir archivos.
 
 ### Paso 1: Clonar el Repositorio
@@ -84,7 +84,9 @@ cd sistema-juridico
 ```
 
 ### Paso 2: Configurar la Base de Datos
-1. Ve a Supabase, crea un nuevo proyecto y obtén tus credenciales de PostgreSQL.
+1. Levanta PostgreSQL. Con Docker basta con `docker compose up -d postgres` desde la raíz
+   (requiere un `.env` en la raíz con `POSTGRES_PASSWORD`; ver `.env.example`).
+   Si prefieres una instancia local ya instalada, crea una base vacía y sigue al paso 2.
 2. En la carpeta `backend`, copia el archivo de ejemplo de variables de entorno:
    ```bash
    cd backend
@@ -94,8 +96,11 @@ cd sistema-juridico
 
 Ejemplo mínimo de `.env`:
 ```env
-DATABASE_URL="postgresql://postgres:TUPASSWORD@aws-0-eu-central-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
-DIRECT_URL="postgresql://postgres:TUPASSWORD@aws-0-eu-central-1.pooler.supabase.com:5432/postgres"
+# En local, con PostgreSQL instalado en tu máquina:
+DATABASE_URL="postgresql://postgres:TUPASSWORD@localhost:5432/sistema_juridico?schema=public"
+DIRECT_URL="postgresql://postgres:TUPASSWORD@localhost:5432/sistema_juridico?schema=public"
+# Dentro de Docker el host es "postgres", el nombre del servicio, NUNCA localhost:
+# dentro de un contenedor, localhost es el propio contenedor.
 JWT_SECRET="alguna_clave_secreta_aleatoria"
 PORT=3000
 

@@ -1,10 +1,26 @@
 # Especificaciones Técnicas - SGPA
 
 > ⚠️ **DOCUMENTO OBSOLETO — no usar como referencia.**
-> Declara React 18, Tailwind v3, React Router v6, Node 18+ y almacenamiento en Supabase.
-> La plataforma corre React 19, Tailwind 4, Router 7, Node 24 y Cloudflare R2.
-> **Documentos vigentes:** [01-ARQUITECTURA.md](../01-ARQUITECTURA.md) y [09-COMPATIBILIDAD-NODE.md](../09-COMPATIBILIDAD-NODE.md).
-> Se conserva como registro histórico. Detalle en [00-AUDITORIA-DE-COHERENCIA.md](../00-AUDITORIA-DE-COHERENCIA.md) (H-05, H-06, H-07).
+>
+> Se conserva **a propósito**, sin corregir, como registro de lo que el proyecto creía ser.
+> Corregirlo borraría la prueba de qué cambió y por qué.
+>
+> **Nada de esta tabla es cierto hoy:**
+>
+> | Dice aquí | Realidad |
+> |---|---|
+> | React 18 · Tailwind v3 · Router v6 | React 19 · Tailwind 4 · Router 7 |
+> | Node.js v18+ | **Node 24**, fijado dentro de la imagen Docker |
+> | Almacenamiento en Supabase | **Cloudflare R2** con URLs firmadas |
+> | **Base de datos en Supabase (AWS us-west-1)** | **PostgreSQL 16 en contenedor propio**, en el VPS |
+> | **Conexión vía PgBouncer, puerto 6543** | **Sin *pooler*.** Conexión directa al servicio `postgres` del compose |
+>
+> **Documentos vigentes:** [01-ARQUITECTURA.md](../01-ARQUITECTURA.md),
+> [09-COMPATIBILIDAD-NODE.md](../09-COMPATIBILIDAD-NODE.md) y
+> [12-DESPLIEGUE-VPS-COMPARTIDO.md](../12-DESPLIEGUE-VPS-COMPARTIDO.md).
+> El porqué del cambio de base de datos está en [ADR-011](../11-DECISIONES-ARQUITECTONICAS.md).
+> Detalle de los desajustes en [00-AUDITORIA-DE-COHERENCIA.md](../00-AUDITORIA-DE-COHERENCIA.md)
+> (H-05, H-06, H-07).
 
 ---
 

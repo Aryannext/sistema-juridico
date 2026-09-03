@@ -89,6 +89,7 @@ argumento a favor de verificar ejecutando, no solo revisando.
 - **Dice `especificaciones_tecnicas.md`:** almacenamiento y base de datos en Supabase.
 - **Dice el código:** `backend/src/config/supabase.js` contiene una sola línea: `// File deprecated. Now using Cloudflare R2`. El almacenamiento real es `backend/src/config/cloudflare.js`, un `S3Client` apuntando a `R2_ENDPOINT`, con URLs firmadas vía `@aws-sdk/s3-request-presigner`.
 - **Matiz:** PostgreSQL **sí** sigue en Supabase (`DATABASE_URL` con PgBouncer). Lo que cambió es el almacenamiento de archivos.
+- **Ya no es así (2 de septiembre de 2026):** la base de datos pasó también a un contenedor propio ([ADR-011](11-DECISIONES-ARQUITECTONICAS.md)). Supabase ya no interviene en nada. El matiz de arriba se conserva porque era cierto el 1 de septiembre, cuando se auditó.
 - **Acción:** corregido en el doc 01.
 
 ### H-07 🟥 `.env.example` está desalineado con las variables que el código realmente lee

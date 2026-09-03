@@ -162,15 +162,15 @@ obligatorio habría roto los datos existentes.
 
 | ID | Requisito | Estado | Evidencia / brecha |
 |---|---|:--:|---|
-| RNF01 | Cifrado en reposo AES-256 y en tránsito TLS 1.2+ | 🔵 | En tránsito: TLS de Nginx y de Supabase. En reposo: cifrado por defecto de Cloudflare R2 y de Supabase. **No hay cifrado a nivel de aplicación**; se depende del proveedor. Debe declararse así en la sustentación |
+| RNF01 | Cifrado en reposo AES-256 y en tránsito TLS 1.2+ | 🔵 | En tránsito: TLS de Nginx. En reposo: cifrado por defecto de Cloudflare R2 para los archivos; **la base de datos, al estar en un contenedor propio, hereda el cifrado de disco del VPS y nada más**. No hay cifrado a nivel de aplicación. Debe declararse así en la sustentación |
 | RNF02 | Política de contraseñas, bloqueo, expiración de sesión, JWT 8 h, 2FA 5 min | 🟡 | **Cumple:** JWT de 8 h, 2FA de 5 min, bloqueo escalado (1/5/15/30/60 min) y, desde el 2-09-2026, **política de contraseñas en el servidor** (`utils/password.js`) y **recuperación de contraseña** operativa. Antes la API aceptaba la contraseña `"1"`. **Sigue sin cumplir:** cierre de sesión por 30 min de inactividad, y falta un limitador dedicado en `/api/auth/login` |
 | RNF03 | Bitácora inmutable, 5 años, exportable en CSV o PDF con filtros | 🟡 | Inmutable: ✅ (no existe ningún `update`/`delete` sobre `bitacoraAuditoria`). Exportación: **la bitácora no tiene endpoint de exportación**; el único export es de expedientes en CSV. **No hay generación de PDF en ninguna parte** |
 | RNF04 | Compatibilidad con navegadores modernos y diseño responsivo 360–1440 px | ✅ | Tailwind con puntos de ruptura; el `DashboardLayout` oculta la barra lateral bajo `lg` |
 | RNF05 | Búsqueda por 6 campos, < 2 s, texto parcial ≥ 3 caracteres, filtros combinables, paginación de 20 | 🟡 | Implementado en `getProcesos`. **Sin índices de base de datos**, el criterio de < 2 s no está garantizado a escala (ver doc 02, deuda #2) |
 | RNF06 | Eliminación definitiva solo por Administrador con confirmación en dos pasos | ✅ | Backend exige rol + justificación escrita; la UI implementa la doble confirmación |
-| RNF07 | Disponibilidad ≥ 99,5 % mensual | 🔵 | Depende del VPS y de Supabase. **Sin monitoreo ni página de estado** |
+| RNF07 | Disponibilidad ≥ 99,5 % mensual | 🔵 | Depende enteramente del VPS: base de datos y API corren allí. **Sin monitoreo ni página de estado** |
 | RNF08 | 50 usuarios concurrentes; consultas < 3 s, escrituras < 5 s | ❓ | **Nunca se ha medido.** No hay pruebas de carga en el repositorio |
-| RNF10 | Transacciones atómicas, backups diarios con 30 días de retención, integridad referencial | 🟡 | Transacciones: ✅ (`prisma.$transaction` en registro, términos, audiencias, borrado de expediente). Integridad referencial: ✅ (claves foráneas de Prisma). **Backups: responsabilidad de Supabase, sin procedimiento propio documentado** |
+| RNF10 | Transacciones atómicas, backups diarios con 30 días de retención, integridad referencial | 🟡 | Transacciones: ✅ (`prisma.$transaction` en registro, términos, audiencias, borrado de expediente). Integridad referencial: ✅ (claves foráneas de Prisma). **Backups: NO HAY.** Al pasar la base a un contenedor propio se perdió el respaldo automático que daba el proveedor gestionado, y no se ha puesto nada en su lugar. Es hoy el mayor riesgo operativo del sistema |
 | RNF11 | Ninguna consulta debe retornar datos de otro tenant; intento → registro + 403 | 🟡 | El filtrado existe, pero **un acceso cruzado devuelve 404, no 403, y no se registra en bitácora** como exige el requisito |
 
 > No existe RNF09: `sistema.docx` lo fusionó con RNF03. No es una omisión (H-15).

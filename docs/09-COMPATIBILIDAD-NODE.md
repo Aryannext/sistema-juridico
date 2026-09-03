@@ -284,8 +284,10 @@ SUPABASE_URL   # obsoleta: config/supabase.js está desactivado
 SUPABASE_KEY   # obsoleta: el almacenamiento es Cloudflare R2
 ```
 
-> PostgreSQL **sigue** alojado en Supabase; lo que dejó de usarse es Supabase Storage.
-> La conexión a la base de datos va por `DATABASE_URL`, no por `SUPABASE_URL`.
+> **Actualizado el 2 de septiembre de 2026.** Supabase ya no interviene en nada: el
+> almacenamiento de archivos pasó a Cloudflare R2 y **la base de datos vive en un contenedor
+> propio** con su volumen (ver [ADR-011](11-DECISIONES-ARQUITECTONICAS.md)). La conexión va por
+> `DATABASE_URL`, apuntando al servicio `postgres` del compose.
 
 Frontend (`frontend/.env`):
 

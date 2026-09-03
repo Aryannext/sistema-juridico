@@ -66,7 +66,7 @@ graph TB
     SGPA["<b>SGPA</b><br/>Sistema de Gestión de<br/>Procesos de Abogados"]
 
     subgraph "Servicios externos"
-        PG[("PostgreSQL<br/>Supabase + PgBouncer")]
+        PG[("PostgreSQL 16<br/>contenedor propio")]
         R2["Cloudflare R2<br/>almacenamiento de archivos"]
         SMTP["Gmail SMTP<br/>correo saliente"]
         N8N["n8n<br/>automatizaciones (opcional)"]
@@ -360,29 +360,45 @@ conjunto de documentos implica modificarlo.
 
 ```mermaid
 graph TB
-    subgraph "VPS — proyectosena.online"
-        NG["Nginx :443<br/>TLS"]
-        subgraph "/sistema-juridico/"
-            ST["archivos estáticos<br/>frontend/dist"]
+    U["Navegador"] -->|HTTPS| NG
+
+    subgraph VPS["VPS compartido — proyectosena.online"]
+        NG["Nginx :443<br/>del host, TLS"]
+        ST["archivos estáticos<br/>frontend/dist"]
+
+        subgraph DK["Docker — aislado del host"]
+            API["sgpa-backend<br/>Node 24 · API + cron<br/>127.0.0.1:3005"]
+            PGC[("sgpa-postgres<br/>PostgreSQL 16<br/>sin puertos expuestos")]
         end
-        NODE["Node.js :3000<br/>API + cron"]
+
+        OTRA["aplicación de otro usuario<br/>(no se toca)"]
     end
 
     subgraph "Nube"
-        SB[("Supabase PostgreSQL<br/>PgBouncer :6543")]
-        CF["Cloudflare R2"]
-        GM["Gmail SMTP"]
+        CF["Cloudflare R2<br/>documentos y logotipos"]
+        SMTP["SMTP saliente<br/>correo"]
     end
 
-    U["Navegador"] -->|HTTPS| NG
     NG --> ST
-    NG -->|"/api → proxy"| NODE
-    NODE --> SB & CF & GM
+    NG -->|"/sistema-juridico/api → proxy"| API
+    API --> PGC
+    API --> CF & SMTP
+    NG -.-> OTRA
 ```
 
-**Base de datos:** `DATABASE_URL` apunta al *pooler* (PgBouncer, puerto 6543) para las
-consultas; `DIRECT_URL` apunta al puerto 5432 para las migraciones, que no funcionan a
-través del pooler.
+**Por qué contenedores.** El VPS lo comparte otra aplicación que depende de una versión
+distinta de Node. Al fijar la versión dentro de la imagen, actualizar el SGPA deja de poder
+romperle el servicio al vecino. Razonado en [ADR-011](11-DECISIONES-ARQUITECTONICAS.md) y con
+el procedimiento completo en [12-DESPLIEGUE-VPS-COMPARTIDO.md](12-DESPLIEGUE-VPS-COMPARTIDO.md).
+
+**Base de datos:** PostgreSQL corre en su propio contenedor, con volumen propio y **sin
+publicar ningún puerto**: solo es alcanzable desde la red interna del compose. `DATABASE_URL` y
+`DIRECT_URL` apuntan al servicio `postgres`, no a `localhost` —dentro de un contenedor,
+`localhost` es el propio contenedor—. No hay *pooler*: las dos variables son idénticas y se
+mantienen separadas porque Prisma usa `DIRECT_URL` para las migraciones.
+
+**El backend escucha en `127.0.0.1:3005`**, no en `0.0.0.0`. Sin esa restricción, Docker abriría
+el puerto a internet saltándose el cortafuegos del VPS.
 
 **Integración continua:** `.github/workflows/ci.yml` ejecuta Jest (backend) y Cypress
 (frontend) sobre **Node 22**. Discrepancia con el Node 24 local — ver el doc 09.
