@@ -230,7 +230,7 @@ lo hace reproducible: sale del diagrama, no de una lista aparte que pueda desvia
 
 | Función | Requisitos | Cumplidos | Qué queda |
 |---|---:|---:|---|
-| F1 · Control de acceso | 9 | 6 | RF52 y RNF11 *(aislamiento por base de datos)* · RNF02 *(limitador en el login)* |
+| F1 · Control de acceso | 9 | 7 | RF52 y RNF11 *(aislamiento por base de datos)* |
 | F2 · Expediente digital | 14 | 14 | — |
 | F3 · Plazos y audiencias | 7 | 7 | — |
 | F4 · Documentos | 11 | 11 | — |
@@ -246,12 +246,13 @@ lo hace reproducible: sale del diagrama, no de una lista aparte que pueda desvia
 > abierto **RNF03.5**, la retención a cinco años, que depende de tener copias de seguridad
 > automáticas y no de escribir código.
 >
-> **La menos completa es ahora F1 · Control de acceso, 6 de 9**, y sus tres pendientes son en
-> realidad dos decisiones. RF52 y RNF11 son la misma: que el aislamiento entre consultorios lo
-> sostenga además la base de datos y no solo el código, evaluado y pospuesto en
-> [ADR-003](../../docs/11-DECISIONES-ARQUITECTONICAS.md). RNF02 es el limitador de peticiones
-> dedicado en `/api/auth/login`: hoy protege el bloqueo por usuario, que frena el ataque a una
-> cuenta concreta pero no uno repartido entre muchas.
+> **La menos completa es ahora F1 · Control de acceso, 7 de 9**, y sus dos pendientes son en
+> realidad **una sola decisión**: RF52 y RNF11 piden lo mismo desde dos sitios, que el aislamiento
+> entre consultorios lo sostenga además la base de datos y no solo el código. Se evaluó y se
+> pospuso en [ADR-003](../../docs/11-DECISIONES-ARQUITECTONICAS.md).
+>
+> El tercer pendiente que tenía esta función, el limitador de peticiones en `/api/auth/login`
+> (RNF02.8), se cerró el 3 de septiembre de 2026.
 >
 > **Esta tabla decía otra cosa hasta el 3 de septiembre de 2026**, y merece anotarse porque el
 > error era de los que no se ven. Daba F5 como la más incompleta, 6 de 8, «por el umbral de

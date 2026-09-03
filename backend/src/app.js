@@ -31,6 +31,14 @@ const apiLimiter = rateLimit({
 
 app.use('/api/', apiLimiter);
 
+// RNF11.4: deja constancia de los intentos de acceso a datos de otro
+// consultorio. Va aquí, antes de los routers, para envolver `res.json` una
+// sola vez y cubrir los treinta y tantos puntos que devuelven 404 —y los que
+// se añadan—. Lee `req.user` cuando la respuesta ya está formada, así que no
+// importa que authMiddleware se aplique más adelante, dentro de cada router.
+const { registrarAccesoCruzado } = require('./middlewares/acceso-cruzado.middleware');
+app.use('/api/', registrarAccesoCruzado);
+
 // Routes
 const authRoutes = require('./modules/auth/auth.routes');
 const tenantRoutes = require('./modules/tenant/tenant.routes');

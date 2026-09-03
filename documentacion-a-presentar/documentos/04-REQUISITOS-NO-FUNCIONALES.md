@@ -50,9 +50,9 @@ JWT de 8 horas y código 2FA con vigencia de 5 minutos.
 | RNF02.5 | El código de doble factor vence a los 5 minutos | ✅ |
 | RNF02.6 | Existe recuperación de contraseña | ✅ |
 | RNF02.7 | La sesión expira por 30 minutos de inactividad | ✅ |
-| RNF02.8 | El inicio de sesión tiene un limitador de peticiones dedicado | 🟥 |
+| RNF02.8 | El inicio de sesión tiene un limitador de peticiones dedicado | ✅ |
 
-**Estado 🟡.** Siete de ocho.
+**Estado ✅.** Las ocho. RNF02.8 se cerró el 3 de septiembre de 2026.
 
 - **RNF02.2** se cumple desde el 2 de septiembre de 2026. Antes solo lo validaba el navegador:
   una petición directa a la API aceptaba la contraseña `"1"`. El 3 de septiembre de 2026 se le
@@ -62,8 +62,16 @@ JWT de 8 horas y código 2FA con vigencia de 5 minutos.
   mismas que el servidor.
 - **RNF02.3** es escalado: 1, 5, 15, 30 y 60 minutos según los intentos acumulados.
 - **RNF02.7** se cumple desde el 3 de septiembre de 2026 (`useCierrePorInactividad.js`).
-- **RNF02.8** sigue pendiente. Lo que hoy protege el acceso es el bloqueo por usuario, que frena
-  el ataque a una cuenta concreta pero no uno distribuido contra muchas.
+- **RNF02.8** se cerró el 3 de septiembre de 2026, y conviene entender qué añade. El bloqueo por
+  usuario frena el ataque contra **una** cuenta: cinco fallos y se cierra. No frena el reparto
+  —probar una contraseña común contra cientos de correos distintos nunca llega a cinco fallos en
+  ninguna cuenta, así que ese bloqueo no se dispara jamás—. Ese ataque se corta por origen, y para
+  eso hace falta un limitador por dirección IP.
+
+  Son **20 intentos fallidos cada 15 minutos**, y solo cuentan los fallidos: en un despacho todos
+  comparten la misma IP, y si los accesos correctos gastaran cupo una mañana normal de trabajo
+  dejaría a la oficina entera fuera. El margen coincide con el de `/api/plataforma/login` a
+  propósito, porque la pantalla de acceso es única y un fallo consume cupo en las dos vías.
 
 > **Hasta dónde llega RNF02.7, dicho con precisión.** Cierra la sesión **en el navegador**: borra
 > el token y devuelve a la pantalla de acceso, explicando por qué. El JWT sigue siendo válido en
@@ -255,7 +263,7 @@ registrarse y responder 403.
 | RNF11.1 | Ninguna consulta devuelve datos de otro consultorio | ✅ |
 | RNF11.2 | Un intento de acceso cruzado se rechaza | ✅ |
 | RNF11.3 | El rechazo responde con código **403** | 🟥 |
-| RNF11.4 | El intento queda registrado en la bitácora | 🟥 |
+| RNF11.4 | El intento queda registrado en la bitácora | ✅ |
 
 **Estado 🟡.**
 
@@ -270,7 +278,24 @@ seguridad.
 > Se declara como no cumplido y con la razón escrita, en lugar de reinterpretar el requisito para
 > que encaje. **Es un desacuerdo argumentado con la especificación, no un olvido.**
 
-RNF11.4 sí es una carencia real: los intentos cruzados no se registran.
+RNF11.4 **era** una carencia real y se cerró el 3 de septiembre de 2026. Sin registro, probar
+identificadores hasta acertar era indistinguible del ruido: quien lo intentaba no obtenía datos,
+pero tampoco dejaba rastro, así que nadie podía detectarlo.
+
+**Lo difícil no era registrar, era no registrar de más.** Un 404 casi siempre es un identificador
+equivocado —un enlace viejo, un expediente borrado—, y anotarlos todos llenaría la bitácora de
+ruido, que es la forma más eficaz de inutilizar una auditoría sin llegar a desactivarla. Por eso
+solo se anota cuando el identificador **existe de verdad en otro consultorio**: eso ya no es un
+error de tecleo.
+
+**El registro va a la bitácora de quien lo intentó, no a la del consultorio afectado.** Avisar al
+segundo le revelaría que existe otro consultorio interesado en sus expedientes, que es filtrar por
+el otro lado exactamente lo mismo que esta regla impide filtrar por el primero.
+
+Está resuelto en un middleware —`acceso-cruzado.middleware.js`— y no repartido por los
+controladores. El sistema tiene una treintena de puntos que devuelven 404 tras filtrar por
+consultorio: instrumentarlos uno a uno serían treinta ocasiones de olvidarse, y el próximo
+endpoint nacería sin registro.
 
 ---
 
@@ -278,13 +303,17 @@ RNF11.4 sí es una carencia real: los intentos cruzados no se registran.
 
 | Estado | Cantidad | Cuáles |
 |---|---:|---|
-| ✅ Cumplidos | 3 | RNF04, RNF05, RNF06 |
-| 🟡 Parciales, con el límite declarado | 4 | RNF02, RNF03, RNF10, RNF11 |
+| ✅ Cumplidos | 4 | RNF02, RNF04, RNF05, RNF06 |
+| 🟡 Parciales, con el límite declarado | 3 | RNF03, RNF10, RNF11 |
 | 🔵 Dependen de infraestructura | 2 | RNF01, RNF07 |
 | ❓ Nunca medidos | 1 | RNF08 |
 
 **Los no funcionales siguen siendo el punto más débil del sistema, y conviene decirlo antes de que
-lo pregunten.** Los funcionales están en 58 de 59 cumplidos; aquí solo 3 de 10 lo están del todo.
+lo pregunten.** Los funcionales están en 58 de 59 cumplidos; aquí solo 4 de 10 lo están del todo.
+
+De los tres parciales que quedan, **RNF11 lo está por una decisión y no por una carencia**: su
+único criterio abierto es devolver 403 en vez de 404, y cumplirlo empeoraría la seguridad. Los
+otros dos —RNF03 y RNF10— son la misma cosa vista dos veces: **no hay copias de seguridad**.
 
 No es casualidad: los requisitos no funcionales exigen medir, monitorear y respaldar —trabajo que
 no produce pantallas visibles y que suele quedar para el final. Las tres carencias que más pesan
