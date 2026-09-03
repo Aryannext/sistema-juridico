@@ -356,8 +356,9 @@ git pull
 docker compose up -d --build backend
 docker compose --profile build run --rm frontend-build
 
-# Si el cambio incluye migraciones
-docker compose run --rm backend npx prisma migrate deploy
+# SIEMPRE, aunque el cambio no traiga migraciones (ver la nota de abajo)
+docker compose exec backend npx prisma migrate status
+docker compose run --rm backend npx prisma migrate deploy   # si hay pendientes
 
 # Ver qué pasa
 docker compose logs -f backend
@@ -366,6 +367,29 @@ docker compose ps
 # Detener el SGPA (la otra aplicación sigue intacta)
 docker compose down
 ```
+
+### Por qué `migrate status` va siempre, y no «solo si hay migraciones»
+
+**Lo que importa no es si el cambio de hoy trae migraciones, sino si la base de producción
+está al día.** Son cosas distintas, y confundirlas rompió el acceso a la plataforma el 3 de
+septiembre de 2026.
+
+Ocurrió así. La migración `recuperacion_de_acceso` se creó el 2 de septiembre y añadía tres
+columnas a `usuario`. Nunca se aplicó en producción, y **nadie lo notó**: la imagen que estaba
+corriendo llevaba un cliente de Prisma generado antes de esas columnas, así que jamás las
+pedía. El sistema funcionaba con una base incompleta sin dar señales.
+
+Al reconstruir la imagen —por un cambio que no traía ninguna migración— el cliente se regeneró
+desde el esquema actual y empezó a pedir las tres columnas en cada `findUnique` sobre `usuario`.
+El primer intento de acceso respondió `500`, con
+`P2022: The column usuario.token_verificacion_expira does not exist`.
+
+**El despliegue no rompió nada: destapó algo que llevaba un día roto.** Esa es la lección. Un
+`git pull` que no trae migraciones puede aun así activar migraciones anteriores que no se
+aplicaron, porque lo que cambia el comportamiento es el **cliente regenerado**, no el commit.
+
+`migrate status` cuesta un segundo y responde la única pregunta que importa: *¿le falta algo a
+esta base?*
 
 ### Copias de seguridad
 
