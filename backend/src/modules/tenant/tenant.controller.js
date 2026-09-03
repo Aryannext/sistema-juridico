@@ -70,11 +70,26 @@ exports.updatePerfil = async (req, res) => {
 
     res.json({ message: 'Perfil actualizado exitosamente', tenant: updatedTenant });
   } catch (error) {
-    console.error(error);
-    if (error.message.includes('Formato de archivo')) {
+    console.error('Error en updatePerfil:', error);
+
+    // El almacenamiento externo rechaza la subida. Decirlo así ahorra buscar el
+    // fallo en la aplicación cuando el problema está en las credenciales de
+    // Cloudflare: comprobarlo con `npm run probar-almacenamiento`.
+    if (error.Code === 'AccessDenied' || error.name === 'AccessDenied') {
+      return res.status(502).json({
+        error: 'No se pudo guardar el logotipo: el almacenamiento de archivos rechazó la operación. ' +
+          'Avise al administrador para que revise las credenciales de Cloudflare R2.',
+        codigo: 'ALMACENAMIENTO_NO_DISPONIBLE',
+      });
+    }
+
+    // `error.message` puede no existir; sin la guarda, este `if` provocaba otro
+    // error dentro del propio catch.
+    if (error.message && error.message.includes('Formato de archivo')) {
       return res.status(400).json({ error: error.message });
     }
-    res.status(500).json({ error: 'Error actualizando el perfil del tenant' });
+
+    res.status(500).json({ error: 'Error actualizando el perfil del consultorio' });
   }
 };
 

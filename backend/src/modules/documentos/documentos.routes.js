@@ -6,12 +6,49 @@ const { authMiddleware } = require('../../middlewares/auth.middleware');
 const requirePermission = require('../../middlewares/roles.middleware');
 const auditMiddleware = require('../../middlewares/audit.middleware');
 
-// Configure Multer for memory uploads (10MB limit as approved by user)
+const { manejarErroresDeSubida } = require('../../middlewares/subida.middleware');
+
+const MAX_MB = 10;
+
+/**
+ * Formatos admitidos en un expediente judicial (RF18).
+ *
+ * Antes NO había ningún filtro: se podía adjuntar un ejecutable a un
+ * expediente, y quedaba almacenado y disponible para descarga. En un sistema
+ * que comparten varios usuarios de un despacho, eso es una vía para distribuir
+ * un archivo dañino con la apariencia de una prueba documental.
+ *
+ * La lista cubre lo que de verdad se aporta a un proceso: escritos, pruebas
+ * escaneadas, fotografías y hojas de cálculo.
+ */
+const FORMATOS = {
+  'application/pdf': 'PDF',
+  'application/msword': 'DOC',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX',
+  'application/vnd.ms-excel': 'XLS',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'XLSX',
+  'image/jpeg': 'JPG',
+  'image/png': 'PNG',
+  'image/webp': 'WebP',
+  'image/tiff': 'TIFF',
+  'text/plain': 'TXT',
+};
+
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10 Megabytes
-  }
+  limits: { fileSize: MAX_MB * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (FORMATOS[file.mimetype]) return cb(null, true);
+    cb(new Error('Formato de archivo no soportado.'), false);
+  },
+});
+
+// Va inmediatamente después de multer en cada ruta de subida: es donde Express
+// entrega los errores que multer lanza antes de llegar al controlador. Sin
+// esto, un archivo de más de 10 MB devolvía un 500 «Algo salió mal!».
+const erroresDeSubida = manejarErroresDeSubida({
+  maxMb: MAX_MB,
+  formatos: Object.values(FORMATOS).join(', '),
 });
 
 // Protect all routes under this module
@@ -22,6 +59,7 @@ router.post(
   '/',
   requirePermission('DOCS', 'CREAR'),
   upload.single('archivo'),
+  erroresDeSubida,
   auditMiddleware('DOCS'),
   documentosController.uploadDocumento
 );
@@ -31,6 +69,7 @@ router.post(
   '/:id/version',
   requirePermission('DOCS', 'CREAR'),
   upload.single('archivo'),
+  erroresDeSubida,
   auditMiddleware('DOCS'),
   documentosController.uploadNuevaVersion
 );

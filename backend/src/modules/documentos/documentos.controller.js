@@ -1,4 +1,21 @@
 const prisma = require('../../config/prisma');
+
+/**
+ * Cloudflare R2 rechazando la operación. Merece un mensaje propio: sin él, un
+ * problema de credenciales del almacenamiento se presentaba como un error
+ * interno genérico y llevaba a buscarlo dentro de la aplicación.
+ * Comprobable con `npm run probar-almacenamiento`.
+ */
+const esFalloDeAlmacenamiento = (error) =>
+  error.Code === 'AccessDenied' || error.name === 'AccessDenied' ||
+  error.Code === 'NoSuchBucket' || error.name === 'NoSuchBucket';
+
+const responderAlmacenamiento = (res) =>
+  res.status(502).json({
+    error: 'No se pudo guardar el archivo: el almacenamiento de documentos rechazó la operación. ' +
+      'Avise al administrador para que revise las credenciales de Cloudflare R2.',
+    codigo: 'ALMACENAMIENTO_NO_DISPONIBLE',
+  });
 const r2Client = require('../../config/cloudflare');
 const { PutObjectCommand, DeleteObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
@@ -148,6 +165,7 @@ exports.uploadDocumento = async (req, res) => {
     });
   } catch (error) {
     console.error('Error en uploadDocumento:', error);
+    if (esFalloDeAlmacenamiento(error)) return responderAlmacenamiento(res);
     res.status(500).json({ error: 'Error interno del servidor al registrar el documento' });
   }
 };

@@ -12,6 +12,7 @@
     "test": "jest",
     "lint": "eslint .",
     "probar-correo": "node -r dotenv/config scripts/probar-correo.js",
+    "probar-almacenamiento": "node -r dotenv/config scripts/probar-almacenamiento.js",
     "verificar:plataforma": "node -r dotenv/config scripts/verificar-admin-plataforma.js",
     "crear-admin-plataforma": "node -r dotenv/config scripts/crear-admin-plataforma.js",
     "defectos": "node -r dotenv/config scripts/reproducir-defectos.js",
