@@ -96,8 +96,41 @@ function validarNombreUsuario(valor) {
   return { valido: true, error: null, valor: normalizado };
 }
 
+/**
+ * Resuelve un nombre de usuario **opcional** recibido al dar de alta una cuenta.
+ *
+ * Los dos sitios que crean usuarios —el registro del consultorio y el alta de
+ * colaborador— hacían exactamente lo mismo con este campo: comprobar si viene,
+ * validar el formato, mirar si ya está tomado y quedarse con el valor
+ * normalizado. Estaba escrito dos veces, y dos copias de una regla son dos
+ * sitios donde relajarla por descuido.
+ *
+ * Omitirlo es válido: el correo sigue siendo el identificador obligatorio y
+ * quien no elija ninguno entra como siempre. Devuelve `null` en ese caso.
+ *
+ * @returns {Promise<{ok: true, valor: string|null} | {ok: false, error: string}>}
+ */
+async function resolverNombreUsuarioOpcional(prisma, valor) {
+  const vacio = valor === undefined || valor === null || String(valor).trim() === '';
+  if (vacio) return { ok: true, valor: null };
+
+  const comprobacion = validarNombreUsuario(valor);
+  if (!comprobacion.valido) return { ok: false, error: comprobacion.error };
+
+  // Único en TODO el sistema, así que esta consulta NO se acota por
+  // consultorio: hacerlo dejaría pasar el alta y la haría estallar después
+  // contra el índice único, con un 500 sin explicación.
+  const yaTomado = await prisma.usuario.findUnique({
+    where: { nombre_usuario: comprobacion.valor },
+  });
+  if (yaTomado) return { ok: false, error: 'Ese nombre de usuario ya está en uso' };
+
+  return { ok: true, valor: comprobacion.valor };
+}
+
 module.exports = {
   validarNombreUsuario,
+  resolverNombreUsuarioOpcional,
   normalizar,
   pareceCorreo,
   MINIMO,

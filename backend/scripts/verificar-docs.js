@@ -270,7 +270,12 @@ for (const { articulo, nombre, sustentacion: sus, tecnica: tec } of FAMILIAS) {
     );
   }
 
-  for (const id of [...new Set([...sus.keys(), ...tec.keys()])].sort()) {
+  // Comparador explícito: `.sort()` a secas ordena convirtiendo a texto, que
+  // aquí acierta por casualidad —son identificadores— y sobre números sería
+  // un fallo. Dejarlo dicho evita tener que razonarlo cada vez que se lee.
+  const ids = [...new Set([...sus.keys(), ...tec.keys()])].sort((a, b) => a.localeCompare(b));
+
+  for (const id of ids) {
     const a = sus.get(id);
     const b = tec.get(id);
 
@@ -366,7 +371,9 @@ function rutasDelCatalogo() {
 
 const rutasCodigo = rutasDelCodigo();
 const rutasDoc = rutasDelCatalogo();
-const rutasSinDocumentar = [...rutasCodigo].filter((r) => !rutasDoc.has(r)).sort();
+const rutasSinDocumentar = [...rutasCodigo]
+  .filter((r) => !rutasDoc.has(r))
+  .sort((a, b) => a.localeCompare(b));
 
 comprobar(
   'Toda ruta de la API está en el catálogo',

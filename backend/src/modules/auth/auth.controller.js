@@ -5,6 +5,7 @@ const { sendEmail } = require('../../config/mailer');
 const { validarPassword } = require('../../utils/password');
 const {
   validarNombreUsuario,
+  resolverNombreUsuarioOpcional,
   normalizar: normalizarNombreUsuario,
   pareceCorreo,
 } = require('../../utils/nombre-usuario');
@@ -28,26 +29,11 @@ exports.registro = async (req, res) => {
       return res.status(400).json({ error: 'El correo ya está registrado' });
     }
 
-    // RF01.2: el nombre de usuario es OPCIONAL en el registro. El correo sigue
-    // siendo el identificador obligatorio, y quien no elija ninguno entra por
-    // correo como hasta ahora. Quien lo omita puede reclamarlo después desde su
-    // perfil.
-    let nombreUsuario = null;
-    if (nombre_usuario !== undefined && nombre_usuario !== null && String(nombre_usuario).trim() !== '') {
-      const comprobacion = validarNombreUsuario(nombre_usuario);
-      if (!comprobacion.valido) {
-        return res.status(400).json({ error: comprobacion.error });
-      }
-
-      const yaTomado = await prisma.usuario.findUnique({
-        where: { nombre_usuario: comprobacion.valor }
-      });
-      if (yaTomado) {
-        return res.status(400).json({ error: 'Ese nombre de usuario ya está en uso' });
-      }
-
-      nombreUsuario = comprobacion.valor;
-    }
+    // RF01.2: es OPCIONAL. Quien no elija ninguno entra por correo, como
+    // siempre, y puede reclamarlo después desde su perfil.
+    const elegido = await resolverNombreUsuarioOpcional(prisma, nombre_usuario);
+    if (!elegido.ok) return res.status(400).json({ error: elegido.error });
+    const nombreUsuario = elegido.valor;
 
     const hashedPassword = await hashPassword(password);
     const tokenVerificacion = generateVerificationToken();

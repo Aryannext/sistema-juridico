@@ -24,11 +24,11 @@
  */
 require('dotenv').config();
 
-const fs = require('fs');
-const path = require('path');
-const zlib = require('zlib');
-const { spawn } = require('child_process');
-const { pipeline } = require('stream/promises');
+const fs = require('node:fs');
+const path = require('node:path');
+const zlib = require('node:zlib');
+const { spawn } = require('node:child_process');
+const { pipeline } = require('node:stream/promises');
 
 const DIRECTORIO = process.env.RESPALDO_DIR || path.join(__dirname, '..', '..', 'respaldos');
 const DIAS_RETENCION = Number(process.env.RESPALDO_DIAS || 30); // RNF10.4
@@ -36,7 +36,9 @@ const PG_DUMP = process.env.PG_DUMP || 'pg_dump';
 
 /** Nombre reconocible y ordenable: sgpa-2026-09-03T16-45-02.sql.gz */
 const nombreDeHoy = () => {
-  const marca = new Date().toISOString().replace(/:/g, '-').replace(/\..+$/, '');
+  // Se corta por posición en vez de con una expresión regular: la marca ISO
+  // tiene forma fija (2026-09-03T20:20:02.123Z) y `/\..+$/` retrocede.
+  const marca = new Date().toISOString().slice(0, 19).replaceAll(':', '-');
   return `sgpa-${marca}.sql.gz`;
 };
 
@@ -63,11 +65,26 @@ function traducirUrl(bruta) {
   ]);
 
   const esquema = url.searchParams.get('schema');
-  for (const clave of [...url.searchParams.keys()]) {
+  for (const clave of Array.from(url.searchParams.keys())) {
     if (!ADMITIDOS.has(clave)) url.searchParams.delete(clave);
   }
 
   return { url: url.toString(), esquema };
+}
+
+/**
+ * La misma URL que usa `psql`, con la contraseña sustituida.
+ *
+ * Sirve para enseñarla por pantalla y en los registros sin filtrarla. El resto
+ * —usuario, servidor, puerto y base— se conserva porque es lo que hace falta
+ * para reconocer *qué* base se está restaurando, y no es secreto para quien ya
+ * está dentro del servidor.
+ */
+function urlSinClave() {
+  const { url } = traducirUrl(process.env.DATABASE_URL);
+  const objetivo = new URL(url);
+  if (objetivo.password) objetivo.password = 'LA_CLAVE_DEL_ENV';
+  return decodeURIComponent(objetivo.toString());
 }
 
 async function volcar(destino) {
@@ -146,7 +163,7 @@ function podar() {
     // retención dejaría de significar lo que dice.
     const marca = archivo.slice('sgpa-'.length, -'.sql.gz'.length);
     const fecha = new Date(marca.replace(/T(\d{2})-(\d{2})-(\d{2})$/, 'T$1:$2:$3'));
-    if (isNaN(fecha) || fecha.getTime() >= limite) continue;
+    if (Number.isNaN(fecha.getTime()) || fecha.getTime() >= limite) continue;
 
     fs.unlinkSync(path.join(DIRECTORIO, archivo));
     borrados.push(archivo);
@@ -175,13 +192,18 @@ async function main() {
   const quedan = fs.readdirSync(DIRECTORIO).filter((f) => ES_RESPALDO.test(f));
   console.log(`  ✓ Copias disponibles: ${quedan.length}\n`);
 
-  // La orden se imprime con la URL ya traducida, no con DATABASE_URL tal cual.
+  // La orden se imprime con la URL ya traducida, no con DATABASE_URL tal cual:
   // `psql` falla igual que `pg_dump` ante el `?schema=` de Prisma, y una
   // instrucción de restauración que no funciona, el día que hace falta
   // restaurar, es peor que no dar ninguna.
-  const { url } = traducirUrl(process.env.DATABASE_URL);
+  //
+  // **Pero la contraseña se oculta.** Este guion está pensado para correr en
+  // `cron` con la salida redirigida a un registro, así que imprimirla entera
+  // escribiría la clave de la base en un archivo del servidor todas las
+  // noches. Quien vaya a restaurar tiene acceso al `.env`; el registro del
+  // respaldo no tiene por qué ser otro sitio donde vive la contraseña.
   console.log('  Para restaurar:');
-  console.log(`    gunzip -c ${path.basename(destino)} | psql "${url}"\n`);
+  console.log(`    gunzip -c ${path.basename(destino)} | psql "${urlSinClave()}"\n`);
 }
 
 main().catch((error) => {

@@ -26,7 +26,8 @@
  */
 require('dotenv').config();
 
-const http = require('http');
+const http = require('node:http');
+const { randomInt } = require('node:crypto');
 const app = require('../src/app');
 const prisma = require('../src/config/prisma');
 
@@ -121,7 +122,7 @@ async function golpear(puerto, simultaneas, total, hacerPeticion) {
 async function preparar(puerto) {
   await pedir(puerto, { metodo: 'POST', ruta: '/api/auth/registro' }); // calienta el proceso
 
-  const registro = await new Promise((resolve) => {
+  await new Promise((resolve) => {
     const cuerpo = JSON.stringify({
       tipo: 'CONSULTORIO', nombre_tenant: `Medicion ${SUFIJO}`,
       email: EMAIL, password: CLAVE, nombre_admin: 'Medicion',
@@ -133,7 +134,6 @@ async function preparar(puerto) {
     );
     req.end(cuerpo);
   });
-  void registro;
 
   const usuario = await prisma.usuario.findUnique({ where: { email: EMAIL } });
   if (!usuario) throw new Error('No se pudo crear el consultorio de medición.');
@@ -192,7 +192,11 @@ async function main() {
   const terminos = ['11001', 'Civil', 'Juzgado 3', '000123', 'Circuito'];
   const lectura = await golpear(puerto, CONCURRENTES, PETICIONES, () => ({
     metodo: 'GET', token,
-    ruta: `/api/procesos?search=${encodeURIComponent(terminos[Math.floor(Math.random() * terminos.length)])}&page=1&limit=20`,
+    // `randomInt` y no `Math.random()`: aquí daría igual —se elige un término
+    // de búsqueda, no un secreto—, pero tener un generador débil en el código
+    // obliga a razonar cada vez si el sitio donde aparece era de los que
+    // importan. Sale más barato no tenerlo.
+    ruta: `/api/procesos?search=${encodeURIComponent(terminos[randomInt(terminos.length)])}&page=1&limit=20`,
   }));
 
   // RNF08.3 — escritura. Crear un expediente toca la validación del

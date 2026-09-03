@@ -2258,10 +2258,11 @@ export default function ProcesoDetalle() {
             ) : (
               <form onSubmit={handleCambiarResponsable} className="space-y-4 md:space-y-6">
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                  <label htmlFor="relevo-abogado" className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
                     Nuevo Abogado Responsable
                   </label>
                   <select
+                    id="relevo-abogado"
                     value={nuevoResponsableId}
                     onChange={(e) => setNuevoResponsableId(e.target.value)}
                     className="w-full bg-neutral-900 border border-neutral-800 focus:border-white focus:outline-none rounded-xl px-4 py-3 text-sm text-neutral-300"
@@ -2275,10 +2276,11 @@ export default function ProcesoDetalle() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
-                    Justificacion
+                  <label htmlFor="relevo-justificacion" className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    Justificación
                   </label>
                   <textarea
+                    id="relevo-justificacion"
                     required
                     rows={3}
                     value={respJustificacion}

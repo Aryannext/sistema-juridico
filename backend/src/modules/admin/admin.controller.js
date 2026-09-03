@@ -1,7 +1,7 @@
 const prisma = require('../../config/prisma');
 const { construirCSV } = require('./exportacion-bitacora');
 const { hashPassword } = require('../../utils/bcrypt');
-const { validarNombreUsuario } = require('../../utils/nombre-usuario');
+const { resolverNombreUsuarioOpcional } = require('../../utils/nombre-usuario');
 
 // Crear un nuevo colaborador (Abogado o Asistente)
 exports.createUsuario = async (req, res) => {
@@ -25,28 +25,11 @@ exports.createUsuario = async (req, res) => {
       return res.status(400).json({ error: 'El correo electrónico ya está en uso' });
     }
 
-    // RF01.2: el nombre de usuario es opcional, igual que en el registro. El
-    // colaborador puede fijarlo o cambiarlo después desde su perfil.
-    let nombreUsuario = null;
-    if (nombre_usuario !== undefined && nombre_usuario !== null && String(nombre_usuario).trim() !== '') {
-      const comprobacion = validarNombreUsuario(nombre_usuario);
-      if (!comprobacion.valido) {
-        return res.status(400).json({ error: comprobacion.error });
-      }
-
-      // El nombre de usuario es único en TODO el sistema, no dentro del
-      // consultorio, así que esta consulta NO filtra por tenant a propósito.
-      // Filtrar aquí dejaría pasar el alta y la haría estallar contra el índice
-      // único con un 500 sin explicación.
-      const yaTomado = await prisma.usuario.findUnique({
-        where: { nombre_usuario: comprobacion.valor }
-      });
-      if (yaTomado) {
-        return res.status(400).json({ error: 'Ese nombre de usuario ya está en uso' });
-      }
-
-      nombreUsuario = comprobacion.valor;
-    }
+    // RF01.2: opcional, igual que en el registro. El colaborador puede fijarlo
+    // o cambiarlo después desde su perfil.
+    const elegido = await resolverNombreUsuarioOpcional(prisma, nombre_usuario);
+    if (!elegido.ok) return res.status(400).json({ error: elegido.error });
+    const nombreUsuario = elegido.valor;
 
     const hashedPassword = await hashPassword(password);
 

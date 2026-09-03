@@ -146,7 +146,7 @@ exports.updateCliente = async (req, res) => {
   }
 };
 
-const crypto = require('crypto');
+const crypto = require('node:crypto');
 const { hashPassword } = require('../../utils/bcrypt');
 const { generateVerificationToken } = require('../../utils/jwt');
 // El correo de primer acceso vive con los demás correos de credenciales, en el
