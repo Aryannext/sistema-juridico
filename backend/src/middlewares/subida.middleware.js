@@ -22,7 +22,6 @@ const multer = require('multer');
 function manejarErroresDeSubida({ maxMb, formatos }) {
   // La firma de cuatro argumentos es obligatoria: sin ella Express no lo
   // reconoce como manejador de errores y lo trata como middleware normal.
-  // eslint-disable-next-line no-unused-vars
   return (err, req, res, next) => {
     if (err instanceof multer.MulterError) {
       if (err.code === 'LIMIT_FILE_SIZE') {

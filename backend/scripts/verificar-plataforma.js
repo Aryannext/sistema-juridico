@@ -43,9 +43,12 @@ async function pedir(metodo, ruta, { token, body } = {}) {
     headers: cabeceras,
     body: body ? JSON.stringify(body) : undefined
   });
+  // Se lee como texto y luego se intenta interpretar: las exportaciones
+  // (CSV, PDF) no son JSON, y `r.json()` a secas dejaría el cuerpo perdido.
+  const texto = await r.text();
   let datos = null;
-  try { datos = await r.json(); } catch { /* respuesta sin cuerpo */ }
-  return { estado: r.status, datos };
+  try { datos = JSON.parse(texto); } catch { /* respuesta que no es JSON */ }
+  return { estado: r.status, datos, texto, tipo: r.headers.get('content-type') || '' };
 }
 
 const sufijo = Date.now().toString().slice(-8);
@@ -101,7 +104,7 @@ async function registrarConsultorio(nombre) {
             nombre_admin: 'Débil', email: `debil_${sufijo}@demo.local`, password: '1' }
   });
   comprobar('RNF02', 'La contraseña débil "1" se rechaza en el backend',
-    debil.estado === 400, `estado=${debil.estado} — brecha conocida, ver doc 03`);
+    debil.estado === 400, `estado=${debil.estado} · "${debil.datos?.error || ''}"`);
 
   // ═══ Datos base en el consultorio A ═══
   seccion('Clientes y expedientes');
@@ -276,13 +279,15 @@ async function registrarConsultorio(nombre) {
   comprobar('RF05', 'Cada registro incluye usuario, módulo, acción e IP',
     lista[0] && ['id_usuario','modulo','accion','ip_adress'].every(k => k in lista[0]), '');
 
-  const hayLogin = lista.some(r => /SESION|LOGIN/i.test(r.accion || ''));
+  const entrada = lista.find(r => r.accion === 'INICIO_SESION');
   comprobar('RF05', 'El inicio de sesión queda registrado en la bitácora',
-    hayLogin, hayLogin ? '' : 'no se registra — brecha conocida H-20');
+    Boolean(entrada), entrada ? `"${entrada.detalle}"` : 'no aparece ningún INICIO_SESION');
 
   const expBit = await pedir('GET', '/admin/auditoria/export', { token: A.token });
+  const lineasCsv = expBit.texto ? expBit.texto.trim().split('\n').length - 1 : 0;
   comprobar('RNF03', 'La bitácora se puede exportar (CSV o PDF)',
-    expBit.estado === 200, `estado=${expBit.estado} — brecha conocida, ver doc 03`);
+    expBit.estado === 200 && lineasCsv > 0,
+    `estado=${expBit.estado} · ${lineasCsv} fila(s) exportadas`);
 
   // ═══ Reportes ═══
   seccion('Reportes (RF42)');
@@ -292,8 +297,12 @@ async function registrarConsultorio(nombre) {
     stats.estado === 200, `estado=${stats.estado}`);
 
   const pdf = await pedir('GET', '/reportes/export/pdf', { token: A.token });
+  // No basta con el 200: un error devuelto como JSON también responde 200 en
+  // algunos marcos. Se exige la firma real del formato.
+  const esPdf = pdf.texto.startsWith('%PDF-');
   comprobar('RF42', 'Los reportes se pueden exportar en PDF',
-    pdf.estado === 200, `estado=${pdf.estado} — brecha conocida, ver doc 03`);
+    pdf.estado === 200 && esPdf,
+    `estado=${pdf.estado} · ${esPdf ? `${pdf.texto.length} bytes, firma %PDF` : `no es un PDF (${pdf.tipo})`}`);
 
   // ── Informe ─────────────────────────────────────────────────────
   console.log('');
