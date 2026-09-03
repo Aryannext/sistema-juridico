@@ -97,7 +97,7 @@ erDiagram
         uuid id_documento PK
         uuid id_proceso FK "OPCIONAL: hay documentos generales"
         enum categoria
-        enum visibilidad "PRIVADO | COMPARTIDO_CLIENTE | COLABORADORES"
+        enum visibilidad "PRIVADO | COMPARTIDO_CLIENTE | VISIBLE_COLAB"
         enum estado "ACTIVO | REEMPLAZADO | INACTIVO"
         uuid id_version_actual FK
     }
@@ -106,7 +106,7 @@ erDiagram
         uuid id_audiencia PK
         timestamp fecha_hora
         varchar lugar
-        enum estado "PROGRAMADA | REALIZADA | CANCELADA | REPROGRAMADA"
+        enum estado "PROGRAMADA | REALIZADA | CANCELADA"
     }
 
     RECORDATORIO_AUDIENCIA {
@@ -120,7 +120,7 @@ erDiagram
     }
 ```
 
-**Dos detalles que se preguntan:**
+**Tres detalles que se preguntan:**
 
 Las **dos claves foráneas opcionales** no son descuidos. `TERMINO.id_actuacion` es opcional
 porque un plazo puede registrarse suelto (RF32); `DOCUMENTO.id_proceso` lo es porque existen
@@ -129,6 +129,12 @@ documentos generales del despacho (RF21).
 Los **dos tipos de recordatorio se modelan distinto**. El de audiencia guarda *minutos antes*,
 así que reprogramar recalcula los avisos solo. El de término guarda la *fecha y hora exacta* de
 envío, porque un plazo no se mueve.
+
+**«Reprogramada» no es un estado**, aunque RF30 exija poder reprogramar. Una audiencia movida
+sigue estando `PROGRAMADA`: lo que cambia es su fecha. El hecho de que se movió queda en
+`HISTORIAL_PROCESO` como `AUDIENCIA_REPROGRAMADA`, con la fecha anterior y la nueva. Es la
+distinción entre **en qué situación está** algo y **qué le pasó**: un estado que dijera
+«reprogramada» no sabría responder si la audiencia ya se celebró.
 
 ---
 
@@ -197,6 +203,88 @@ erDiagram
 
 ---
 
+## Las cinco tablas de apoyo
+
+Aparecen en las relaciones de los diagramas anteriores, pero se detallan aquí para no cargar
+el núcleo. Ninguna es una entidad del negocio por sí sola: **tres resuelven relaciones de muchos
+a muchos o de uno a muchos, y dos guardan historia.**
+
+```mermaid
+erDiagram
+    USUARIO ||--o{ PERMISO_ROL : "posee"
+    PROCESO ||--o{ PROCESO_ABOGADO : "tiene equipo"
+    USUARIO ||--o{ PROCESO_ABOGADO : "participa en"
+    PROCESO ||--o{ PARTE_PROCESAL : "tiene partes"
+    PROCESO ||--o{ HISTORIAL_PROCESO : "registra cambios"
+    DOCUMENTO ||--o{ VERSION_DOCUMENTO : "versiona"
+
+    PERMISO_ROL {
+        uuid id_permiso PK
+        uuid id_usuario FK
+        enum modulo "CLIENTES | PROCESOS | DOCS | ..."
+        boolean puede_leer
+        boolean puede_crear
+        boolean puede_editar
+        boolean puede_eliminar
+    }
+
+    PROCESO_ABOGADO {
+        uuid id PK
+        uuid id_proceso FK
+        uuid id_usuario FK
+        enum rol_en_proceso "ABOGADO | ASISTENTE"
+        timestamp asigned_at
+    }
+
+    PARTE_PROCESAL {
+        uuid id_procesal PK
+        uuid tenant_id FK
+        uuid id_proceso FK
+        varchar nombre
+        enum tipo "DEMANDANTE | DEMANDADO | ..."
+        varchar id_documento "opcional"
+        timestamp created_at
+    }
+
+    HISTORIAL_PROCESO {
+        uuid id_historial PK
+        uuid tenant_id FK
+        uuid id_proceso FK
+        varchar campo_modificado
+        text valor_anterior
+        text valor_nuevo
+        varchar accion
+        uuid realizado_por FK
+        timestamp created_at
+    }
+
+    VERSION_DOCUMENTO {
+        uuid id_version PK
+        uuid id_documento FK
+        int numero_version
+        text url_archivo
+        varchar nombre_archivo
+        int tamano_bytes
+        varchar formato
+        uuid subido_por FK
+        timestamp created_at
+    }
+```
+
+**Tres detalles que se preguntan:**
+
+`PERMISO_ROL` **cuelga del usuario, no del rol.** El rol da el punto de partida; el Administrador
+puede afinar los permisos de una persona concreta sin tocar a los demás de su mismo rol (RF03).
+
+`PROCESO_ABOGADO` es la razón de que un expediente pueda tener **varios abogados**.
+`PROCESO.id_abogado_resp` señala al responsable —el que responde ante el cliente—, y esta tabla
+recoge al resto del equipo. Sin ella, `RN04` no tendría dónde apoyarse.
+
+`VERSION_DOCUMENTO` guarda la URL de **cada versión**, no solo de la última. Es lo que permite
+recuperar una redacción anterior de una demanda, que es justamente cuando importa.
+
+---
+
 ## La asimetría de las claves únicas
 
 | Campo | Alcance | Por qué |
@@ -213,17 +301,39 @@ llevaba ese caso.
 
 ## Integridad referencial
 
-**Ninguna clave foránea borra en cascada.** Todas son `ON DELETE RESTRICT`.
+**Ninguna clave foránea borra en cascada.** El esquema no declara ningún `onDelete`, así que
+rige el comportamiento por defecto, que depende de si la relación es obligatoria:
 
-Es deliberado: en un sistema jurídico, un borrado que arrastra registros en silencio es
-peligroso. Eliminar un expediente se hace explícitamente, dentro de una transacción y en orden,
-de las hojas hacia la raíz:
+| Relación | Acción al borrar el padre | Cuántas |
+|---|---|---:|
+| Obligatoria | `RESTRICT` — el borrado falla si hay hijos | 17 |
+| Opcional | `SET NULL` — el hijo sobrevive con el campo vacío | 2 |
+
+Las dos opcionales son `DOCUMENTO.id_proceso` y `TERMINO_JUDICIAL.id_actuacion`, y no es
+casualidad que sean justo las dos que el negocio permite dejar sueltas: un documento general del
+despacho (RF21) y un plazo registrado a mano (RF32). En ambas, `SET NULL` deja exactamente el
+estado que el requisito ya contempla.
+
+Que nada se borre en cascada es deliberado: en un sistema jurídico, un borrado que arrastra
+registros en silencio es peligroso. Eliminar un expediente se hace explícitamente, dentro de una
+transacción y en orden, de las hojas hacia la raíz:
 
 ```
-recordatorios → versiones → notificaciones → historial → bitácora
-   → partes → términos → actuaciones → audiencias → documentos
-      → proceso
+equipo → partes
+  → recordatorios de audiencia → audiencias
+  → recordatorios de término   → términos
+  → versiones                  → documentos
+  → historial → actuaciones
+    → proceso
 ```
+
+**La bitácora y las notificaciones no aparecen en esa lista, y es lo importante.** No se borran:
+la bitácora es inmutable por RN01 —si desapareciera con el expediente, la auditoría no serviría
+para nada— y las notificaciones no cuelgan del proceso.
+
+**Las actuaciones van después de los términos.** Un término apunta a la actuación de la que
+nace; aunque esa clave sea `SET NULL`, borrar primero los términos evita dejar filas a medias.
+Y la clave de actuación hacia proceso sí es `RESTRICT`, así que sin esa línea el borrado falla.
 
 > Esa decisión tuvo un coste real: al añadir `ACTUACION` se olvidó incluirla en la transacción, y
 > eliminar un expediente con actuaciones empezó a fallar con un error opaco. Hoy hay una prueba

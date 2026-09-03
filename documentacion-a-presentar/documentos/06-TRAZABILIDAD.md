@@ -186,7 +186,20 @@ respondiera correctamente pero sin contenido seguiría marcando fallo.
 | `npm --prefix backend run verificar` | 34 comprobaciones sobre la plataforma en ejecución | 34/34 |
 | `npm --prefix backend run verificar:plataforma` | 16 comprobaciones de la administración de plataforma | 16/16 |
 | `npm --prefix backend run arreglos` | 12 comprobaciones sobre defectos corregidos | 12/12 |
+| `npm --prefix backend run verificar:docs` | Que los RF, RNF y HU coincidan entre las dos carpetas | 9/9 |
+| `npm --prefix backend run verificar:referencias` | Que cada ruta, archivo y enumerado que la documentación cita exista en el código | ✅ |
 | `npm --prefix backend run lint` | Análisis estático del backend | 0 errores |
+
+> **Los dos últimos verificadores miran en direcciones distintas.** `verificar:docs` compara las
+> dos carpetas de documentación entre sí; `verificar:referencias` compara la documentación contra
+> el **código**: revisa las 67 rutas de la API, los 19 modelos, los 56 valores de enumerado y
+> cada archivo citado entre comillas invertidas.
+>
+> El segundo se escribió después de una revisión manual que encontró cuatro desajustes que nadie
+> habría visto leyendo: un estado de audiencia que no existe (`REPROGRAMADA`), un valor de
+> enumerado cambiado (`COLABORADORES` por `VISIBLE_COLAB`), una prueba citada con un nombre
+> equivocado y una afirmación sobre la bitácora que su propio comando de comprobación desmentía.
+> Ahora esos cuatro fallos harían fallar el guion.
 
 ### Pruebas que respaldan las reglas de negocio
 
@@ -194,7 +207,7 @@ respondiera correctamente pero sin contenido seguiría marcando fallo.
 |---|---|
 | RN01 · Bitácora inmutable | `auditoria.test.js` |
 | RN03, RN05 · Estados del proceso | `eliminacion_expediente.test.js` · verificación e2e |
-| RN06 · Documentos | `documentos.test.js` |
+| RN06 · Documentos | `eliminacion_documentos.test.js` |
 | RN07 · Término tardío | `terminos_audiencias.test.js` · verificación e2e |
 | RN08 · Alertas críticas | `notificaciones.test.js` |
 | RF52, RNF11 · Aislamiento | `aislamiento_consultorio.test.js` · 4 comprobaciones e2e |

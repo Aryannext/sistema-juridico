@@ -53,7 +53,7 @@ argumento a favor de verificar ejecutando, no solo revisando.
 ### H-02 🟦 El diagrama de arquitectura referencia un archivo que no existe
 
 - **Dice el diagrama:** `docs/fuentes/Diagramas_v2.xml`, página *"arquitectura general"*, celda 202: *"`tenant.middleware.js` → entre auth y roles"*.
-- **Dice el código:** `backend/src/middlewares/` contiene exactamente tres archivos: `audit.middleware.js`, `auth.middleware.js`, `roles.middleware.js`. **No hay `tenant.middleware.js`.**
+- **Dice el código:** en el momento de la auditoría, `backend/src/middlewares/` contenía tres archivos: `audit.middleware.js`, `auth.middleware.js` y `roles.middleware.js`. Hoy son cinco —se añadieron `plataforma.middleware.js` y `subida.middleware.js`—, pero **sigue sin haber `tenant.middleware.js`**, que es lo que el hallazgo señalaba.
 - **Dónde está realmente la lógica de tenant:** en `auth.middleware.js:29`, la línea `req.tenant_id = user.tenant_id;` — el tenant se resuelve dentro del middleware de autenticación, no en uno propio.
 - **Acción:** el diagrama Mermaid del doc 01 ya refleja la realidad. Regenerar el `.xml` o marcarlo como histórico.
 

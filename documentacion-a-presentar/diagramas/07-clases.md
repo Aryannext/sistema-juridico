@@ -201,10 +201,12 @@ classDiagram
         +String detalle
         +String ip_adress
         +DateTime create_at
-        +registrar(accion, detalle) ~único método~
+        +registrar(accion, detalle)
+        +consultar(filtros) Registro[]
+        +exportar(filtros) CSV
     }
 
-    note for BitacoraAuditoria "NO tiene actualizar() ni eliminar().<br/>Su ausencia es la implementación de RN01."
+    note for BitacoraAuditoria "NO tiene actualizar().<br/>Escribe y lee; nunca modifica.<br/>Esa ausencia es RN01."
 
     class BitacoraPlataforma {
         +String accion
@@ -215,9 +217,16 @@ classDiagram
 ```
 
 > **La ausencia de métodos es aquí tan significativa como su presencia.** `BitacoraAuditoria`
-> solo sabe registrar. No existe `actualizar()` ni `eliminar()` en ninguna parte del código, y
-> esa ausencia **es** la implementación de RN01: una bitácora que su administrador puede alterar
-> no sirve como prueba de nada.
+> registra, se consulta y se exporta, pero **no se modifica**: no existe ningún `update` sobre
+> ella en todo el backend. Esa ausencia **es** la implementación de RN01, porque una bitácora que
+> su administrador puede alterar no sirve como prueba de nada.
+
+> **Un borrado sí existe, y conviene saberlo antes de que lo pregunten.** Cuando el
+> administrador de la plataforma da de baja un consultorio entero, la bitácora de ese
+> consultorio desaparece con él —las claves foráneas son `RESTRICT`, así que no podría ser de
+> otra forma—. No permite quitar una línea suelta, y el acto queda anotado en
+> `BitacoraPlataforma`. Por eso esa clase guarda `tenant_nombre` como **texto y no como
+> relación**: tiene que seguir teniendo sentido cuando el consultorio ya no exista.
 
 ---
 

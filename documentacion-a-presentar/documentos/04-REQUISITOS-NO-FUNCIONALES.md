@@ -68,11 +68,17 @@ JWT de 8 horas y código 2FA con vigencia de 5 minutos.
 
 | | Criterio | |
 |---|---|:--:|
-| RNF03.1 | La bitácora es inmutable: no se puede editar ni borrar | ✅ |
+| RNF03.1 | La bitácora es inmutable: ningún usuario del consultorio la edita ni la borra | ✅ |
 | RNF03.2 | Cada registro incluye usuario, fecha, IP, módulo y detalle legible | ✅ |
 | RNF03.3 | La bitácora se puede consultar con filtros | ✅ |
 | RNF03.4 | La bitácora se puede **exportar** | ✅ |
 | RNF03.5 | Los registros se conservan 5 años | 🔵 |
+
+**Sobre RNF03.1.** No existe ni un `update` sobre la bitácora en todo el backend. El único
+borrado ocurre cuando el administrador *de la plataforma* da de baja un consultorio entero, y ese
+acto queda anotado en `BitacoraPlataforma`, que guarda el nombre como texto para sobrevivir a la
+baja. Es una excepción que no permite quitar una línea suelta ni ocultar quién la quitó. Ver
+[RN01](02-REGLAS-DE-NEGOCIO.md).
 
 **Estado 🟡.** RNF03.4 se cerró el 3 de septiembre de 2026: `GET /api/admin/auditoria/export`
 entrega la bitácora en CSV con los mismos filtros de la pantalla —módulo, acción y rango de

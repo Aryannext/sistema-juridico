@@ -18,12 +18,31 @@ borrarse. Nadie, ni el titular del consultorio.
 de nada. Su valor entero depende de ser inmutable: si el registro puede modificarse, deja de
 responder «quién hizo qué» y pasa a responder «qué quiso alguien que constara».
 
-**Cómo se cumple.** No existe ninguna operación de escritura sobre la bitácora fuera de la
-creación. `GET /api/admin/auditoria` es el único acceso; no hay `update` ni `delete` en ningún
-punto del backend.
+**Cómo se cumple.** Dentro de un consultorio no existe ninguna operación de escritura sobre la
+bitácora fuera de la creación. `GET /api/admin/auditoria` y su exportación en CSV son los únicos
+accesos, ambos de lectura. **No hay ni un solo `update`** en todo el backend, y ningún rol del
+consultorio —Administrador incluido— puede borrar una línea.
 
-**Cómo comprobarlo.** Buscar `bitacoraAuditoria.update` o `bitacoraAuditoria.delete` en
-`backend/src`: no aparecen.
+**La única excepción, y por qué no rompe la regla.** Cuando el administrador *de la plataforma*
+elimina un consultorio entero, su bitácora se borra con él
+(`plataforma.controller.js`, dentro de la transacción de baja). No es una vía para maquillar el
+registro: no permite quitar una línea concreta, exige eliminar toda la organización, y **ese
+acto queda registrado en `BitacoraPlataforma`**, que guarda el nombre del consultorio como texto
+precisamente para sobrevivir a su desaparición. Quien borra no puede borrar la constancia de que
+borró.
+
+Técnicamente tampoco podría ser de otro modo: las claves foráneas son `ON DELETE RESTRICT`, así
+que dar de baja un consultorio con su bitácora intacta simplemente fallaría.
+
+**Cómo comprobarlo.**
+
+```bash
+grep -rn "bitacoraAuditoria.update" backend/src   # sin resultados: nunca se edita
+grep -rn "bitacoraAuditoria.delete" backend/src   # un resultado: la baja del consultorio
+```
+
+El segundo comando devuelve **exactamente una línea**, y está dentro de la eliminación completa
+de un consultorio. Si algún día devolviera dos, la regla estaría rota.
 
 **Requisitos que la implementan:** RF05, RNF03 · **Historia:** HU-03
 
