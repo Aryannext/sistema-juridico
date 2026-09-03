@@ -24,7 +24,8 @@
     "verificar": "node scripts/verificar-plataforma.js",
     "verificar:limpiar": "node scripts/limpiar-datos-verificacion.js",
     "respaldo": "node scripts/respaldo.js",
-    "medir:concurrencia": "node scripts/medir-concurrencia.js"
+    "medir:concurrencia": "node scripts/medir-concurrencia.js",
+    "verificar:todo": "node scripts/verificar-todo.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1092.0",

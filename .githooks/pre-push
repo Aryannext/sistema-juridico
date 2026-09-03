@@ -1,0 +1,38 @@
+#!/bin/sh
+#
+# Verificación antes de subir — el sustituto de la integración continua.
+#
+# El proyecto tiene un flujo en GitHub Actions que no ejecuta nada: la cuenta
+# está bloqueada por facturación, así que los trabajos ni arrancan. Los checks
+# salen en rojo, y ese rojo significa «no se sabe», no «falla» — que es peor,
+# porque se parece a lo primero y se acaba ignorando.
+#
+# Sin presupuesto para minutos de servidor, la verificación se mueve al único
+# sitio donde ya es gratis: esta máquina. Y se pone donde no se puede olvidar.
+#
+# Se instala una sola vez con:
+#     git config core.hooksPath .githooks
+#
+# Va versionado a propósito, para que sea el mismo para todo el que trabaje en
+# el proyecto en vez de una costumbre personal de cada uno.
+#
+# Si hace falta subir algo sin esperar —una rama de trabajo a medias, un
+# respaldo del día—:
+#     git push --no-verify
+# Saltárselo para `main` es otra cosa, y es la que este archivo desaconseja.
+
+echo ""
+echo "  Verificando antes de subir. Con --no-verify se omite."
+echo ""
+
+cd "$(dirname "$0")/../backend" || exit 1
+npm run verificar:todo
+resultado=$?
+
+if [ $resultado -ne 0 ]; then
+  echo "  No se sube: hay comprobaciones en rojo."
+  echo "  Arréglalas, o usa 'git push --no-verify' si sabes lo que haces."
+  echo ""
+fi
+
+exit $resultado
