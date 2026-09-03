@@ -2307,7 +2307,7 @@ export default function ProcesoDetalle() {
               Eliminar Documento Definitivamente
             </h2>
             <p className="text-sm text-neutral-400 mb-6">
-              Esta es una acción irreversible y crítica. Eliminará físicamente todas las versiones de <strong className="text-white">{selectedDoc?.nombre}</strong> de Supabase Storage y de la base de datos.
+              Esta es una acción irreversible y crítica. Eliminará físicamente todas las versiones de <strong className="text-white">{selectedDoc?.nombre}</strong>, tanto el archivo almacenado como su registro en el expediente.
             </p>
 
             <form onSubmit={handleDeleteDefinitivoSubmit} className="space-y-4 md:space-y-6">
