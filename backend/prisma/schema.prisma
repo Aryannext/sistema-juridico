@@ -69,6 +69,17 @@ model Usuario {
   codigo_2fa         String?    @db.VarChar(10)
   expira_2fa         DateTime?
   token_verificacion String?    @db.VarChar(100)
+  /// Vigencia del enlace de verificación (RF54: 24 horas).
+  /// Nulo significa "sin caducidad": es el caso de las cuentas creadas antes de
+  /// existir este campo, y se respeta para no dejarlas fuera.
+  token_verificacion_expira DateTime?
+
+  /// Recuperación de contraseña. Va en campos APARTE de los de verificación:
+  /// son dos flujos distintos y mezclarlos permitiría usar un enlace de
+  /// recuperación para activar una cuenta sin verificar el correo.
+  token_recuperacion        String?   @db.VarChar(100)
+  token_recuperacion_expira DateTime?
+
   create_at          DateTime   @default(now())
 
   preferencia_canal        CanalNotificacion     @default(AMBOS)

@@ -3,6 +3,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import VerificacionPage from './pages/auth/VerificacionPage';
+import RecuperarPage from './pages/auth/RecuperarPage';
+import RestablecerPage from './pages/auth/RestablecerPage';
 import TwoFactorPage from './pages/auth/TwoFactorPage';
 import DashboardLayout from './components/layout/DashboardLayout';
 import DashboardIndex from './pages/dashboard/DashboardIndex';
@@ -66,6 +68,8 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/registro" element={<RegisterPage />} />
           <Route path="/verificacion" element={<VerificacionPage />} />
+          <Route path="/recuperar" element={<RecuperarPage />} />
+          <Route path="/restablecer" element={<RestablecerPage />} />
           <Route path="/2fa" element={<TwoFactorPage />} />
 
           {/* Plataforma. Fuera de ProtectedRoute a propósito: no usa el

@@ -22,7 +22,10 @@ Extraído directamente de los archivos `*.routes.js` del commit `7ebf5c4`.
 | Método | Ruta | Auth | Permiso | Audit | Qué hace | HU |
 |---|---|:--:|---|:--:|---|---|
 | POST | `/registro` | — | — | — | Crea tenant + usuario administrador en una transacción; envía correo de verificación | HU-35 |
-| GET | `/verificar/:token` | — | — | — | Activa la cuenta y anula el token | HU-35 |
+| GET | `/verificar/:token` | — | — | — | Activa la cuenta y anula el token. El enlace caduca a las 24 h (RF54) | HU-35 |
+| POST | `/reenviar-verificacion` | — | — | — | Reenvía el correo de activación con un token nuevo. Máx. 5 cada 15 min. Responde igual exista o no la cuenta | RF54 |
+| POST | `/recuperar` | — | — | — | Envía el enlace para restablecer la contraseña. Máx. 5 cada 15 min. Responde igual exista o no la cuenta | HU-01 |
+| POST | `/restablecer` | — | — | — | Fija la contraseña nueva. Enlace de un solo uso y 1 h de vigencia; desbloquea al usuario y queda en la bitácora | HU-01 |
 | POST | `/login` | — | — | — | Valida credenciales; aplica bloqueo progresivo; devuelve JWT o `require2FA` | HU-01 |
 | POST | `/2fa/verificar` | preAuth | — | — | Canjea el código OTP por el JWT definitivo | HU-32 |
 | GET | `/perfil` | ✔ | — | — | Datos del usuario en sesión + preferencias | HU-01 |

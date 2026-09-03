@@ -169,7 +169,11 @@ const loginLimiter = rateLimit({ windowMs: 15*60*1000, max: 10 });
 router.post('/login', loginLimiter, authController.login);
 ```
 
-### 2.3 Validar la política de contraseñas en el backend — **RNF02** · 30 min
+### 2.3 ~~Validar la política de contraseñas en el backend~~ — ✅ HECHO (2-09-2026)
+
+> Aplicada en `src/utils/password.js`, usada por registro y restablecimiento.
+> Ver [17-RECUPERACION-DE-ACCESO.md § 5](17-RECUPERACION-DE-ACCESO.md).
+> El análisis original se conserva:
 
 Hoy solo valida el frontend (`RegisterPage.jsx` con `react-hook-form`). Una petición directa a
 `POST /api/auth/registro` acepta la contraseña `"1"`. La validación de cliente es usabilidad;
@@ -311,13 +315,19 @@ Hoy nada impide dos filas para el mismo usuario y módulo, y `roles.middleware.j
 
 Ordenada por valor para el usuario.
 
-### 4.1 Recuperación de contraseña — RNF02, HU-01 · 1 día
+### 4.1 ~~Recuperación de contraseña~~ — ✅ HECHO (2-09-2026)
+
+> `POST /api/auth/recuperar` y `/restablecer`, con el enlace del login restaurado.
+> Ver [17-RECUPERACION-DE-ACCESO.md](17-RECUPERACION-DE-ACCESO.md).
 
 Endpoints `POST /api/auth/recuperar` y `POST /api/auth/restablecer`, token con vigencia,
 correo, y una pantalla nueva. Es la brecha que un usuario real encuentra primero: hoy, quien
 olvida su contraseña **no tiene forma de entrar**.
 
-### 4.2 Reenvío del correo de verificación — RF54 · 3 h
+### 4.2 ~~Reenvío del correo de verificación~~ — ✅ HECHO (2-09-2026)
+
+> `POST /api/auth/reenviar-verificacion`, ofrecido en la pantalla del enlace caducado.
+> Ver [17-RECUPERACION-DE-ACCESO.md](17-RECUPERACION-DE-ACCESO.md).
 
 `POST /api/auth/reenviar-verificacion`. El nuevo enlace invalida el anterior. Junto con 3.4
 cierra RF54 por completo.

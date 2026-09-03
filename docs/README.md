@@ -24,6 +24,7 @@ Lo que se consulta a diario, con enlace directo:
 | **Defectos encontrados y corregidos** | [14 — Auditoría de defectos](14-AUDITORIA-DE-DEFECTOS.md) |
 | **Suspender o dar de baja un consultorio** | [15 — Administración de la plataforma](15-ADMINISTRACION-DE-PLATAFORMA.md) |
 | **Que los correos no vayan a spam** | [16 — Correo y entregabilidad](16-CORREO-Y-ENTREGABILIDAD.md) |
+| **Recuperar contraseña o reenviar la verificación** | [17 — Recuperación de acceso](17-RECUPERACION-DE-ACCESO.md) |
 
 ---
 
@@ -77,6 +78,7 @@ docs/
 | 14 | [Auditoría de defectos](14-AUDITORIA-DE-DEFECTOS.md) | 16 defectos reproducidos contra la base de datos y corregidos; reparto de `ProcesoDetalle.jsx` |
 | 15 | [Administración de la plataforma](15-ADMINISTRACION-DE-PLATAFORMA.md) | Alta, suspensión y baja de consultorios sin entrar al servidor |
 | 16 | [Correo y entregabilidad](16-CORREO-Y-ENTREGABILIDAD.md) | Por qué los correos van a spam y cómo enviarlos desde el propio dominio |
+| 17 | [Recuperación de acceso](17-RECUPERACION-DE-ACCESO.md) | Reenvío de verificación, recuperación de contraseña y política de contraseñas |
 | — | [Manual de usuario](MANUAL_USUARIO.md) | Guía para el usuario final, sin lenguaje técnico |
 
 ---

@@ -1,14 +1,42 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const authController = require('./auth.controller');
+const recuperacion = require('./recuperacion.controller');
 
 const { authMiddleware } = require('../../middlewares/auth.middleware');
+
+/**
+ * Limitador para las rutas que ENVÍAN CORREO a una dirección indicada por quien
+ * llama. Sin él, cualquiera podría usar la plataforma para inundar el buzón de
+ * otra persona: escribe su correo, repite mil veces, y los mensajes salen
+ * firmados por nosotros. Además de la molestia, quema la reputación del
+ * remitente y acabaría mandando a spam el correo legítimo.
+ *
+ * El limitador general de la API (1000 cada 15 minutos) es inútil para esto.
+ */
+const limitadorCorreo = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Has solicitado demasiados correos. Espera unos minutos antes de volver a intentarlo.'
+  },
+});
 
 // Registro de Tenant y Admin
 router.post('/registro', authController.registro);
 
 // Verificación de Email
 router.get('/verificar/:token', authController.verificarEmail);
+
+// Reenvío del correo de verificación (RF54)
+router.post('/reenviar-verificacion', limitadorCorreo, recuperacion.reenviarVerificacion);
+
+// Recuperación de contraseña (HU-01)
+router.post('/recuperar', limitadorCorreo, recuperacion.solicitarRecuperacion);
+router.post('/restablecer', recuperacion.restablecerPassword);
 
 // Login
 router.post('/login', authController.login);

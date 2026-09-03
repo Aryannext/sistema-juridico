@@ -214,16 +214,20 @@ remitente no pertenece al dominio del sistema. …
 
 ---
 
-## 4. Un riesgo que sigue abierto
+## 4. El riesgo que esto destapó — ya cerrado
 
-**No existe forma de reenviar el correo de verificación.** Si el mensaje se pierde o va a spam y
-el usuario lo borra, su cuenta queda creada pero inactiva y **no puede hacer nada por su cuenta**.
-Hoy solo se resuelve activándola a mano:
+Mientras se resolvía todo lo anterior quedó a la vista un problema mayor: **no existía forma de
+reenviar el correo de verificación ni de recuperar la contraseña**. Un mensaje perdido en spam
+dejaba a esa persona con la cuenta creada e inactiva y **sin ninguna salida**: no podía activarla,
+no podía pedir otro correo y no podía recuperar su acceso. Solo se resolvía entrando al servidor
+a ejecutar un `UPDATE` a mano por cada usuario afectado.
 
-```bash
-docker compose exec postgres psql -U sgpa -d sgpa \
-  -c "UPDATE usuario SET activo = true, token_verificacion = NULL WHERE email = 'CORREO';"
-```
+**Resuelto el 2 de septiembre de 2026.** Ver
+[17-RECUPERACION-DE-ACCESO.md](17-RECUPERACION-DE-ACCESO.md):
 
-Es el punto 4.2 del [plan de remediación](10-PLAN-DE-REMEDIACION.md) y gana importancia mientras
-los correos sigan yendo a spam: cada mensaje perdido es un usuario bloqueado.
+- Desde la pantalla del enlace caducado se puede **pedir otro correo** (RF54).
+- El login tiene **«¿Olvidaste tu contraseña?»** operativo (HU-01).
+- Los enlaces caducan: 24 horas el de activación, una hora el de recuperación.
+
+Sigue siendo cierto que un correo en spam es una molestia. La diferencia es que ahora el usuario
+puede desatascarse solo.

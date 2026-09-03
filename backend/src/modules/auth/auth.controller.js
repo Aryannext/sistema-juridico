@@ -2,10 +2,19 @@ const prisma = require('../../config/prisma');
 const { hashPassword, comparePassword } = require('../../utils/bcrypt');
 const { signToken, generateOTP, generateVerificationToken } = require('../../utils/jwt');
 const { sendEmail } = require('../../config/mailer');
+const { validarPassword } = require('../../utils/password');
 
 exports.registro = async (req, res) => {
   try {
     const { tipo, nombre_tenant, razon_social, nit, telefono, ciudad, email, password, nombre_admin } = req.body;
+
+    // RNF02: la política de contraseñas se comprueba EN EL SERVIDOR. Hasta
+    // ahora solo la validaba el formulario del navegador, de modo que una
+    // petición directa a este endpoint aceptaba la contraseña "1".
+    const politica = validarPassword(password);
+    if (!politica.valida) {
+      return res.status(400).json({ error: politica.error });
+    }
 
     // Validate if email already exists
     const existingUser = await prisma.usuario.findUnique({ where: { email } });
@@ -45,7 +54,12 @@ exports.registro = async (req, res) => {
           password_hash: hashedPassword,
           rol: 'ADMINISTRADOR',
           activo: isAutoVerify, // Active if auto-verify is enabled, else inactive until verified
-          token_verificacion: isAutoVerify ? null : tokenVerificacion
+          token_verificacion: isAutoVerify ? null : tokenVerificacion,
+          // RF54: el enlace de activación vive 24 horas. Antes no caducaba
+          // nunca, así que un correo antiguo seguía sirviendo indefinidamente.
+          token_verificacion_expira: isAutoVerify
+            ? null
+            : new Date(Date.now() + 24 * 3600 * 1000)
         }
       });
 
@@ -127,15 +141,29 @@ exports.verificarEmail = async (req, res) => {
       where: { token_verificacion: token }
     });
 
-    if (!user) {
-      return res.status(400).json({ error: 'Token inválido o expirado' });
+    // Mismo mensaje para un token inexistente y para uno caducado, y con la
+    // marca `puedeReenviar` para que la interfaz ofrezca pedir otro correo en
+    // lugar de dejar al usuario en un callejón sin salida.
+    const invalido = () =>
+      res.status(400).json({
+        error: 'El enlace no es válido o ya caducó. Solicita uno nuevo.',
+        puedeReenviar: true
+      });
+
+    if (!user) return invalido();
+
+    // RF54: 24 horas de vigencia. Un token sin fecha es de una cuenta anterior
+    // a que existiera este campo; se acepta para no dejarlas bloqueadas.
+    if (user.token_verificacion_expira && user.token_verificacion_expira < new Date()) {
+      return invalido();
     }
 
     await prisma.usuario.update({
       where: { id_usuario: user.id_usuario },
       data: {
         activo: true,
-        token_verificacion: null
+        token_verificacion: null,
+        token_verificacion_expira: null
       }
     });
 

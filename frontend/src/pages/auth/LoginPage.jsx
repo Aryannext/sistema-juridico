@@ -203,19 +203,14 @@ export default function LoginPage() {
               {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password.message}</p>}
             </div>
 
-            {/*
-              Enlace de recuperación de contraseña oculto a propósito.
-              Apuntaba a "#" y no hacía nada: mostrarlo traducido solo hace más
-              evidente que no funciona. Se restablece cuando existan los endpoints
-              POST /api/auth/recuperar y POST /api/auth/restablecer.
-              Ver docs/10-PLAN-DE-REMEDIACION.md (Ola 4.1) y RNF02.
-
-              <div className="flex items-center justify-end">
-                <Link to="/recuperar" className="text-xs font-medium text-neutral-400 hover:text-[#DFB971] transition-colors">
-                  ¿Olvidaste tu contraseña?
-                </Link>
-              </div>
-            */}
+            {/* Restablecido: los endpoints POST /api/auth/recuperar y
+                /restablecer ya existen. Estaba oculto porque apuntaba a "#" y
+                no hacía nada. */}
+            <div className="flex items-center justify-end">
+              <Link to="/recuperar" className="text-xs font-medium text-neutral-400 hover:text-[#DFB971] transition-colors">
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
 
             <button 
               type="submit" 
