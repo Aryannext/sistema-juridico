@@ -39,8 +39,10 @@ export default function DashboardLayout() {
     }
   }, [location.pathname, user]);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    // Se espera a logout() porque avisa al servidor para dejar el cierre en la
+    // bitacora; navegar antes borraria el token y la peticion saldria sin el.
+    await logout();
     navigate('/login');
   };
 

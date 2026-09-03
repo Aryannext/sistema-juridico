@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/axios';
-import { Shield, Search, Filter, Calendar, Activity, Info } from 'lucide-react';
+import { Shield, Search, Filter, Calendar, Activity, Info, Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AuditoriaList() {
@@ -8,6 +8,7 @@ export default function AuditoriaList() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [moduleFilter, setModuleFilter] = useState('ALL');
+  const [exporting, setExporting] = useState(false);
 
   const fetchLogs = async () => {
     try {
@@ -39,6 +40,40 @@ export default function AuditoriaList() {
 
     return (matchAccion || matchDetalle || matchUser || matchIp) && matchModule;
   });
+
+  const exportarCSV = async () => {
+    try {
+      setExporting(true);
+
+      // El filtro de módulo sí viaja al servidor. La búsqueda por texto es de
+      // pantalla y no tiene equivalente en la API, así que se avisa en vez de
+      // entregar en silencio un archivo distinto de lo que se está viendo.
+      const params = {};
+      if (moduleFilter !== 'ALL') params.modulo = moduleFilter;
+
+      const res = await api.get('/admin/auditoria/export', { params, responseType: 'blob' });
+
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `bitacora-auditoria-${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      if (search.trim()) {
+        toast.info('El archivo incluye el filtro de módulo, pero no la búsqueda por texto.');
+      } else {
+        toast.success('Bitácora exportada correctamente.');
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('No se pudo exportar la bitácora.');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div className="space-y-8 animate-fade-in pb-16">
@@ -85,6 +120,17 @@ export default function AuditoriaList() {
             ))}
           </select>
         </div>
+
+        {/* Export */}
+        <button
+          onClick={exportarCSV}
+          disabled={exporting || loading}
+          title="Descarga la bitácora en CSV, aplicando el filtro de módulo"
+          className="flex items-center gap-2 shrink-0 bg-white/5 border border-white/10 hover:bg-white/10 text-neutral-300 hover:text-[#DFB971] hover:border-[#DFB971]/30 font-semibold px-4 py-3 rounded-xl text-xs transition-all cursor-pointer shadow-[0_4px_16px_rgba(0,0,0,0.2)] disabled:opacity-50"
+        >
+          {exporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+          <span>Exportar CSV</span>
+        </button>
 
       </div>
 

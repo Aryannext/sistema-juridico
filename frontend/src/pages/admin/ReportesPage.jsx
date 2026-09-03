@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import { 
-  BarChart3, Download, Printer, Calendar, ShieldAlert, Users, 
-  Briefcase, AlertCircle, FileText, CheckCircle2, Clock, Loader2 
+  BarChart3, Download, FileDown, Printer, Calendar, ShieldAlert, Users,
+  Briefcase, AlertCircle, FileText, CheckCircle2, Clock, Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -42,16 +42,19 @@ export default function ReportesPage() {
     fetchStats();
   }, [filter, startDate, endDate]);
 
-  const handleExportCSV = async () => {
+  // Los dos formatos comparten filtro y descarga; solo cambia la ruta y la
+  // extensión. Separarlos en dos funciones haría que un cambio en el filtro
+  // hubiera que recordarlo en dos sitios.
+  const exportar = async (formato) => {
     try {
-      setExporting(true);
+      setExporting(formato);
       const params = { filter };
       if (filter === 'custom') {
         params.start_date = startDate;
         params.end_date = endDate;
       }
 
-      const res = await api.get('/reportes/export/csv', {
+      const res = await api.get(`/reportes/export/${formato}`, {
         params,
         responseType: 'blob'
       });
@@ -59,14 +62,15 @@ export default function ReportesPage() {
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `reporte-general-${filter}-${Date.now()}.csv`);
+      link.setAttribute('download', `reporte-general-${filter}-${Date.now()}.${formato}`);
       document.body.appendChild(link);
       link.click();
       link.remove();
-      toast.success('Reporte CSV exportado y descargado exitosamente.');
+      window.URL.revokeObjectURL(url);
+      toast.success(`Reporte ${formato.toUpperCase()} descargado correctamente.`);
     } catch (error) {
       console.error(error);
-      toast.error('Error al exportar datos a CSV.');
+      toast.error(`No se pudo exportar el reporte en ${formato.toUpperCase()}.`);
     } finally {
       setExporting(false);
     }
@@ -113,11 +117,21 @@ export default function ReportesPage() {
             <span>Imprimir</span>
           </button>
           <button
-            onClick={handleExportCSV}
-            disabled={exporting}
+            onClick={() => exportar('pdf')}
+            disabled={!!exporting}
+            title="Informe listo para entregar o archivar"
+            className="flex items-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 text-neutral-300 hover:text-[#DFB971] hover:border-[#DFB971]/30 font-semibold px-4 py-2.5 rounded-xl text-xs transition-all cursor-pointer shadow-[0_4px_16px_rgba(0,0,0,0.2)] disabled:opacity-50"
+          >
+            {exporting === 'pdf' ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
+            <span>Exportar PDF</span>
+          </button>
+          <button
+            onClick={() => exportar('csv')}
+            disabled={!!exporting}
+            title="Datos en bruto para analizar en Excel"
             className="flex items-center gap-2 bg-gradient-to-r from-[#C29B4F] to-[#E5C37A] hover:from-[#E5C37A] hover:to-[#C29B4F] text-black font-bold px-4 py-2.5 rounded-xl text-xs transition-all cursor-pointer shadow-[0_4px_15px_rgba(223,185,113,0.3)] disabled:opacity-50 transform hover:scale-[1.02]"
           >
-            {exporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            {exporting === 'csv' ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
             <span>Exportar CSV</span>
           </button>
         </div>

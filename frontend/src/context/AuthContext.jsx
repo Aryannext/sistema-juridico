@@ -23,7 +23,17 @@ export const AuthProvider = ({ children }) => {
     setUser(userData);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // Avisar al servidor para que el cierre quede en la bitácora (RF05). Se
+    // espera la respuesta, pero el fallo no detiene nada: si la API no
+    // responde, la sesión se cierra igual en el navegador. Lo contrario
+    // dejaría al usuario atrapado dentro por un problema de red.
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      /* el cierre local sigue adelante */
+    }
+
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
