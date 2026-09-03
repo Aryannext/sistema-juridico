@@ -8,6 +8,11 @@ Mismo formato que los funcionales: cada uno descompuesto en criterios verificabl
 **Estados:** ✅ cumplido · 🟡 parcial, con el límite declarado · 🔵 depende de un tercero ·
 ❓ nunca medido
 
+> **La numeración salta del RNF08 al RNF10, y no es un error.** `RNF09` no existe: la
+> especificación original lo fusionó con RNF03, que declara ser *«fusión de RNF03 y RNF09
+> originales»*. Se anota aquí porque ya se reportó una vez como requisito faltante
+> (hallazgo H-15), y sin la explicación volvería a parecerlo.
+
 ---
 
 ## RNF01 · Cifrado de la información
