@@ -131,6 +131,17 @@ comentario `// Todo: Record audit login` sin implementar. Se cerraron el 3 de se
 > Antes, además, un cliente sin nombre llegaba hasta Prisma y devolvía un **500 opaco** en lugar
 > de decir qué faltaba. Ahora se enumeran de una vez todos los campos que faltan, para no obligar
 > a reenviar el formulario y descubrirlos de uno en uno.
+>
+> **Ese arreglo se quedó a medias durante un día, y conviene contarlo.** Cerró el hueco para las
+> personas naturales y lo dejó abierto para las jurídicas: `nombre` quedó en la lista de lo que
+> exige el tipo NATURAL, cuando la columna es obligatoria en la base **para los dos**. Una empresa
+> sin nombre pasaba la validación y reproducía exactamente el mismo 500 que esta validación vino a
+> evitar. Se detectó el 4 de septiembre de 2026 revisando el catálogo contra el código, se
+> comprobó contra la API —HTTP 500— y se corrigió moviendo `nombre` a los campos comunes.
+>
+> En una persona jurídica el nombre es el comercial, el que se usa a diario; la razón social es el
+> de los papeles. La plataforma enseña el primero en listados y fichas, así que pedir los dos no
+> es redundante.
 
 **Implementado en** `POST /api/clientes` · `clientes/validacion.js`
 **Historias:** HU-04, HU-05 · **Pruebas:** `validacion_cliente.test.js`
@@ -460,6 +471,17 @@ ver. **HU-13**
 
 **Estado ✅** · `autoArchivePastHearings` · **HU-20**
 
+> **Un estado de audiencia inventado devolvía un `500` opaco.** `updateAudiencia` volcaba en la
+> base el valor recibido sin comprobarlo. Corregido el 4 de septiembre de 2026: ahora responde
+> `400` diciendo cuáles son los tres admitidos.
+>
+> Es la séptima vez que aparece el mismo defecto en este proyecto —un valor de enumerado que llega
+> del cliente y se guarda sin mirar—, después del tamaño de los archivos, la categoría documental,
+> el tipo de actuación, la visibilidad del documento, el tipo de parte procesal y el canal del
+> recordatorio. Se había corregido cuatro veces por separado, reescribiendo la lista en cada
+> controlador, lo cual no arregla el patrón: lo reproduce. Ahora las listas viven en un solo sitio
+> (`utils/enumerados.js`) con una prueba que comprueba que coincidan con el esquema.
+
 ---
 
 ## H. Términos judiciales
@@ -748,7 +770,7 @@ de 2026 al revisar el catálogo contra el código antes de desplegar.
 | 🟡 Parciales, con el límite declarado | 1 |
 | 🟥 No cumplidos | 0 |
 
-Ninguno está sin empezar. Queda **un criterio pendiente sobre un total de 143**, y está aquí, en
+Ninguno está sin empezar. Queda **un criterio pendiente sobre un total de 149**, y está aquí, en
 su tabla, marcado 🟥:
 
 | Criterio | Qué falta | Qué exige resolverlo |
