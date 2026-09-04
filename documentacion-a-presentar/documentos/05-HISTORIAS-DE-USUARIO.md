@@ -346,6 +346,16 @@ Administrador.
 **Dónde está** `PUT /api/auth/preferencias` · `AjustesPage.jsx` (despacho) · `PortalAjustes.jsx` (cliente)
 **Cómo demostrarlo** Ajustes → Notificaciones
 
+
+> **Los tres criterios figuraban como cumplidos y los dos primeros no lo estaban.** Esta pantalla
+> guardaba el canal y las prioridades, y **el sistema los ignoraba**: avisaba siempre por correo y
+> con la prioridad escrita a mano en el código. Elegir «solo plataforma» no cambiaba nada.
+>
+> Se corrigió el 4 de septiembre de 2026, al revisar el catálogo contra el código antes de
+> desplegar. El criterio 3 —«las de prioridad alta no se pueden silenciar»— se cumplía de la peor
+> manera posible: era cierto porque **ninguna** preferencia hacía nada. Ahora se cumple porque la
+> criticidad manda sobre la preferencia de forma explícita.
+
 ---
 
 # Módulo 2 · Clientes

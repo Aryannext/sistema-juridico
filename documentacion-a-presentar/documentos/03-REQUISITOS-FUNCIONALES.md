@@ -435,6 +435,15 @@ ver. **HU-13**
 
 **Estado ✅** · `recordatorios.job.js` · **HU-18**
 
+> **RF29.2 figuraba como cumplido y no lo estaba.** El recordatorio salía para el abogado
+> responsable y para el cliente, y nadie más: **los colaboradores asignados no recibían nada**.
+> Quien trabajaba el expediente sin ser su titular se enteraba de la audiencia por otro lado o no
+> se enteraba. Solo los avisaba la *reprogramación*, no el recordatorio.
+>
+> Corregido el 4 de septiembre de 2026, al revisar el catálogo contra el código antes de
+> desplegar. Se excluye a quien tenga la cuenta inactiva —avisar a quien ya no puede entrar no es
+> avisar a nadie— y no se escribe dos veces a quien sea responsable y colaborador a la vez.
+
 ### RF30 · Reprogramación
 | | Criterio | |
 |---|---|:--:|
@@ -575,6 +584,21 @@ con `GET /api/reportes/export/pdf`.
 | RF47.2 | Más de cinco alertas en diez minutos se agrupan en una sola | ✅ |
 
 **Estado ✅** · **HU-25, HU-29**
+
+> **RF47.1 era una preferencia decorativa, y esto es lo más serio que salió de la revisión.** La
+> pantalla de ajustes guardaba el canal y las prioridades, el perfil los devolvía… y a la hora de
+> avisar **nadie los leía**: el envío era siempre por correo y la prioridad estaba escrita a mano
+> en el código. Quien eligiera «solo plataforma» seguía recibiendo correos.
+>
+> Una preferencia que no se respeta es peor que no ofrecerla: enseña que los ajustes de esta
+> aplicación no sirven, y esa lección se aplica luego a todos los demás.
+>
+> Corregido el 4 de septiembre de 2026 (`utils/preferencias-alerta.js`). El canal decide ahora si
+> se envía correo, si se crea el aviso en la plataforma o las dos cosas —antes el recordatorio
+> **no existía** en la plataforma, solo el de creación—, y la prioridad sale de la preferencia de
+> quien recibe. **La criticidad manda sobre la preferencia**: un término crítico es ALTA aunque su
+> destinatario prefiera baja, porque RF48.2 dice que esas no se silencian y bajarla sería
+> silenciarla.
 
 ### RF48 · Prioridades
 | | Criterio | |
