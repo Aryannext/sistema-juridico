@@ -1,6 +1,54 @@
 const cron = require('node-cron');
 const prisma = require('../config/prisma');
 const { sendEmail } = require('../config/mailer');
+const { prioridadPara, canalesPara } = require('../utils/preferencias-alerta');
+
+/**
+ * Avisa a una persona respetando SU preferencia de canal — RF47.1.
+ *
+ * Antes el aviso salía siempre por correo, sin mirar los ajustes: quien
+ * eligiera «solo plataforma» recibía correos igual. Y no existía aviso en
+ * plataforma para los recordatorios, solo para la creación del término, así
+ * que elegir ese canal equivalía a quedarse sin recordatorio.
+ *
+ * Un fallo al escribir no interrumpe nada: se traza y se sigue con el
+ * siguiente destinatario. Perder un aviso por un correo rebotado sería
+ * exactamente lo que este sistema existe para evitar.
+ */
+async function avisar({ usuario, tenantId, asunto, html, evento, esCritico, referencia }) {
+  if (!usuario) return;
+
+  const canales = canalesPara(usuario);
+  const prioridad = prioridadPara(usuario, evento, esCritico);
+
+  if (canales.correo && usuario.email) {
+    try {
+      await sendEmail({ to: usuario.email, subject: asunto, html });
+      console.log(`[Cron Job] Aviso por correo a ${usuario.email}`);
+    } catch (error) {
+      console.error(`[Cron Job] No se pudo escribir a ${usuario.email}:`, error.message);
+    }
+  }
+
+  if (canales.plataforma) {
+    try {
+      await prisma.notificacion.create({
+        data: {
+          tenant_id: tenantId,
+          id_usuario: usuario.id_usuario,
+          titulo: asunto,
+          // El cuerpo del correo es HTML; en la plataforma se guarda el texto.
+          mensaje: html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 500),
+          prioridad,
+          referencia_tipo: referencia?.tipo || null,
+          id_referencia: referencia?.id || null,
+        },
+      });
+    } catch (error) {
+      console.error(`[Cron Job] No se pudo crear la notificación de ${usuario.id_usuario}:`, error.message);
+    }
+  }
+}
 
 // Function that executes the reminder check
 const runReminderChecks = async () => {
@@ -19,7 +67,28 @@ const runReminderChecks = async () => {
             proceso: {
               include: {
                 abogado_resp: true,
-                cliente: true
+                cliente: true,
+                // RF29.2: el recordatorio llega TAMBIÉN a los colaboradores
+                // asignados. Faltaba: el aviso salía solo para el responsable y
+                // el cliente, de modo que quien trabajaba el expediente sin ser
+                // su titular no se enteraba de la audiencia. Se descubrió
+                // revisando el catálogo contra el código antes de desplegar.
+                // Los campos que necesita `avisar`: sin `preferencia_canal` ni
+                // las prioridades, cada colaborador recibiría el valor por
+                // defecto y la preferencia volvería a no servir de nada.
+                abogados: {
+                  include: {
+                    usuario: {
+                      select: {
+                        id_usuario: true, email: true, activo: true,
+                        preferencia_canal: true,
+                        pref_prioridad_audiencia: true,
+                        pref_prioridad_termino: true,
+                        pref_prioridad_tarea: true,
+                      },
+                    },
+                  },
+                }
               }
             }
           }
@@ -35,7 +104,8 @@ const runReminderChecks = async () => {
       const alertTime = new Date(hearingTime.getTime() - alert.minutos_antes * 60 * 1000);
 
       if (now >= alertTime) {
-        const abogadoEmail = alert.audiencia.proceso.abogado_resp.email;
+        // El correo del responsable ya no se usa suelto: los destinatarios se
+        // recorren abajo respetando la preferencia de canal de cada uno.
         const clienteEmail = alert.audiencia.proceso.cliente.email;
         const radicado = alert.audiencia.proceso.numero_radicado;
         const hearingName = alert.audiencia.nombre;
@@ -76,8 +146,28 @@ const runReminderChecks = async () => {
 
         try {
           // Despachar correo a abogado responsable
-          await sendEmail({ to: abogadoEmail, subject, html });
-          console.log(`[Cron Job] Email recordatorio audiencia enviado con éxito a abogado ${abogadoEmail}`);
+          // RF29.1 y RF29.2 — al responsable y a los colaboradores asignados.
+          // RF47.1 — cada uno por el canal que haya elegido.
+          const destinatarios = [
+            alert.audiencia.proceso.abogado_resp,
+            ...(alert.audiencia.proceso.abogados || []).map((a) => a.usuario),
+          ].filter((u) => u && u.activo !== false);
+
+          // Sin repetir a quien figure como responsable y colaborador a la vez.
+          const vistos = new Set();
+          for (const usuario of destinatarios) {
+            if (vistos.has(usuario.id_usuario)) continue;
+            vistos.add(usuario.id_usuario);
+
+            await avisar({
+              usuario,
+              tenantId: alert.audiencia.tenant_id,
+              asunto: subject,
+              html,
+              evento: 'AUDIENCIA',
+              referencia: { tipo: 'AUDIENCIA', id: alert.audiencia.id_audiencia },
+            });
+          }
 
           // Despachar también a cliente si corresponde
           if (alert.canal === 'AMBOS' || alert.canal === 'EMAIL') {
@@ -133,7 +223,8 @@ const runReminderChecks = async () => {
       const alertTime = new Date(alert.fecha_hora_envio);
 
       if (now >= alertTime) {
-        const abogadoEmail = alert.termino.proceso.abogado_resp.email;
+        // El correo del responsable ya no se usa suelto: los destinatarios se
+        // recorren abajo respetando la preferencia de canal de cada uno.
         const radicado = alert.termino.proceso.numero_radicado;
         const termName = alert.termino.nombre;
         const vDate = new Date(alert.termino.fecha_vencimiento);
@@ -173,8 +264,48 @@ const runReminderChecks = async () => {
         `;
 
         try {
-          await sendEmail({ to: abogadoEmail, subject, html });
-          console.log(`[Cron Job] Email alerta término enviado con éxito a abogado ${abogadoEmail}`);
+          // RF37.2 — un término CRÍTICO alerta también al Administrador.
+          //
+          // Se cumplía solo al crear el término, con una notificación en la
+          // plataforma. Faltaba aquí, que es cuando importa: el aviso de
+          // creación se da semanas antes; el del recordatorio llega con el
+          // plazo encima. Un término crítico es aquel cuyo incumplimiento tiene
+          // consecuencias procesales, y por eso el requisito quiere un segundo
+          // par de ojos justo en ese momento.
+          const receptores = [alert.termino.proceso.abogado_resp];
+
+          if (esCritico) {
+            const administradores = await prisma.usuario.findMany({
+              where: { tenant_id: alert.termino.tenant_id, rol: 'ADMINISTRADOR', activo: true },
+              select: {
+                id_usuario: true, email: true, activo: true,
+                preferencia_canal: true,
+                pref_prioridad_audiencia: true,
+                pref_prioridad_termino: true,
+                pref_prioridad_tarea: true,
+              },
+            });
+            receptores.push(...administradores);
+          }
+
+          // RF47.1 — cada uno por su canal. Y `esCritico` fuerza la prioridad
+          // ALTA por encima de la preferencia: RF48.2 dice que esas no se
+          // silencian, y bajarla sería silenciarla.
+          const avisados = new Set();
+          for (const usuario of receptores) {
+            if (!usuario || avisados.has(usuario.id_usuario)) continue;
+            avisados.add(usuario.id_usuario);
+
+            await avisar({
+              usuario,
+              tenantId: alert.termino.tenant_id,
+              asunto: subject,
+              html,
+              evento: 'TERMINO',
+              esCritico,
+              referencia: { tipo: 'TERMINO', id: alert.termino.id_termino },
+            });
+          }
 
           // Marcar como enviado
           await prisma.recordatorioTermino.update({

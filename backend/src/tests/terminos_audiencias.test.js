@@ -72,3 +72,54 @@ describe('Sprint 3: Términos y Audiencias', () => {
 
   // HU-20 is handled by node-cron in server.js or jobs folder, so we skip the explicit controller test for now.
 });
+
+describe('RF31 · Un estado de audiencia inventado se rechaza con 400', () => {
+  /**
+   * Encontrado revisando el catálogo criterio a criterio antes de desplegar.
+   *
+   * `updateAudiencia` volcaba el `estado` recibido directamente en Prisma. Un
+   * valor fuera del enumerado devolvía un **500 opaco**, exactamente el mismo
+   * defecto ya corregido tres veces en este proyecto: el tamaño de los archivos
+   * (RF18), la categoría documental (RF19) y el tipo de actuación (RF56).
+   *
+   * El patrón se repite siempre igual —un valor de enumerado que llega del
+   * cliente sin filtrar—, así que conviene mirarlo en cada campo nuevo de ese
+   * tipo antes de darlo por bueno.
+   */
+  const audiencias = require('../modules/audiencias/audiencias.controller');
+
+  it('Los estados declarados son los tres del enumerado', () => {
+    expect(audiencias.ESTADOS_AUDIENCIA).toEqual(['PROGRAMADA', 'REALIZADA', 'CANCELADA']);
+  });
+
+  it('La lista coincide con el enumerado del esquema', () => {
+    // Si divergen, el controlador rechazaría un estado válido o dejaría pasar
+    // uno que la base no admite.
+    const fs = require('fs');
+    const path = require('path');
+    const esquema = fs.readFileSync(
+      path.join(__dirname, '..', '..', 'prisma', 'schema.prisma'), 'utf8'
+    );
+    const bloque = esquema.match(/enum EstadoAudiencia \{([\s\S]*?)\}/)[1];
+    const valores = bloque.split('\n').map((l) => l.trim()).filter(Boolean);
+
+    expect(valores.sort()).toEqual([...audiencias.ESTADOS_AUDIENCIA].sort());
+  });
+
+  it('Un estado inventado se rechaza antes de tocar la base', async () => {
+    const req = {
+      params: { id: 'a1' },
+      body: { estado: 'INVENTADO' },
+      tenant_id: 't1',
+      user: { id_usuario: 'u1' },
+    };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+
+    await audiencias.updateAudiencia(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.stringContaining('PROGRAMADA') })
+    );
+  });
+});

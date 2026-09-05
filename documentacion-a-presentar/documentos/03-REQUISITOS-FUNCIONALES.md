@@ -1,6 +1,10 @@
 # 03 — Requisitos funcionales
 
-**59 requisitos**, agrupados por área.
+**60 requisitos**, agrupados por área.
+
+> El sexagésimo, RF60, se añadió el 3 de septiembre de 2026: la administración de la plataforma
+> existía en el sistema y **no tenía requisito que la respaldara**. Se detectó revisando este
+> catálogo contra el código antes de desplegar.
 
 ## Cómo leer este documento
 
@@ -127,6 +131,17 @@ comentario `// Todo: Record audit login` sin implementar. Se cerraron el 3 de se
 > Antes, además, un cliente sin nombre llegaba hasta Prisma y devolvía un **500 opaco** en lugar
 > de decir qué faltaba. Ahora se enumeran de una vez todos los campos que faltan, para no obligar
 > a reenviar el formulario y descubrirlos de uno en uno.
+>
+> **Ese arreglo se quedó a medias durante un día, y conviene contarlo.** Cerró el hueco para las
+> personas naturales y lo dejó abierto para las jurídicas: `nombre` quedó en la lista de lo que
+> exige el tipo NATURAL, cuando la columna es obligatoria en la base **para los dos**. Una empresa
+> sin nombre pasaba la validación y reproducía exactamente el mismo 500 que esta validación vino a
+> evitar. Se detectó el 4 de septiembre de 2026 revisando el catálogo contra el código, se
+> comprobó contra la API —HTTP 500— y se corrigió moviendo `nombre` a los campos comunes.
+>
+> En una persona jurídica el nombre es el comercial, el que se usa a diario; la razón social es el
+> de los papeles. La plataforma enseña el primero en listados y fichas, así que pedir los dos no
+> es redundante.
 
 **Implementado en** `POST /api/clientes` · `clientes/validacion.js`
 **Historias:** HU-04, HU-05 · **Pruebas:** `validacion_cliente.test.js`
@@ -304,13 +319,27 @@ abre un expediente para enterarse de que está incompleto. **HU-11**
 ### RF18 · Formatos y tamaño
 | | Criterio | |
 |---|---|:--:|
-| RF18.1 | Se admiten PDF, DOCX, XLSX, JPG y PNG | ✅ |
+| RF18.1 | Se admiten al menos PDF, DOCX, XLSX, JPG y PNG | ✅ |
 | RF18.2 | El tamaño máximo por archivo es de 10 MB | ✅ |
 | RF18.3 | Un formato no admitido devuelve un error **descriptivo** | ✅ |
 | RF18.4 | Un archivo demasiado grande devuelve un error descriptivo | ✅ |
 
 **Estado ✅.** RF18.3 y RF18.4 se corrigieron el 2 de septiembre de 2026: antes devolvían un
 `500 "Algo salió mal!"` porque la validación ocurre **antes** del controlador. Y hasta esa fecha
+
+> **La plataforma admite más formatos de los que el enunciado enumera, y conviene decirlo antes de
+> que lo pregunten.** El requisito nombra cinco; `documentos.routes.js` acepta **diez**: PDF, DOC,
+> DOCX, XLS, XLSX, JPG, PNG, WebP, TIFF y TXT.
+>
+> No es una desviación: es un superconjunto. Los cinco del enunciado están todos, y los otros
+> cinco responden a lo que llega de verdad a un despacho — un juzgado que remite en `.doc`, una
+> notificación escaneada en TIFF, una constancia en texto plano. Rechazarlos habría obligado a
+> convertir el archivo antes de subirlo, que es exactamente la fricción que este sistema viene a
+> quitar.
+>
+> El criterio se redactó como *«al menos»* el 3 de septiembre de 2026, al detectar el desajuste
+> revisando el catálogo contra el código. Antes decía «se admiten PDF, DOCX, XLSX, JPG y PNG» a
+> secas, y quien lo leyera esperaría que un `.txt` fuera rechazado.
 no existía filtro de formatos: se podía adjuntar un ejecutable a un expediente judicial.
 **HU-12**
 
@@ -417,6 +446,15 @@ ver. **HU-13**
 
 **Estado ✅** · `recordatorios.job.js` · **HU-18**
 
+> **RF29.2 figuraba como cumplido y no lo estaba.** El recordatorio salía para el abogado
+> responsable y para el cliente, y nadie más: **los colaboradores asignados no recibían nada**.
+> Quien trabajaba el expediente sin ser su titular se enteraba de la audiencia por otro lado o no
+> se enteraba. Solo los avisaba la *reprogramación*, no el recordatorio.
+>
+> Corregido el 4 de septiembre de 2026, al revisar el catálogo contra el código antes de
+> desplegar. Se excluye a quien tenga la cuenta inactiva —avisar a quien ya no puede entrar no es
+> avisar a nadie— y no se escribe dos veces a quien sea responsable y colaborador a la vez.
+
 ### RF30 · Reprogramación
 | | Criterio | |
 |---|---|:--:|
@@ -432,6 +470,17 @@ ver. **HU-13**
 | RF31.1 | Las audiencias ya celebradas pasan al historial sin intervención manual | ✅ |
 
 **Estado ✅** · `autoArchivePastHearings` · **HU-20**
+
+> **Un estado de audiencia inventado devolvía un `500` opaco.** `updateAudiencia` volcaba en la
+> base el valor recibido sin comprobarlo. Corregido el 4 de septiembre de 2026: ahora responde
+> `400` diciendo cuáles son los tres admitidos.
+>
+> Es la séptima vez que aparece el mismo defecto en este proyecto —un valor de enumerado que llega
+> del cliente y se guarda sin mirar—, después del tamaño de los archivos, la categoría documental,
+> el tipo de actuación, la visibilidad del documento, el tipo de parte procesal y el canal del
+> recordatorio. Se había corregido cuatro veces por separado, reescribiendo la lista en cada
+> controlador, lo cual no arregla el patrón: lo reproduce. Ahora las listas viven en un solo sitio
+> (`utils/enumerados.js`) con una prueba que comprueba que coincidan con el esquema.
 
 ---
 
@@ -558,6 +607,21 @@ con `GET /api/reportes/export/pdf`.
 
 **Estado ✅** · **HU-25, HU-29**
 
+> **RF47.1 era una preferencia decorativa, y esto es lo más serio que salió de la revisión.** La
+> pantalla de ajustes guardaba el canal y las prioridades, el perfil los devolvía… y a la hora de
+> avisar **nadie los leía**: el envío era siempre por correo y la prioridad estaba escrita a mano
+> en el código. Quien eligiera «solo plataforma» seguía recibiendo correos.
+>
+> Una preferencia que no se respeta es peor que no ofrecerla: enseña que los ajustes de esta
+> aplicación no sirven, y esa lección se aplica luego a todos los demás.
+>
+> Corregido el 4 de septiembre de 2026 (`utils/preferencias-alerta.js`). El canal decide ahora si
+> se envía correo, si se crea el aviso en la plataforma o las dos cosas —antes el recordatorio
+> **no existía** en la plataforma, solo el de creación—, y la prioridad sale de la preferencia de
+> quien recibe. **La criticidad manda sobre la preferencia**: un término crítico es ALTA aunque su
+> destinatario prefiera baja, porque RF48.2 dice que esas no se silencian y bajarla sería
+> silenciarla.
+
 ### RF48 · Prioridades
 | | Criterio | |
 |---|---|:--:|
@@ -661,17 +725,52 @@ evaluó *Row Level Security* y se pospuso ([ADR-003](../../docs/11-DECISIONES-AR
 **Estado ✅.** RF54.2 y RF54.4 se completaron el 2 de septiembre de 2026. Antes, un correo perdido
 dejaba a la persona bloqueada sin ninguna salida. **HU-35**
 
+
+### RF60 · Administración de la plataforma
+
+**Enunciado.** Existe una administración del servicio, separada de los consultorios, que da de
+alta, suspende y da de baja consultorios sin acceder a sus expedientes.
+
+| | Criterio verificable | |
+|---|---|:--:|
+| RF60.1 | La administración de la plataforma es una identidad separada, no un rol de consultorio | ✅ |
+| RF60.2 | Su sesión **no da acceso** a expedientes, clientes ni documentos de ningún consultorio | ✅ |
+| RF60.3 | Puede suspender un consultorio, y la suspensión corta el acceso de todos sus usuarios | ✅ |
+| RF60.4 | La suspensión exige justificación escrita | ✅ |
+| RF60.5 | La baja definitiva exige que el consultorio esté suspendido, el nombre exacto y justificación | ✅ |
+| RF60.6 | Los actos de plataforma quedan en una bitácora aparte que sobrevive a la baja del consultorio | ✅ |
+
+**Estado ✅.** Este requisito **no existía**, y la funcionalidad sí: se añadió el 3 de septiembre
+de 2026 al revisar el catálogo contra el código antes de desplegar.
+
+> **Por qué faltaba, y por qué importa que ya no falte.** La administración de plataforma nació de
+> una necesidad operativa —cortar el acceso a un consultorio que no paga— y se documentó bien, pero
+> en otro sitio: [doc 15](../../docs/15-ADMINISTRACION-DE-PLATAFORMA.md) y
+> [ADR-012](../../docs/11-DECISIONES-ARQUITECTONICAS.md). Nunca se escribió como requisito.
+>
+> El resultado era que **la plataforma hacía algo que su catálogo no pedía**: seis endpoints, una
+> tabla de identidad propia y la capacidad de borrar un despacho entero, sin ningún RF detrás. Al
+> presentar el catálogo, cualquiera podía señalar esa funcionalidad y preguntar de dónde salió.
+>
+> La decisión de fondo —que esa administración **no** puede abrir expedientes— es la parte que más
+> convenía tener escrita como requisito y no solo como decisión técnica: los procesos judiciales
+> están cubiertos por el secreto profesional, y que exista un rol capaz de leerlos todos sería una
+> cuestión legal, no de implementación. RF60.2 lo fija.
+
+**Implementado en** `plataforma.controller.js` · `plataforma.middleware.js` · `AdminPlataforma` ·
+`BitacoraPlataforma` · **Pruebas:** `consultorio_suspendido.test.js`
+
 ---
 
 ## Resumen
 
 | Estado | Requisitos |
 |---|---:|
-| ✅ Cumplidos | 58 |
+| ✅ Cumplidos | 59 |
 | 🟡 Parciales, con el límite declarado | 1 |
 | 🟥 No cumplidos | 0 |
 
-Ninguno está sin empezar. Queda **un criterio pendiente sobre un total de 143**, y está aquí, en
+Ninguno está sin empezar. Queda **un criterio pendiente sobre un total de 149**, y está aquí, en
 su tabla, marcado 🟥:
 
 | Criterio | Qué falta | Qué exige resolverlo |

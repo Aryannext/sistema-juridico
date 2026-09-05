@@ -33,10 +33,13 @@ classDiagram
         +Boolean activo
         +Int intentos_fallidos
         +DateTime bloqueado_hasta
+        +CanalNotificacion preferencia_canal
         +autenticar(password) Token
         +bloquearPorIntentos()
         +restablecerPassword(token, nueva)
         +tienePermiso(modulo, accion) Boolean
+        +canalesDeAviso() ~correo, plataforma o ambos~
+        +prioridadPara(evento) Prioridad ~lo critico manda~
     }
 
     class Cliente {
@@ -121,6 +124,8 @@ classDiagram
 | `Tenant.suspender()` | Corta el acceso de **todos** sus usuarios de golpe |
 | `Usuario.bloquearPorIntentos()` | Bloqueo escalado: 1, 5, 15, 30 y 60 minutos |
 | `PermisoRol.permite()` | Es lo que `roles.middleware.js` consulta antes de cada operación (RF03) |
+| `Usuario.canalesDeAviso()` | RF47.1 — decide si el aviso sale por correo, por la plataforma o por los dos. Ante una preferencia ausente o corrupta avisa por ambos: en un sistema de plazos, equivocarse avisando de más es recuperable; callando, no |
+| `Usuario.prioridadPara()` | RF48.2 — **la criticidad manda sobre la preferencia**. Un término crítico es ALTA aunque su destinatario prefiera baja, porque bajarla sería silenciarla |
 
 ---
 
@@ -265,6 +270,13 @@ classDiagram
     }
 ```
 
+> **Estos dos métodos existen porque durante un tiempo no existieron.** Los campos de
+> preferencia estaban en la base y la pantalla los guardaba, pero **nadie los leía al avisar**:
+> el envío era siempre por correo y la prioridad estaba escrita a mano en el código. Se
+> corrigió el 4 de septiembre de 2026. Aparecen aquí porque un diagrama de clases que muestra
+> los atributos sin el comportamiento que los usa deja creer que el dato sirve para algo por
+> el mero hecho de estar guardado.
+>
 > **Hay tres registros y no uno, y responden a preguntas distintas.**
 > `BitacoraAuditoria` responde *«¿quién hizo qué en el consultorio?»* y abarca todos los módulos.
 > `HistorialProceso` responde *«¿qué le ha pasado a ESTE expediente?»* y por eso guarda el valor

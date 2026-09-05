@@ -1,4 +1,5 @@
 const prisma = require('../../config/prisma');
+const { validarEnum } = require('../../utils/enumerados');
 
 /**
  * RF19.1 — las siete categorías documentales del enunciado, en su orden.
@@ -113,6 +114,11 @@ exports.uploadDocumento = async (req, res) => {
         error: `Categoría no válida. Las categorías admitidas son: ${CATEGORIAS.join(', ')}.`
       });
     }
+
+    // La visibilidad decide quien ve el documento (RF22): un valor invalido
+    // aqui no puede acabar en un 500 opaco.
+    const vis = validarEnum('VisibilidadDocumento', visibilidad);
+    if (!vis.valido) return res.status(400).json({ error: vis.error });
 
     // Verificar límite global de almacenamiento (9.5 GB)
     const MAX_STORAGE_BYTES = 9.5 * 1024 * 1024 * 1024;

@@ -374,7 +374,7 @@ endpoint nacería sin registro.
 | ❓ Nunca medidos | 0 | — |
 
 **Los no funcionales siguen siendo el punto más débil del sistema, y conviene decirlo antes de que
-lo pregunten.** Los funcionales están en 58 de 59 cumplidos; aquí, 5 de 10 lo están del todo.
+lo pregunten.** Los funcionales están en 59 de 60 cumplidos; aquí, 5 de 10 lo están del todo.
 
 **Ya no queda ninguno sin medir.** RNF08 estaba en ❓ y ahora tiene números con su entorno
 declarado, que era lo peor de la lista: de un incumplimiento se sabe el tamaño; de algo sin medir

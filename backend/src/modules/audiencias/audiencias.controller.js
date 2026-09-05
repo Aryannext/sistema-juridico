@@ -1,4 +1,10 @@
 const prisma = require('../../config/prisma');
+const { validarEnum, ENUMERADOS } = require('../../utils/enumerados');
+
+// Se reexporta para las pruebas. La lista vive en utils/enumerados.js, junto a
+// las demás y vigilada contra schema.prisma: tenerla aquí fue lo que permitió
+// que este mismo defecto se repitiera seis veces en sitios distintos.
+exports.ESTADOS_AUDIENCIA = ENUMERADOS.EstadoAudiencia;
 
 // Función interna para archivar automáticamente audiencias del pasado (HU-20)
 const autoArchivePastHearings = async (tenant_id) => {
@@ -205,6 +211,12 @@ exports.updateAudiencia = async (req, res) => {
   try {
     const { id } = req.params;
     const { nombre, tipo, fecha_hora, lugar, estado, recordatorios } = req.body;
+
+    // Omitir el estado deja la audiencia como está, y es válido: esta ruta
+    // sirve también para reprogramar. Enviar uno que no existe es un error de
+    // quien llama, y se le dice cuál es.
+    const est = validarEnum('EstadoAudiencia', estado);
+    if (!est.valido) return res.status(400).json({ error: est.error });
 
     const existingAudiencia = await prisma.audiencia.findFirst({
       where: { id_audiencia: id, tenant_id: req.tenant_id },

@@ -41,6 +41,10 @@ erDiagram
         boolean activo
         int intentos_fallidos
         timestamp bloqueado_hasta
+        enum preferencia_canal "PLATAFORMA | EMAIL | AMBOS - RF47.1"
+        enum pref_prioridad_audiencia "ALTA | MEDIA | BAJA"
+        enum pref_prioridad_termino
+        enum pref_prioridad_tarea
     }
 
     CLIENTE {
