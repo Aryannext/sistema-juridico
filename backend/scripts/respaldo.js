@@ -32,7 +32,23 @@ const { pipeline } = require('node:stream/promises');
 
 const DIRECTORIO = process.env.RESPALDO_DIR || path.join(__dirname, '..', '..', 'respaldos');
 const DIAS_RETENCION = Number(process.env.RESPALDO_DIAS || 30); // RNF10.4
-const PG_DUMP = process.env.PG_DUMP || 'pg_dump';
+/**
+ * Cómo llamar a `pg_dump`.
+ *
+ * Se parte en palabras porque a menudo NO es un binario suelto. En este
+ * despliegue el cliente de PostgreSQL no está en el host ni en la imagen del
+ * backend —solo en el contenedor de la base—, así que la forma de invocarlo es:
+ *
+ *   PG_DUMP="docker compose exec -T postgres pg_dump" npm run respaldo
+ *
+ * `spawn` no pasa por una shell: si se le entrega esa cadena entera busca un
+ * ejecutable llamado literalmente «docker compose exec -T postgres pg_dump» y
+ * falla con ENOENT. Tampoco se quiere una shell de por medio —invitaría a
+ * inyectar por la variable de entorno—, así que se separa aquí: la primera
+ * palabra es el programa y el resto son argumentos que van delante de los
+ * nuestros.
+ */
+const [PG_DUMP, ...PREFIJO] = (process.env.PG_DUMP || 'pg_dump').trim().split(/\s+/);
 
 /** Nombre reconocible y ordenable: sgpa-2026-09-03T16-45-02.sql.gz */
 const nombreDeHoy = () => {
@@ -100,7 +116,7 @@ async function volcar(destino) {
   //
   // Para un respaldo, acotar nunca fue lo correcto. `?schema=` le dice a Prisma
   // dónde trabajar; una copia de seguridad tiene que traerlo todo.
-  const opciones = ['--no-owner', '--no-privileges', url];
+  const opciones = [...PREFIJO, '--no-owner', '--no-privileges', url];
 
   const dump = spawn(PG_DUMP, opciones, { stdio: ['ignore', 'pipe', 'pipe'] });
 
