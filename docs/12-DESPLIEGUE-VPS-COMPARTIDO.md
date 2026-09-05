@@ -461,23 +461,47 @@ También hay una diferencia en la retención. Borrar con `find -mtime +30` mira 
 modificación del archivo**, que cambia en cuanto alguien copia los respaldos a otro disco: justo
 cuando los pone a salvo, la retención empieza a mentir. El guion lee la fecha del nombre.
 
+### Dónde se ejecuta, y por qué no hay otro sitio
+
+**En el host, no dentro de un contenedor.** Merece explicarse, porque los dos contenedores
+parecen mejores candidatos y ninguno sirve:
+
+| Dónde | Por qué no |
+|---|---|
+| Contenedor del backend | No lleva `pg_dump`. La imagen es de Node; instalar el cliente de PostgreSQL solo para esto la engorda sin necesidad |
+| Contenedor de PostgreSQL | Tiene `pg_dump`, pero no tiene Node, así que no puede ejecutar el guion |
+
+El host es el único punto desde el que se alcanzan las dos piezas: Node por un lado y, por el
+otro, la base a través de `docker compose exec postgres pg_dump`. Además es donde conviene que
+aterricen los archivos, porque desde ahí se copian fuera de la máquina.
+
+**El guion no necesita `node_modules`.** Solo usa módulos propios de Node y lee `backend/.env`
+por su cuenta cuando `dotenv` no está instalado, que es el caso del host: aquí todo se instala
+dentro de la imagen. Para el respaldo bastan **Node y Docker**, que el servidor ya tiene.
+
+> Esto se descubrió al programarlo por primera vez, el 5 de septiembre de 2026. El guion
+> arrancaba con `require('dotenv')` y moría con `MODULE_NOT_FOUND` antes de escribir nada, y
+> `PG_DUMP` se entregaba entero a `spawn`, que buscaba un ejecutable llamado literalmente
+> «docker compose exec -T postgres pg_dump». Dos fallos que solo aparecen en el servidor y que
+> habrían dejado el cron fallando cada noche contra un registro que nadie mira.
+
 ### Programarlo
 
-`pg_dump` tiene que estar disponible en el host, o ejecutarse dentro del contenedor de PostgreSQL:
+```bash
+PG_DUMP="docker compose exec -T postgres pg_dump" npm --prefix backend run respaldo
+```
+
+Lánzalo **desde la raíz del proyecto**: `docker compose` busca el archivo de composición en el
+directorio actual. Ejecutado a mano una vez y en verde, se programa:
 
 ```cron
 # Todas las noches a las 3, con la salida a un registro que se pueda revisar.
-0 3 * * * cd ~/proyectos/proyectosena.online/sistema-juridico/backend && /usr/bin/npm run respaldo >> ~/respaldo-sgpa.log 2>&1
-```
-
-Si el host no tiene el cliente de PostgreSQL, se le indica al guion cómo llamarlo:
-
-```bash
-PG_DUMP="docker compose exec -T postgres pg_dump" npm run respaldo
+0 3 * * * cd ~/proyectos/proyectosena.online/sistema-juridico && PG_DUMP="docker compose exec -T postgres pg_dump" /usr/bin/npm --prefix backend run respaldo >> ~/respaldo-sgpa.log 2>&1
 ```
 
 Variables que admite: `RESPALDO_DIR` (destino, por defecto `respaldos/`), `RESPALDO_DIAS`
-(retención, 30) y `PG_DUMP`.
+(retención, 30) y `PG_DUMP`. Ninguna pisa lo que ya venga en el entorno, así que se pueden fijar
+delante del comando sin tocar `backend/.env`.
 
 ### Restaurar
 

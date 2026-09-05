@@ -22,13 +22,65 @@
  * fallo se descubre el día que hace falta restaurar. Aquí se verifica que el
  * volcado termine con la marca de cierre que PostgreSQL escribe al final.
  */
-require('dotenv').config();
-
 const fs = require('node:fs');
 const path = require('node:path');
 const zlib = require('node:zlib');
 const { spawn } = require('node:child_process');
 const { pipeline } = require('node:stream/promises');
+
+/**
+ * Carga `backend/.env` sin depender de que `dotenv` esté instalado.
+ *
+ * Este guion tiene que poder correr **en el host del servidor**, y ahi no hay
+ * `node_modules`: todo se instala dentro de la imagen de Docker. Tampoco sirve
+ * ejecutarlo dentro del contenedor del backend, porque ese no lleva `pg_dump`
+ * —solo lo tiene el de PostgreSQL—. El host es el unico sitio desde el que se
+ * alcanzan las dos cosas: Node por un lado y, por el otro, la base a traves de
+ * `docker compose exec postgres pg_dump`.
+ *
+ * Aparte de esto, el guion solo usa modulos propios de Node. Quitando esta
+ * dependencia queda **autonomo**: para el respaldo nocturno basta con Node y
+ * Docker, que es lo que el servidor ya tiene.
+ *
+ * Se usa `dotenv` cuando esta disponible —dentro del contenedor lo esta— y se
+ * recurre al lector propio cuando no. En ambos casos **no se pisa** lo que ya
+ * venga en el entorno, que es como se comporta `dotenv`: permite fijar
+ * `RESPALDO_DIR` o `PG_DUMP` delante del comando sin tocar el archivo.
+ */
+function cargarEntorno() {
+  try {
+    require('dotenv').config();
+    return;
+  } catch {
+    /* sin dotenv: se lee el archivo a mano, justo debajo */
+  }
+
+  const archivo = path.join(__dirname, '..', '.env');
+  if (!fs.existsSync(archivo)) return;
+
+  for (const linea of fs.readFileSync(archivo, 'utf8').split(/\r?\n/)) {
+    const limpia = linea.trim();
+    if (!limpia || limpia.startsWith('#')) continue;
+
+    const corte = limpia.indexOf('=');
+    if (corte === -1) continue;
+
+    // Se admite el prefijo `export`, habitual cuando el mismo archivo se
+    // carga tambien desde la shell.
+    const clave = limpia.slice(0, corte).replace(/^export\s+/, '').trim();
+    if (!clave || clave in process.env) continue;
+
+    let valor = limpia.slice(corte + 1).trim();
+    const comilla = valor[0];
+    if ((comilla === '"' || comilla === "'") && valor.endsWith(comilla)) {
+      valor = valor.slice(1, -1);
+    }
+
+    process.env[clave] = valor;
+  }
+}
+
+cargarEntorno();
 
 const DIRECTORIO = process.env.RESPALDO_DIR || path.join(__dirname, '..', '..', 'respaldos');
 const DIAS_RETENCION = Number(process.env.RESPALDO_DIAS || 30); // RNF10.4
