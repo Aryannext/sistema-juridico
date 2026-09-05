@@ -495,9 +495,31 @@ Lánzalo **desde la raíz del proyecto**: `docker compose` busca el archivo de c
 directorio actual. Ejecutado a mano una vez y en verde, se programa:
 
 ```cron
+PATH=/home/cristian/.nvm/versions/node/v22.23.2/bin:/usr/local/bin:/usr/bin:/bin
+
 # Todas las noches a las 3, con la salida a un registro que se pueda revisar.
-0 3 * * * cd ~/proyectos/proyectosena.online/sistema-juridico && PG_DUMP="docker compose exec -T postgres pg_dump" /usr/bin/npm --prefix backend run respaldo >> ~/respaldo-sgpa.log 2>&1
+0 3 * * * cd ~/proyectos/proyectosena.online/sistema-juridico && PG_DUMP="docker compose exec -T postgres pg_dump" npm --prefix backend run respaldo >> ~/respaldo-sgpa.log 2>&1
 ```
+
+**La línea del `PATH` no es adorno.** `cron` arranca con un entorno pelado —`PATH` reducido a
+`/usr/bin:/bin`, sin tu perfil— y en este servidor Node está instalado con **nvm**, fuera de
+esas rutas. Sin declararlo, la tarea muere cada noche con *«npm: no such file or directory»* y
+sólo se descubre el día que hace falta restaurar. Comprueba la ruta con `which npm`.
+
+> **Y hay que volver a tocarla** cada vez que se instale otra versión de Node con nvm: la ruta
+> lleva el número de versión dentro. Es el precio de nvm en un VPS compartido, y se paga a
+> sabiendas: instalar Node del sistema es justamente lo que este despliegue evita.
+
+### Comprobarlo sin esperar a las 3 de la mañana
+
+Programar una tarea y confiar en que funcionará es como tener un respaldo sin haberlo
+restaurado. Esto reproduce el entorno pelado de `cron` y ejecuta el mismo comando:
+
+```bash
+env -i HOME="$HOME" PATH=/home/cristian/.nvm/versions/node/v22.23.2/bin:/usr/local/bin:/usr/bin:/bin bash -c 'cd ~/proyectos/proyectosena.online/sistema-juridico && PG_DUMP="docker compose exec -T postgres pg_dump" npm --prefix backend run respaldo'
+```
+
+Si termina en verde, el cron funcionará. Si falla, falla ahora y delante de ti.
 
 Variables que admite: `RESPALDO_DIR` (destino, por defecto `respaldos/`), `RESPALDO_DIAS`
 (retención, 30) y `PG_DUMP`. Ninguna pisa lo que ya venga en el entorno, así que se pueden fijar
