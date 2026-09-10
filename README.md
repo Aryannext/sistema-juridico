@@ -4,6 +4,8 @@ El **SGPA** es una plataforma SaaS B2B robusta, construida con tecnologías mode
 
 Este repositorio contiene el código fuente completo del sistema, dividido en un Frontend (React/Vite) y un Backend (Node.js/Express).
 
+Es uno de los tres proyectos de mi portafolio: **[proyectosena.online](https://proyectosena.online)** — donde también puedes verlo funcionando en [/sistema-juridico](https://proyectosena.online/sistema-juridico).
+
 ---
 
 ## 📚 Documentación completa
