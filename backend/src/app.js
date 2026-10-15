@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const { opcionesCors } = require('./config/cors');
 
 const app = express();
 
@@ -19,7 +20,8 @@ const app = express();
 app.set('trust proxy', Number(process.env.TRUST_PROXY ?? 1));
 
 app.use(helmet());
-app.use(cors());
+// Solo los orígenes configurados; ver src/config/cors.js.
+app.use(cors(opcionesCors()));
 app.use(express.json());
 
 const apiLimiter = rateLimit({

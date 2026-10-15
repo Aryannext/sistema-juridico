@@ -396,15 +396,10 @@ esta base?*
 La base vive en un volumen de Docker. **`docker compose down` no la borra**; solo
 `docker compose down -v` lo haría.
 
-```bash
-# Respaldo
-docker compose exec -T postgres pg_dump -U sgpa sgpa > respaldo-$(date +%F).sql
-
-# Restauración
-cat respaldo-2026-09-01.sql | docker compose exec -T postgres psql -U sgpa -d sgpa
-```
-
-Conviene automatizarlo con un cron diario del sistema.
+**No uses el `pg_dump` de una línea**: si falla a mitad deja un archivo truncado que parece
+bueno, y restaurar encima de la base en uso puede dejarla a medias. El procedimiento vigente
+—respaldo verificado, retención, copia fuera del VPS, restauración y objetivos de
+recuperación— está en [§ 7 bis](#7-bis-respaldos--el-mecanismo-existe-falta-programarlo-aquí).
 
 ### Actualizar la versión de Node — el objetivo de todo esto
 
@@ -563,11 +558,137 @@ ha restaurado no es un respaldo, es un archivo del que se supone algo.
 1. **Programar la tarea aquí.** Hasta que el `cron` corra en este servidor, RNF10.3 no se cumple:
    el mecanismo existe, los respaldos no.
 2. **Sacarlos del VPS.** Un respaldo en la misma máquina no protege del fallo más probable, que
-   es perder la máquina. Copiarlos a otro sitio —Cloudflare R2 sirve, y ya está configurado—
-   sigue sin hacerse.
+   es perder la máquina. El procedimiento está justo debajo, en *Copia fuera del VPS*; falta
+   ejecutarlo en el servidor.
+3. **Aprobar los objetivos de recuperación y medir el RTO aquí.** Ver *Objetivos de
+   recuperación*.
 
 **Los documentos subidos no entran aquí:** viven en R2 y tienen su propia durabilidad. Este
-respaldo cubre la base de datos, que es lo que hoy no tiene ninguna red.
+respaldo cubre la base de datos, que es lo que hoy no tiene ninguna red. Lo que R2 no cubre se
+explica al final de esta sección.
+
+### Copia fuera del VPS
+
+**Qué se busca.** Que perder el servidor entero —disco, cuenta del proveedor o acceso— no
+arrastre los respaldos. La copia tiene que vivir en otro proveedor o, como mínimo, en otro
+servicio con credenciales que **no** estén en este servidor con permiso de borrar.
+
+**Destino propuesto: un bucket de R2 aparte, solo para respaldos.** R2 ya está contratado y no
+cobra por la salida de datos, que es justo lo que se paga el día de restaurar. Pero **no** el
+bucket de documentos ni sus claves:
+
+| Decisión | Por qué |
+|---|---|
+| Bucket propio, p. ej. `sgpa-respaldos`, privado | Los volcados contienen expedientes completos, cubiertos por el secreto profesional. Nunca con dominio público |
+| Token de API propio, limitado a ese bucket y a *Object Read & Write* | Si se filtran las claves de la aplicación (`R2_ACCESS_KEY_ID`), no deben alcanzar los respaldos. Y al revés |
+| Regla de ciclo de vida en el bucket que borre a los 30 días | La retención fuera del VPS la aplica el proveedor, no un guion que puede dejar de correr |
+
+**La herramienta: `rclone`, en un contenedor.** Así no se instala nada más en el host, igual que
+el resto del despliegue. Se configura una vez en `~/.config/rclone/rclone.conf`, con permisos
+`600`:
+
+```ini
+[r2-respaldos]
+type = s3
+provider = Cloudflare
+access_key_id = <clave del token de respaldos>
+secret_access_key = <secreto del token de respaldos>
+endpoint = https://<account-id>.r2.cloudflarestorage.com
+acl = private
+# El token solo tiene permisos sobre objetos: sin esto rclone intenta crear el bucket y falla.
+no_check_bucket = true
+```
+
+Y se encadena **detrás** del respaldo con `&&`, para que solo suba un volcado que ya pasó la
+comprobación:
+
+```cron
+0 3 * * * cd ~/proyectos/proyectosena.online/sistema-juridico && PG_DUMP="docker compose exec -T postgres pg_dump" npm --prefix backend run respaldo >> ~/respaldo-sgpa.log 2>&1 && docker run --rm -v ~/.config/rclone:/config/rclone:ro -v "$PWD/respaldos:/data:ro" rclone/rclone:1.68.2 copy /data r2-respaldos:sgpa-respaldos --immutable >> ~/respaldo-sgpa.log 2>&1
+```
+
+Sustituye a la línea de *Programarlo*, no se añade a ella. `--immutable` impide que una copia
+ya subida se sobrescriba con otra distinta del mismo nombre, y los dos montajes son de solo
+lectura: el contenedor no puede tocar ni la configuración ni los respaldos locales.
+
+**Comprobar que la copia existe y se puede traer de vuelta**, que es lo único que demuestra algo:
+
+```bash
+docker run --rm -v ~/.config/rclone:/config/rclone:ro rclone/rclone:1.68.2 ls r2-respaldos:sgpa-respaldos
+docker run --rm -v ~/.config/rclone:/config/rclone:ro -v /tmp:/salida rclone/rclone:1.68.2 copy r2-respaldos:sgpa-respaldos/sgpa-FECHA.sql.gz /salida
+gunzip -t /tmp/sgpa-FECHA.sql.gz && echo "íntegro"
+```
+
+**Pendiente de decidir: cifrar antes de subir.** R2 cifra en reposo, pero con claves de
+Cloudflare. Cifrar en el servidor (`rclone crypt`) protege también frente al proveedor, a
+cambio de un riesgo nuevo: **perder la clave es perder todos los respaldos**. Es una decisión
+del responsable del servicio, no técnica; si se toma, la clave se guarda fuera del VPS y en
+dos sitios.
+
+### Objetivos de recuperación (RPO y RTO)
+
+Dos preguntas que hay que poder contestar antes de que pase nada:
+
+- **RPO** — *¿cuánto trabajo se puede perder?* Es la distancia entre el último respaldo bueno
+  y el momento del fallo. Lo que se registró después se pierde y hay que volver a cargarlo.
+- **RTO** — *¿cuánto puede estar caído el servicio?* Es el tiempo desde que se decide
+  restaurar hasta que los usuarios vuelven a trabajar.
+
+**Lo que el mecanismo actual permite, sin adornos:**
+
+| Situación | RPO real | Por qué |
+|---|---|---|
+| Hoy, sin el `cron` programado | **Ilimitado** | No hay respaldos: se pierde todo |
+| `cron` diario, copias solo en el VPS | 24 h si falla la base; **todo** si se pierde el servidor | La copia cae con la máquina |
+| `cron` diario + copia fuera del VPS | **Hasta 24 h** | Un fallo a las 2:59 pierde el día entero, desde las 3:00 del anterior |
+
+**Objetivos propuestos — pendientes de aprobación por el responsable del servicio:**
+
+| | Objetivo propuesto | Qué lo sostiene |
+|---|---|---|
+| RPO | **24 horas** | Respaldo diario a las 3:00 y copia fuera del VPS |
+| RTO | **4 horas** en horario laboral | Restaurar un volcado de este tamaño lleva minutos; el resto es tener un servidor, Docker y las claves a mano |
+
+No son un compromiso con nadie: son un objetivo interno y no un SLA. Quien los apruebe debe
+saber también lo que **no** cubren:
+
+- **Un RPO menor que 24 h no se consigue programando el volcado más a menudo.** Para minutos
+  hace falta archivado continuo del WAL de PostgreSQL y recuperación a un instante
+  (*PITR*). Un volcado diario no la ofrece, por frecuente que sea.
+- **El RPO de los documentos no es este.** Los archivos de R2 no entran en el volcado; ver el
+  último apartado.
+- **Dentro de las 24 h, el RPO solo se cumple si alguien se entera de que el respaldo falló.**
+  Por eso el interruptor de hombre muerto de § 7 ter no es opcional: un respaldo que dejó de
+  correr hace un mes da un RPO de un mes.
+
+### Medir el RTO: ensayo de restauración
+
+El RTO no se estima, se mide, y aquí todavía no se ha medido. El ensayo se hace sobre una base
+aparte, sin tocar la que está en uso:
+
+1. Anotar la hora de inicio.
+2. Traer el último volcado **desde la copia externa**, no desde el disco local: es el caso real
+   cuando se pierde el servidor.
+3. Restaurar en una base nueva (*Restaurar*, más arriba).
+4. Comprobar tablas y filas, y que `GET /api/estado` responde 200 contra la base restaurada.
+5. Anotar la hora de fin y registrar el ensayo en la tabla.
+
+Repetirlo cada tres meses y después de cualquier cambio de esquema importante.
+
+| Fecha | Dónde | Origen del volcado | Duración | Resultado |
+|---|---|---|---|---|
+| 3-09-2026 | Equipo de desarrollo | Disco local | No se midió | Tablas, índices, extensión y filas idénticos |
+| *pendiente* | Este VPS | Copia externa | — | — |
+
+Si la duración real supera el objetivo, se revisa el objetivo o el procedimiento. Lo que no vale
+es dejar el objetivo escrito sin medir nada.
+
+### Los documentos en R2
+
+R2 replica los archivos y no los pierde por un fallo de disco, pero **no es un respaldo**: si
+algo los borra con credenciales válidas —un error, una baja de consultorio equivocada, unas
+claves filtradas—, el borrado también es duradero. Protegerlos exige una copia en otro bucket con
+otras credenciales, del mismo modo que la base. Queda **pendiente** y fuera de los objetivos de
+arriba hasta que se haga.
 
 ---
 
