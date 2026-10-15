@@ -245,6 +245,8 @@ DATABASE_URL="postgresql://user:password@host:6543/postgres?pgbouncer=true"
 DIRECT_URL="postgresql://user:password@host:5432/postgres"
 
 # ─── Autenticación ────────────────────────────────────────────
+# Obligatoria, ≥ 32 caracteres y distinta de este ejemplo: si no, el servidor
+# no arranca (src/config/entorno.js). Generar con: openssl rand -hex 32
 JWT_SECRET="clave-larga-y-aleatoria-de-al-menos-32-caracteres"
 JWT_EXPIRES_IN="8h"
 
@@ -267,6 +269,10 @@ NODE_ENV="development"
 
 # ⚠️ FALTABA. Base de los enlaces de verificación enviados por correo.
 FRONTEND_URL="http://localhost:5173/sistema-juridico"
+
+# Orígenes CORS permitidos, separados por comas. Vacía → el origen de
+# FRONTEND_URL. Nunca "*" (src/config/cors.js).
+CORS_ORIGENES=""
 
 # ⚠️ FALTABA. Solo en desarrollo: activa la cuenta sin verificar el correo.
 # En producción se ignora, por diseño (auth.controller.js).

@@ -315,6 +315,13 @@ huérfanos.
 > el de `gzip`. Si `pg_dump` muere a mitad, `gzip` comprime lo que recibió y devuelve 0: queda un
 > archivo con peso, cortado, y una tarea que nunca avisa. Es la diferencia entre tener copias y
 > creer que se tienen.
+>
+> **Cuánto se puede perder y cuánto se tarda en volver.** Desde el 15 de octubre de 2026 el
+> doc 12 § 7 bis fija la copia fuera del VPS —bucket propio con credenciales propias— y propone
+> los objetivos de recuperación: **RPO de 24 horas** (lo que permite un volcado diario) y **RTO de
+> 4 horas**. Son propuestas, no compromisos: falta que las apruebe el responsable del servicio y
+> medir el RTO con un ensayo real en el servidor. Un RPO de minutos exigiría archivado continuo
+> del WAL, que un volcado diario no ofrece.
 
 ---
 

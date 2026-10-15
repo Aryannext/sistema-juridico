@@ -103,7 +103,8 @@ DATABASE_URL="postgresql://postgres:TUPASSWORD@localhost:5432/sistema_juridico?s
 DIRECT_URL="postgresql://postgres:TUPASSWORD@localhost:5432/sistema_juridico?schema=public"
 # Dentro de Docker el host es "postgres", el nombre del servicio, NUNCA localhost:
 # dentro de un contenedor, localhost es el propio contenedor.
-JWT_SECRET="alguna_clave_secreta_aleatoria"
+# Mínimo 32 caracteres; el servidor no arranca sin ella. Genérala con: openssl rand -hex 32
+JWT_SECRET="pega-aqui-la-salida-de-openssl-rand-hex-32"
 PORT=3000
 
 # Necesarias para subir documentos (Cloudflare R2)
