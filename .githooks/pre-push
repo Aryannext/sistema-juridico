@@ -1,14 +1,14 @@
 #!/bin/sh
 #
-# Verificación antes de subir — el sustituto de la integración continua.
+# Verificación antes de subir — complemento de la integración continua.
 #
-# El proyecto tiene un flujo en GitHub Actions que no ejecuta nada: la cuenta
-# está bloqueada por facturación, así que los trabajos ni arrancan. Los checks
-# salen en rojo, y ese rojo significa «no se sabe», no «falla» — que es peor,
-# porque se parece a lo primero y se acaba ignorando.
+# GitHub Actions (.github/workflows/ci.yml) verifica cada push y pull request
+# en una máquina limpia. Este hook corre lo mismo antes de subir, para que un
+# fallo se vea aquí y no en el servidor, y añade lo único que Actions no hace:
+# la verificación de índices, que necesita una base de datos accesible.
 #
-# Sin presupuesto para minutos de servidor, la verificación se mueve al único
-# sitio donde ya es gratis: esta máquina. Y se pone donde no se puede olvidar.
+# Nació en septiembre de 2026, cuando la cuenta estaba bloqueada por
+# facturación y Actions no ejecutaba nada; entonces era la única verificación.
 #
 # Se instala una sola vez con:
 #     git config core.hooksPath .githooks

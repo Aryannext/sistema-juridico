@@ -6,8 +6,9 @@
  * ── Por qué existe ──────────────────────────────────────────────────────
  *
  * El proyecto tenía un flujo de integración continua en GitHub Actions que
- * **no ejecutaba nada**: la cuenta está bloqueada por facturación, así que los
- * trabajos ni siquiera arrancaban. Los checks salían en rojo y ese rojo no
+ * **no ejecutaba nada**: en septiembre de 2026 la cuenta estuvo bloqueada por
+ * facturación, así que los trabajos ni siquiera arrancaban (volvió a funcionar
+ * el 15 de octubre de 2026). Los checks salían en rojo y ese rojo no
  * significaba «las pruebas fallan» sino «no se sabe», que es peor, porque se
  * parece a lo primero.
  *
