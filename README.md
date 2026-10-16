@@ -160,7 +160,7 @@ cd backend && npm test
 
 ### Paso 6: Activar la verificación antes de subir
 
-**Este paso no es opcional si vas a empujar cambios.** Ejecútalo una sola vez tras clonar:
+**Recomendado si vas a empujar cambios.** Ejecútalo una sola vez tras clonar:
 
 ```bash
 git config core.hooksPath .githooks
@@ -177,17 +177,20 @@ Corre el lint y las pruebas del backend, la coherencia entre los dos juegos de d
 referencias al código y la compilación del frontend. La verificación de índices necesita la base
 levantada: si no lo está, se omite **y lo dice**, porque «no se comprobó» no es «salió bien».
 
-> **Por qué en tu máquina y no en un servidor.** El proyecto tiene un flujo en GitHub Actions que
-> hoy no ejecuta nada: la cuenta está bloqueada por facturación y los trabajos ni arrancan. Los
-> checks salen en rojo, y ese rojo significa «no se sabe», no «falla» — que es peor, porque se
-> parece a lo malo y se acaba ignorando.
+> **En tu máquina y en el servidor.** GitHub Actions vuelve a ejecutarse: cada push a `main` o
+> `develop` y cada pull request hacia ellas corren el flujo de [`ci.yml`](.github/workflows/ci.yml)
+> en una máquina limpia. Pasa las pruebas y el lint del backend, la coherencia de la
+> documentación, las referencias al código y la compilación del frontend, todo con `npm ci`, que
+> además comprueba que el `package-lock.json` sea coherente. Eso es lo que el hook no puede
+> comprobar.
 >
-> Un proyecto sin presupuesto para minutos de servidor no tiene por qué quedarse sin verificación.
-> Lo que faltaba no era capacidad de cómputo, sino una orden que lo corriera todo y un sitio donde
-> fuera obligatoria. El flujo de Actions se conserva para el día que se desbloquee.
+> El hook sigue siendo útil porque avisa antes de subir, y no después. Además, es el único que
+> corre la **verificación de índices**: el flujo de Actions no levanta base de datos, así que en el
+> servidor esa comprobación no existe.
 >
-> **Lo que esto no cubre, y conviene saberlo:** no comprueba que el proyecto compile en una
-> máquina limpia ni que el `package-lock.json` sea coherente. Para eso hace falta un servidor.
+> Durante septiembre de 2026 la cuenta estuvo bloqueada por facturación y Actions no ejecutaba
+> nada. El hook nació para cubrir ese hueco, y por eso los comentarios del proyecto cuentan esa
+> historia.
 
 ---
 
